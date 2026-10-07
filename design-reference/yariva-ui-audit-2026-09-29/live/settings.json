@@ -1,0 +1,164 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Settings",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "ACCOUNT",
+    "bounds": "[60,315][1020,357]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Devices & sessions",
+    "bounds": "[62,380][1018,554]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Devices & sessions",
+    "bounds": "[221,440][895,494]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "APPEARANCE",
+    "bounds": "[60,604][1020,646]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Theme",
+    "bounds": "[62,669][1018,843]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Theme",
+    "bounds": "[221,702][767,756]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Light, Dark, or System",
+    "bounds": "[221,759][767,810]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Light",
+    "bounds": "[803,729][895,783]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Language & tone",
+    "bounds": "[62,843][1018,1017]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Language & tone",
+    "bounds": "[221,877][807,931]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Language and optional Hyderabad flavour",
+    "bounds": "[221,934][807,985]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "EN",
+    "bounds": "[843,904][895,958]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "PRIVACY",
+    "bounds": "[60,1067][1020,1109]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Privacy",
+    "bounds": "[62,1132][1018,1306]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Privacy",
+    "bounds": "[221,1165][895,1219]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Hide age, distance, pause",
+    "bounds": "[221,1222][895,1273]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Communication",
+    "bounds": "[62,1306][1018,1480]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Communication",
+    "bounds": "[221,1340][895,1394]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Calls, read receipts, media",
+    "bounds": "[221,1397][895,1448]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "SAFETY",
+    "bounds": "[60,1530][1020,1572]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Blocked users",
+    "bounds": "[62,1595][1018,1769]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Blocked users",
+    "bounds": "[221,1655][895,1709]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Log out",
+    "bounds": "[62,1821][1018,1995]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Log out",
+    "bounds": "[221,1854][895,1908]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Sign out on this device",
+    "bounds": "[221,1911][895,1962]",
+    "clickable": false,
+    "checked": false
+  }
+]

@@ -1,0 +1,62 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Looking for",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Intentional dating",
+    "bounds": "[62,329][1018,503]",
+    "clickable": true,
+    "checked": true
+  },
+  {
+    "text": "Intentional dating",
+    "bounds": "[221,389][883,443]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Committed relationship",
+    "bounds": "[62,503][1018,677]",
+    "clickable": true,
+    "checked": true
+  },
+  {
+    "text": "Committed relationship",
+    "bounds": "[221,564][883,618]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Marriage-minded",
+    "bounds": "[62,677][1018,851]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Marriage-minded",
+    "bounds": "[221,738][883,792]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Save changes",
+    "bounds": "[60,2040][1020,2172]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Save changes",
+    "bounds": "[400,2076][680,2136]",
+    "clickable": false,
+    "checked": false
+  }
+]

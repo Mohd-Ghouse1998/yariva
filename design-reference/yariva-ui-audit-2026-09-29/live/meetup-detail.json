@@ -1,0 +1,92 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Meetup",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Confirmed",
+    "bounds": "[72,309][252,351]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "with Rohan",
+    "bounds": "[300,303][506,357]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Public art and coffee",
+    "bounds": "[48,369][688,453]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Thu, 24 Sept, 4:44\u202fpm",
+    "bounds": "[206,545][827,611]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "120 min",
+    "bounds": "[851,551][994,605]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Open Selected public caf\u00e9 in Google Maps",
+    "bounds": "[50,665][1030,839]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Selected public caf\u00e9",
+    "bounds": "[206,694][919,760]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Madhapur, Hyderabad \u2014 public meeting point",
+    "bounds": "[206,760][919,814]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Safety tools",
+    "bounds": "[50,879][1030,1065]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Safety tools",
+    "bounds": "[206,912][919,978]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Share, check in or get help",
+    "bounds": "[206,978][919,1032]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Cancel meetup",
+    "bounds": "[48,1103][1032,1235]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Cancel meetup",
+    "bounds": "[388,1139][692,1199]",
+    "clickable": false,
+    "checked": false
+  }
+]

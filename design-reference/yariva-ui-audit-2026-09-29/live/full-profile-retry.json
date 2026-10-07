@@ -1,0 +1,128 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Profile",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Profile options",
+    "bounds": "[876,123][1020,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Previous photo",
+    "bounds": "[60,303][540,1059]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Next photo",
+    "bounds": "[540,303][1020,1059]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Nandini, 28",
+    "bounds": "[60,1107][324,1173]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Photo verified",
+    "bounds": "[348,1113][402,1167]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Hyderabad \u00b7 Telangana \u00b7 5 km away",
+    "bounds": "[114,1191][1020,1245]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Dating",
+    "bounds": "[132,1269][240,1323]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Committed relationship",
+    "bounds": "[360,1269][746,1323]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "96% fit",
+    "bounds": "[156,1404][291,1458]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Your usual availability overlaps",
+    "bounds": "[99,1470][981,1524]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Your relationship intentions align",
+    "bounds": "[138,1548][981,1602]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "ABOUT",
+    "bounds": "[60,1677][1020,1719]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Product researcher and Kuchipudi learner. I like museum afternoons, curious questions, and making plans that leave room for serendipity.",
+    "bounds": "[98,1778][982,2025]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "My ideal unhurried Sunday\u2026",
+    "bounds": "[98,2117][982,2025]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "A slow breakfast, a long walk, and one plan worth looking forward to.",
+    "bounds": "[98,2171][982,2025]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Not for me",
+    "bounds": "[60,2064][430,2196]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Not for me",
+    "bounds": "[139,2100][351,2160]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Interested",
+    "bounds": "[466,2064][1020,2196]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Interested",
+    "bounds": "[682,2100][889,2160]",
+    "clickable": false,
+    "checked": false
+  }
+]

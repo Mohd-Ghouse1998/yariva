@@ -1,0 +1,152 @@
+[
+  {
+    "text": "Meetups",
+    "bounds": "[409,142][670,223]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Search cafes, restaurants, and activities",
+    "bounds": "[60,291][1020,423]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Search caf\u00e9s, restaurants\u2026",
+    "bounds": "[177,324][906,390]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Meetup sections",
+    "bounds": "[60,447][1020,579]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Upcoming, 1",
+    "bounds": "[75,462][385,564]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Upcoming 1",
+    "bounds": "[117,486][342,540]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Pending, 1",
+    "bounds": "[385,462][695,564]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Pending 1",
+    "bounds": "[446,486][633,540]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Past, 2",
+    "bounds": "[695,462][1005,564]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Past 2",
+    "bounds": "[790,486][909,540]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Open meetup: Public art and coffee",
+    "bounds": "[60,603][1020,847]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Public art and coffee",
+    "bounds": "[230,632][652,698]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Confirmed",
+    "bounds": "[700,638][880,680]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Rohan \u00b7 Thu, 24 Sept, 4:44\u202fpm",
+    "bounds": "[230,704][904,758]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Selected public caf\u00e9",
+    "bounds": "[284,764][904,818]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Discover",
+    "bounds": "[52,2028][247,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Discover",
+    "bounds": "[77,2110][221,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Connections",
+    "bounds": "[247,2028][442,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Connect",
+    "bounds": "[274,2110][414,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Meetups",
+    "bounds": "[442,2028][638,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Meet",
+    "bounds": "[498,2110][581,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Chats",
+    "bounds": "[638,2028][833,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Chats",
+    "bounds": "[687,2110][784,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Profile",
+    "bounds": "[833,2028][1028,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Profile",
+    "bounds": "[877,2110][984,2149]",
+    "clickable": false,
+    "checked": false
+  }
+]

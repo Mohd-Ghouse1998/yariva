@@ -1,0 +1,122 @@
+[
+  {
+    "text": "Close",
+    "bounds": "[60,155][228,224]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Report",
+    "bounds": "[192,156][888,222]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Reports are reviewed by our safety team. You\u2019re never told whose report it was, and the person isn\u2019t told either.",
+    "bounds": "[114,357][966,519]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "What\u2019s happening?",
+    "bounds": "[72,609][1008,675]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Inappropriate photos",
+    "bounds": "[72,705][1008,864]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Inappropriate photos",
+    "bounds": "[124,751][859,817]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Harassment or hate",
+    "bounds": "[72,882][1008,1041]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Harassment or hate",
+    "bounds": "[124,928][859,994]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Spam or scam",
+    "bounds": "[72,1059][1008,1218]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Spam or scam",
+    "bounds": "[124,1105][859,1171]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Underage",
+    "bounds": "[72,1236][1008,1395]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Underage",
+    "bounds": "[124,1282][859,1348]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Impersonation",
+    "bounds": "[72,1413][1008,1572]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Impersonation",
+    "bounds": "[124,1459][859,1525]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Other",
+    "bounds": "[72,1590][1008,1749]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Other",
+    "bounds": "[124,1636][859,1702]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Anything else? (optional)",
+    "bounds": "[72,1803][1008,1857]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Add details to help us\u2026",
+    "bounds": "[72,1875][1008,1953]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Submit report",
+    "bounds": "[72,1992][1008,2124]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Submit report",
+    "bounds": "[401,2028][679,2088]",
+    "clickable": false,
+    "checked": false
+  }
+]

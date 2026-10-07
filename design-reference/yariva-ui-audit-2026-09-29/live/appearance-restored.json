@@ -1,0 +1,50 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Appearance",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Use device setting",
+    "bounds": "[62,305][1018,479]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Use device setting",
+    "bounds": "[221,365][883,419]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Light",
+    "bounds": "[62,479][1018,653]",
+    "clickable": true,
+    "checked": true
+  },
+  {
+    "text": "Light",
+    "bounds": "[221,540][883,594]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Dark",
+    "bounds": "[62,653][1018,827]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Dark",
+    "bounds": "[221,714][883,768]",
+    "clickable": false,
+    "checked": false
+  }
+]

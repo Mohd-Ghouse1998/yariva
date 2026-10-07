@@ -1,0 +1,98 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Duo meetup",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Yariva Test Venue \u2014 Madhapur Commons",
+    "bounds": "[89,392][991,524]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Caf\u00e9 meetup \u00b7 Madhapur",
+    "bounds": "[89,548][991,602]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Wed, 30 Sept, 6:30\u202fpm",
+    "bounds": "[89,626][991,692]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "4 of 4 in \u00b7 Confirmed",
+    "bounds": "[89,716][991,770]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Chinmoy \u2713",
+    "bounds": "[89,794][296,848]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Rohan \u2713",
+    "bounds": "[320,794][481,848]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Asha \u2713",
+    "bounds": "[505,794][641,848]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Meera \u2713",
+    "bounds": "[665,794][828,848]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Change",
+    "bounds": "[89,872][295,974]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Change",
+    "bounds": "[121,893][263,953]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Cancel plan",
+    "bounds": "[319,872][592,974]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Cancel plan",
+    "bounds": "[349,893][562,953]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Open in Maps",
+    "bounds": "[89,998][991,1100]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Open in Maps",
+    "bounds": "[416,1019][664,1079]",
+    "clickable": false,
+    "checked": false
+  }
+]

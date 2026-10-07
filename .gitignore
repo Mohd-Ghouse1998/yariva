@@ -1,0 +1,48 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.jks
+*.keystore
+google-services.json
+GoogleService-Info.plist
+
+# Dependencies and generated output
+node_modules/
+dist/
+build/
+coverage/
+.expo/
+.gradle/
+.kotlin/
+Pods/
+DerivedData/
+*.tsbuildinfo
+*.log
+*.db
+*.sqlite
+*.sqlite3
+frontend-mobile/android/
+frontend-mobile/ios/
+aroha_backend/src/generated/
+
+# Machine-specific and temporary files
+.DS_Store
+.idea/
+.vscode/
+tmp/
+frontend-mobile/tmp/
+frontend-mobile/web-build/
+frontend-mobile/expo-env.d.ts
+__pycache__/
+
+# Local audits and superseded Aroha design experiments
+/audit/
+/output/
+/research/
+/aroha/
+/aroha_ui_deisgn.html
+/aroha_ui_deisgn_files/
+/aroha_logo_transparent.png

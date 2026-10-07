@@ -1,0 +1,224 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Meet Meera",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Search cafes, restaurants, activities",
+    "bounds": "[174,355][993,460]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Venue categories",
+    "bounds": "[48,489][1032,621]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Caf\u00e9",
+    "bounds": "[63,504][381,606]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Caf\u00e9",
+    "bounds": "[177,528][267,582]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Food",
+    "bounds": "[381,504][699,606]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Food",
+    "bounds": "[492,528][588,582]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Things to do",
+    "bounds": "[699,504][1017,606]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Things to do",
+    "bounds": "[737,528][978,582]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Search location: Halfway",
+    "bounds": "[48,633][1032,747]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Top picks \u00b7 Halfway",
+    "bounds": "[132,657][945,723]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Yariva Test Venue \u2014 Madhapur Commons, Madhapur",
+    "bounds": "[51,786][1029,978]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Yariva Test Venue \u2014 Madhapur Commons",
+    "bounds": "[213,822][912,888]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "4.8",
+    "bounds": "[258,888][319,942]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Madhapur",
+    "bounds": "[325,888][912,942]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Yariva Test Venue \u2014 Central Coffee Room, Abids \u00b7 \u20b9\u20b9 \u00b7 Open",
+    "bounds": "[51,978][1029,1170]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Yariva Test Venue \u2014 Central Coffee Room",
+    "bounds": "[213,1016][993,1082]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "4.6",
+    "bounds": "[258,1082][319,1136]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Abids \u00b7 \u20b9\u20b9 \u00b7 Open",
+    "bounds": "[325,1082][993,1136]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Maps",
+    "bounds": "[48,1209][287,1311]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Maps",
+    "bounds": "[156,1230][257,1290]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Add place",
+    "bounds": "[299,1209][620,1311]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Add place",
+    "bounds": "[407,1230][590,1290]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "WHEN",
+    "bounds": "[48,1347][1032,1401]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Meetup time",
+    "bounds": "[48,1425][1032,1557]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Tonight",
+    "bounds": "[63,1440][302,1542]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Tonight",
+    "bounds": "[109,1464][255,1518]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Tomorrow",
+    "bounds": "[302,1440][540,1542]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Tomorrow",
+    "bounds": "[327,1464][515,1518]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Weekend",
+    "bounds": "[540,1440][779,1542]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Weekend",
+    "bounds": "[570,1464][748,1518]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Pick time",
+    "bounds": "[779,1440][1017,1542]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Pick time",
+    "bounds": "[810,1464][986,1518]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Wed, 30 Sept, 6:30\u202fpm",
+    "bounds": "[147,1593][640,1659]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Suggest meetup",
+    "bounds": "[48,2040][1032,2172]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Suggest meetup",
+    "bounds": "[415,2076][747,2136]",
+    "clickable": false,
+    "checked": false
+  }
+]

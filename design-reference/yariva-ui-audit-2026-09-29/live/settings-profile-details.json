@@ -1,0 +1,140 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Languages & values",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "LANGUAGES",
+    "bounds": "[60,351][1020,393]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Telugu, Hindi, English",
+    "bounds": "[99,424][981,529]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "FOOD PREFERENCES",
+    "bounds": "[60,594][1020,636]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Caf\u00e9 food, Hyderabadi, Vegetarian-friendly",
+    "bounds": "[99,667][981,772]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Relationship pace",
+    "bounds": "[60,837][1020,891]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Not set",
+    "bounds": "[60,939][288,1071]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Not set",
+    "bounds": "[105,978][243,1032]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Slow & steady",
+    "bounds": "[312,939][667,1071]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Slow & steady",
+    "bounds": "[357,978][622,1032]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Open to exploring",
+    "bounds": "[60,1095][487,1227]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Open to exploring",
+    "bounds": "[105,1134][442,1188]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Intentional",
+    "bounds": "[511,1095][802,1227]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Intentional",
+    "bounds": "[556,1134][757,1188]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Ready to commit",
+    "bounds": "[60,1251][466,1383]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Ready to commit",
+    "bounds": "[105,1290][421,1344]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Personal values",
+    "bounds": "[62,1433][1018,1607]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Personal values",
+    "bounds": "[221,1466][785,1520]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Optional \u00b7 sharing is controlled in Privacy",
+    "bounds": "[221,1523][785,1574]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Add",
+    "bounds": "[821,1493][895,1547]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Save changes",
+    "bounds": "[60,2064][1020,2196]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Save changes",
+    "bounds": "[400,2100][680,2160]",
+    "clickable": false,
+    "checked": false
+  }
+]

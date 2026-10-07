@@ -1,0 +1,140 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Connection",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "View Kabir's profile",
+    "bounds": "[60,303][1020,519]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Kabir, 30",
+    "bounds": "[312,318][864,384]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Photo verified",
+    "bounds": "[876,324][930,378]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Rock climbing, indie films, vinyl over playlists",
+    "bounds": "[312,396][930,504]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Message",
+    "bounds": "[62,569][379,743]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Message",
+    "bounds": "[134,660][305,714]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Voice",
+    "bounds": "[379,569][698,743]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Voice",
+    "bounds": "[486,660][593,714]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Video",
+    "bounds": "[698,569][1018,743]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Video",
+    "bounds": "[803,660][915,714]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Plan meetup",
+    "bounds": "[60,793][1020,925]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Plan meetup",
+    "bounds": "[455,829][706,889]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Call & notification settings",
+    "bounds": "[62,975][1018,1149]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Call & notification settings",
+    "bounds": "[221,1035][895,1089]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "SAFETY & PRIVACY",
+    "bounds": "[60,1199][1020,1241]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Unmatch",
+    "bounds": "[62,1264][1018,1438]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Unmatch",
+    "bounds": "[221,1297][895,1351]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Ends this connection",
+    "bounds": "[221,1354][895,1405]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Report",
+    "bounds": "[62,1438][1018,1612]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Report",
+    "bounds": "[221,1472][895,1526]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Tell Yariva about a safety concern",
+    "bounds": "[221,1529][895,1580]",
+    "clickable": false,
+    "checked": false
+  }
+]

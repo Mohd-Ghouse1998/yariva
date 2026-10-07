@@ -1,0 +1,44 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Blind Vibe",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Conversation first.",
+    "bounds": "[60,351][1020,435]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Thu, 1 Oct \u00b7 8:00\u202fpm\u201310:00\u202fpm IST",
+    "bounds": "[60,459][1020,525]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "You left this event \u00b7 Hyderabad",
+    "bounds": "[60,549][1020,603]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Join again",
+    "bounds": "[60,651][1020,783]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Join again",
+    "bounds": "[479,687][685,747]",
+    "clickable": false,
+    "checked": false
+  }
+]

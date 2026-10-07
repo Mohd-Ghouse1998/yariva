@@ -1,0 +1,176 @@
+[
+  {
+    "text": "Dating location Hyderabad",
+    "bounds": "[60,111][204,255]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Yariva home",
+    "bounds": "[422,146][659,221]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Discovery preferences",
+    "bounds": "[876,111][1020,255]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Duo \u00b7 Rohan. Approve your Scenes together",
+    "bounds": "[0,291][1080,318]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Blind Vibe, Thursday introductions",
+    "bounds": "[0,354][1080,522]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Blind Vibe",
+    "bounds": "[138,378][954,444]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Thursday \u00b7 conversation first",
+    "bounds": "[138,444][954,498]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Previous photo of Nandini",
+    "bounds": "[39,573][540,1935]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Next photo of Nandini",
+    "bounds": "[540,573][1041,1935]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Open Nandini's full profile, 1 of 1",
+    "bounds": "[87,1404][825,1887]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Nandini, 28",
+    "bounds": "[87,1404][518,1506]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Photo verified",
+    "bounds": "[542,1428][596,1482]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Hyderabad \u00b7 5 km away",
+    "bounds": "[147,1518][583,1572]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Classical dance, design walks, filter coffee",
+    "bounds": "[87,1608][825,1752]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Coffee",
+    "bounds": "[126,1816][251,1870]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Music",
+    "bounds": "[353,1816][462,1870]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Profile decisions",
+    "bounds": "[855,1557][1017,1887]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Like Nandini",
+    "bounds": "[864,1572][1008,1716]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Skip Nandini",
+    "bounds": "[864,1728][1008,1872]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Discover",
+    "bounds": "[52,2028][247,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Discover",
+    "bounds": "[77,2110][221,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Connections",
+    "bounds": "[247,2028][442,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Connect",
+    "bounds": "[274,2110][414,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Meetups",
+    "bounds": "[442,2028][638,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Meet",
+    "bounds": "[498,2110][581,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Chats",
+    "bounds": "[638,2028][833,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Chats",
+    "bounds": "[687,2110][784,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Profile",
+    "bounds": "[833,2028][1028,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Profile",
+    "bounds": "[877,2110][984,2149]",
+    "clickable": false,
+    "checked": false
+  }
+]

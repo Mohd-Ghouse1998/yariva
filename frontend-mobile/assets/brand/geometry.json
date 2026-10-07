@@ -1,0 +1,43 @@
+{
+  "launcherIcon": {
+    "background": "#FFFCFB",
+    "markScale": 0.58
+  },
+  "nativeLaunch": {
+    "background": "#FFFCFB",
+    "tagline": "#171719",
+    "petalSizeDp": 70,
+    "wordmarkHeightDp": 48,
+    "imageWidthDp": 152,
+    "taglineGapDp": 10,
+    "taglineFontSizeDp": 16,
+    "taglineLineHeightDp": 24,
+    "glows": {
+      "topRight": {
+        "color": "#F45F87",
+        "opacity": 0.07,
+        "sizeDp": 360,
+        "topDp": -120,
+        "rightDp": -120
+      },
+      "bottomLeft": {
+        "color": "#F8ABA8",
+        "opacity": 0.126,
+        "sizeDp": 380,
+        "bottomDp": -160,
+        "leftDp": -100
+      }
+    }
+  },
+  "colors": {
+    "ink": "#171719",
+    "ivory": "#FFFCFB",
+    "petalLight": "#F8ABA8",
+    "petal": "#F45F87",
+    "petalDeep": "#D02560",
+    "petalDarkLight": "#FADCE6",
+    "petalDarkMid": "#F0A9C4",
+    "petalDarkDeep": "#D36E98",
+    "darkCanvas": "#171719"
+  }
+}

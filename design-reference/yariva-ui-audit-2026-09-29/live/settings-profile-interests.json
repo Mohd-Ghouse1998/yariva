@@ -1,0 +1,164 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Interests",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Search interests\u2026",
+    "bounds": "[183,343][981,448]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "FOOD",
+    "bounds": "[60,513][1020,567]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Cooking",
+    "bounds": "[60,597][306,729]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Cooking",
+    "bounds": "[105,636][261,690]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Coffee",
+    "bounds": "[330,597][547,729]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Coffee",
+    "bounds": "[375,636][502,690]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "CULTURE",
+    "bounds": "[60,777][1020,831]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Movies",
+    "bounds": "[60,861][285,993]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Movies",
+    "bounds": "[105,900][240,954]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Music",
+    "bounds": "[309,861][512,993]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Music",
+    "bounds": "[354,900][467,954]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Books",
+    "bounds": "[536,861][743,993]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Books",
+    "bounds": "[581,900][698,954]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "WELLNESS",
+    "bounds": "[60,1041][1020,1095]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Fitness",
+    "bounds": "[60,1125][288,1257]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Fitness",
+    "bounds": "[105,1164][243,1218]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "LIFESTYLE",
+    "bounds": "[60,1305][1020,1359]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Travel",
+    "bounds": "[60,1389][265,1521]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Travel",
+    "bounds": "[105,1428][220,1482]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "OUTDOORS",
+    "bounds": "[60,1569][1020,1623]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Hiking",
+    "bounds": "[60,1653][270,1785]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Hiking",
+    "bounds": "[105,1692][225,1746]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "4 selected",
+    "bounds": "[60,1956][1020,2010]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Save changes",
+    "bounds": "[60,2040][1020,2172]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Save changes",
+    "bounds": "[400,2076][680,2136]",
+    "clickable": false,
+    "checked": false
+  }
+]

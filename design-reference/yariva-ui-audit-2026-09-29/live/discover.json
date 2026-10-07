@@ -1,0 +1,170 @@
+[
+  {
+    "text": "Dating location Hyderabad",
+    "bounds": "[60,111][204,255]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Yariva home",
+    "bounds": "[422,146][659,221]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Discovery preferences",
+    "bounds": "[876,111][1020,255]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Scenes",
+    "bounds": "[0,303][1080,591]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Renew scene",
+    "bounds": "[36,315][264,579]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "My Scene",
+    "bounds": "[56,525][244,579]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Duo \u00b7 Rohan. Approve your Scenes together",
+    "bounds": "[0,627][1080,807]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Duo \u00b7 Rohan",
+    "bounds": "[189,654][951,720]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Approve your Scenes together",
+    "bounds": "[189,726][951,780]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Blind Vibe, Thursday introductions",
+    "bounds": "[0,843][1080,1011]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Blind Vibe",
+    "bounds": "[138,867][954,933]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Thursday \u00b7 conversation first",
+    "bounds": "[138,933][954,987]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Previous photo of Nandini",
+    "bounds": "[39,1062][540,2010]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Next photo of Nandini",
+    "bounds": "[540,1062][1041,2010]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Open Nandini's full profile, 1 of 1",
+    "bounds": "[87,1893][825,2010]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Nandini, 28",
+    "bounds": "[87,1893][518,1995]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Photo verified",
+    "bounds": "[542,1917][596,1971]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Hyderabad \u00b7 5 km away",
+    "bounds": "[147,2007][583,2010]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Discover",
+    "bounds": "[52,2028][247,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Discover",
+    "bounds": "[77,2110][221,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Connections",
+    "bounds": "[247,2028][442,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Connect",
+    "bounds": "[274,2110][414,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Meetups",
+    "bounds": "[442,2028][638,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Meet",
+    "bounds": "[498,2110][581,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Chats",
+    "bounds": "[638,2028][833,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Chats",
+    "bounds": "[687,2110][784,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Profile",
+    "bounds": "[833,2028][1028,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Profile",
+    "bounds": "[877,2110][984,2149]",
+    "clickable": false,
+    "checked": false
+  }
+]

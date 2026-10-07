@@ -1,0 +1,218 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Usually free",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "DAYS",
+    "bounds": "[60,327][1020,381]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Monday",
+    "bounds": "[60,411][187,531]",
+    "clickable": true,
+    "checked": true
+  },
+  {
+    "text": "M",
+    "bounds": "[104,438][142,504]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Tuesday",
+    "bounds": "[199,411][326,531]",
+    "clickable": true,
+    "checked": true
+  },
+  {
+    "text": "T",
+    "bounds": "[248,438][276,504]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Wednesday",
+    "bounds": "[338,411][465,531]",
+    "clickable": true,
+    "checked": true
+  },
+  {
+    "text": "W",
+    "bounds": "[380,438][422,504]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Thursday",
+    "bounds": "[477,411][603,531]",
+    "clickable": true,
+    "checked": true
+  },
+  {
+    "text": "T",
+    "bounds": "[526,438][554,504]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Friday",
+    "bounds": "[615,411][742,531]",
+    "clickable": true,
+    "checked": true
+  },
+  {
+    "text": "F",
+    "bounds": "[665,438][690,504]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Saturday",
+    "bounds": "[754,411][881,531]",
+    "clickable": true,
+    "checked": true
+  },
+  {
+    "text": "S",
+    "bounds": "[803,438][830,504]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Sunday",
+    "bounds": "[893,411][1020,531]",
+    "clickable": true,
+    "checked": true
+  },
+  {
+    "text": "S",
+    "bounds": "[942,438][969,504]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "TIME OF DAY",
+    "bounds": "[60,579][1020,633]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Mornings",
+    "bounds": "[60,663][327,795]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Mornings",
+    "bounds": "[105,702][282,756]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Lunchtime",
+    "bounds": "[351,663][639,795]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Lunchtime",
+    "bounds": "[396,702][594,756]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Afternoons",
+    "bounds": "[663,663][963,795]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Afternoons",
+    "bounds": "[708,702][918,756]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Evenings",
+    "bounds": "[60,819][322,951]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Evenings",
+    "bounds": "[105,858][277,912]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Late nights",
+    "bounds": "[346,819][647,951]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Late nights",
+    "bounds": "[391,858][602,912]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Prefer weekends",
+    "bounds": "[62,1001][1018,1181]",
+    "clickable": true,
+    "checked": true
+  },
+  {
+    "text": "Prefer weekends",
+    "bounds": "[101,1064][799,1118]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Open to online meets",
+    "bounds": "[62,1181][1018,1363]",
+    "clickable": true,
+    "checked": true
+  },
+  {
+    "text": "Open to online meets",
+    "bounds": "[101,1246][799,1300]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "MAX MEETUPS PER WEEK",
+    "bounds": "[60,1413][1020,1455]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "2",
+    "bounds": "[99,1486][981,1591]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Save changes",
+    "bounds": "[60,2040][1020,2172]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Save changes",
+    "bounds": "[400,2076][680,2136]",
+    "clickable": false,
+    "checked": false
+  }
+]

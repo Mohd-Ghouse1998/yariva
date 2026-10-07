@@ -1,0 +1,230 @@
+[
+  {
+    "text": "Chats",
+    "bounds": "[454,142][625,223]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Notifications",
+    "bounds": "[888,117][1020,249]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Private conversations with mutual matches.",
+    "bounds": "[60,258][1020,360]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Open Blind Vibe test",
+    "bounds": "[48,396][1032,618]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "BL",
+    "bounds": "[92,473][147,539]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Blind Vibe test",
+    "bounds": "[228,440][545,506]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "48m ago",
+    "bounds": "[884,452][1032,494]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Hello from the phone",
+    "bounds": "[228,518][1032,572]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Open Duo chat",
+    "bounds": "[48,618][1032,840]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "DU",
+    "bounds": "[87,695][153,761]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Duo chat",
+    "bounds": "[228,662][423,728]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "1h ago",
+    "bounds": "[921,674][1032,716]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Duo test: hello from the phone",
+    "bounds": "[228,740][1032,794]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Open Meera",
+    "bounds": "[48,840][1032,1062]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Meera",
+    "bounds": "[228,884][367,950]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Photo verified",
+    "bounds": "[379,890][433,944]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "5d ago",
+    "bounds": "[916,896][1032,938]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Just matched! Hi \ud83d\udc4b",
+    "bounds": "[228,962][1032,1016]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Open Rohan",
+    "bounds": "[48,1062][1032,1284]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Rohan",
+    "bounds": "[228,1106][365,1172]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Photo verified",
+    "bounds": "[377,1112][431,1166]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "6d ago",
+    "bounds": "[915,1118][1032,1160]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Perfect. I'll grab us coffee after.",
+    "bounds": "[228,1184][1032,1238]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Open Asha",
+    "bounds": "[48,1284][1032,1506]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Asha",
+    "bounds": "[228,1328][340,1394]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Photo verified",
+    "bounds": "[352,1334][406,1388]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "6d ago",
+    "bounds": "[915,1340][1032,1382]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Yes please. Saturday afternoon?",
+    "bounds": "[228,1406][1032,1460]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Discover",
+    "bounds": "[52,2028][247,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Discover",
+    "bounds": "[77,2110][221,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Connections",
+    "bounds": "[247,2028][442,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Connect",
+    "bounds": "[274,2110][414,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Meetups",
+    "bounds": "[442,2028][638,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Meet",
+    "bounds": "[498,2110][581,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Chats",
+    "bounds": "[638,2028][833,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Chats",
+    "bounds": "[687,2110][784,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Profile",
+    "bounds": "[833,2028][1028,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Profile",
+    "bounds": "[877,2110][984,2149]",
+    "clickable": false,
+    "checked": false
+  }
+]

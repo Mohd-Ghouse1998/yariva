@@ -1,0 +1,2 @@
+ALTER TABLE "Like"
+ADD COLUMN "introNote" VARCHAR(300);

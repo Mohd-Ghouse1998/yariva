@@ -1,0 +1,278 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Discovery preferences",
+    "bounds": "[192,151][888,239]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Age",
+    "bounds": "[60,327][162,415]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "22 \u2013 40",
+    "bounds": "[836,327][1020,415]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Range, minimum",
+    "bounds": "[41,433][173,565]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Range, maximum",
+    "bounds": "[255,433][387,565]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Distance",
+    "bounds": "[60,601][284,689]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "within 30 km",
+    "bounds": "[704,601][1020,689]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Range",
+    "bounds": "[106,707][238,839]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Show me",
+    "bounds": "[60,875][1020,963]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Women",
+    "bounds": "[60,987][298,1119]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Women",
+    "bounds": "[93,1014][265,1092]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Men",
+    "bounds": "[316,987][481,1119]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Men",
+    "bounds": "[349,1014][448,1092]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Non-binary",
+    "bounds": "[499,987][824,1119]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Non-binary",
+    "bounds": "[532,1014][791,1092]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Trans women",
+    "bounds": "[60,1137][433,1269]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Trans women",
+    "bounds": "[93,1164][400,1242]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Trans men",
+    "bounds": "[451,1137][757,1269]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Trans men",
+    "bounds": "[484,1164][724,1242]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Agender",
+    "bounds": "[60,1287][321,1419]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Agender",
+    "bounds": "[93,1314][288,1392]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Other",
+    "bounds": "[339,1287][535,1419]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Other",
+    "bounds": "[372,1314][502,1392]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Prefer not to say",
+    "bounds": "[553,1287][995,1419]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Prefer not to say",
+    "bounds": "[586,1314][962,1392]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Open to",
+    "bounds": "[60,1467][1020,1555]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "friendship",
+    "bounds": "[60,1579][356,1711]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "friendship",
+    "bounds": "[93,1606][323,1684]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "companionship",
+    "bounds": "[374,1579][788,1711]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "companionship",
+    "bounds": "[407,1606][755,1684]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "shared interests",
+    "bounds": "[60,1729][495,1861]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "shared interests",
+    "bounds": "[93,1756][462,1834]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "relationship",
+    "bounds": "[513,1729][847,1861]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "relationship",
+    "bounds": "[546,1756][814,1834]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "dating",
+    "bounds": "[60,1879][270,2002]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "dating",
+    "bounds": "[93,1906][237,1984]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "committed relationship",
+    "bounds": "[288,1879][879,2002]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "committed relationship",
+    "bounds": "[321,1906][846,1984]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "marriage minded",
+    "bounds": "[60,2029][513,2002]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "marriage minded",
+    "bounds": "[93,2056][480,2002]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Same-city only",
+    "bounds": "[62,2211][1018,2002]",
+    "clickable": true,
+    "checked": true
+  },
+  {
+    "text": "Same-city only",
+    "bounds": "[101,2235][799,2002]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Show people who live in your city.",
+    "bounds": "[101,2319][799,2002]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Save changes",
+    "bounds": "[60,2040][1020,2172]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Save changes",
+    "bounds": "[355,2065][725,2148]",
+    "clickable": false,
+    "checked": false
+  }
+]

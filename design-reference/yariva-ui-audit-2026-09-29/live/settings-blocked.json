@@ -1,0 +1,26 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Blocked",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "No one is blocked",
+    "bounds": "[330,1138][749,1204]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Blocked people can\u2019t see your profile, message, or call you.",
+    "bounds": "[72,1228][1008,1360]",
+    "clickable": false,
+    "checked": false
+  }
+]

@@ -1,0 +1,68 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Photos",
+    "bounds": "[192,151][888,239]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Profile photo 1, approved, primary",
+    "bounds": "[60,327][360,727]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "PRIMARY",
+    "bounds": "[102,351][284,417]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Profile photo 2, approved",
+    "bounds": "[390,327][690,727]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Add profile photo 3",
+    "bounds": "[720,327][1020,727]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Add profile photo 4",
+    "bounds": "[60,757][360,1157]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Add profile photo 5",
+    "bounds": "[390,757][690,1157]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Add profile photo 6",
+    "bounds": "[720,757][1020,1157]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Done",
+    "bounds": "[60,2040][1020,2172]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Done",
+    "bounds": "[471,2065][610,2148]",
+    "clickable": false,
+    "checked": false
+  }
+]

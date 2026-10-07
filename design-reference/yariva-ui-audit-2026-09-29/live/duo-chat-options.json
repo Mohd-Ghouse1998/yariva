@@ -1,0 +1,56 @@
+[
+  {
+    "text": "Close dialog",
+    "bounds": "[0,0][1080,2340]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Conversation options",
+    "bounds": "[60,858][1020,1438]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Conversation options",
+    "bounds": "[110,908][790,974]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Your four-person conversation",
+    "bounds": "[110,986][790,1040]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Close conversation options",
+    "bounds": "[826,908][970,1052]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Duo meetup",
+    "bounds": "[110,1100][970,1232]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Duo meetup",
+    "bounds": "[417,1136][663,1196]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Members & safety",
+    "bounds": "[110,1256][970,1388]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Members & safety",
+    "bounds": "[359,1292][722,1352]",
+    "clickable": false,
+    "checked": false
+  }
+]

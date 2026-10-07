@@ -1,0 +1,62 @@
+[
+  {
+    "text": "Close",
+    "bounds": "[48,123][168,243]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Yariva Vibe",
+    "bounds": "[434,156][647,210]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "View current Vibe",
+    "bounds": "[912,123][1032,243]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Vibe recording progress",
+    "bounds": "[48,267][1032,276]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Flip",
+    "bounds": "[912,312][1044,438]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Add music",
+    "bounds": "[912,474][1044,600]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Show effects",
+    "bounds": "[912,636][1044,762]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Mute original audio",
+    "bounds": "[912,798][1044,924]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "5s",
+    "bounds": "[521,1863][559,1905]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Record Vibe",
+    "bounds": "[432,1932][648,2148]",
+    "clickable": true,
+    "checked": false
+  }
+]

@@ -1,0 +1,134 @@
+[
+  {
+    "text": "Profile",
+    "bounds": "[445,142][634,223]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Settings",
+    "bounds": "[876,111][1020,255]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Chinmoy, 31",
+    "bounds": "[240,291][526,357]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Hyderabad \u00b7 he/him",
+    "bounds": "[240,363][604,417]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Profile complete",
+    "bounds": "[264,429][546,471]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "PROFILE",
+    "bounds": "[60,531][1020,573]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "My Vibe",
+    "bounds": "[62,596][1018,770]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "My Vibe",
+    "bounds": "[221,629][895,683]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "A 5-second intro with your style and sound",
+    "bounds": "[221,686][895,737]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Edit profile",
+    "bounds": "[62,770][1018,944]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Edit profile",
+    "bounds": "[221,804][895,858]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Your details, photos and preferences",
+    "bounds": "[221,861][895,912]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Discover",
+    "bounds": "[52,2028][247,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Discover",
+    "bounds": "[77,2110][221,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Connections",
+    "bounds": "[247,2028][442,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Connect",
+    "bounds": "[274,2110][414,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Meetups",
+    "bounds": "[442,2028][638,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Meet",
+    "bounds": "[498,2110][581,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Chats",
+    "bounds": "[638,2028][833,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Chats",
+    "bounds": "[687,2110][784,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Profile",
+    "bounds": "[833,2028][1028,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Profile",
+    "bounds": "[877,2110][984,2149]",
+    "clickable": false,
+    "checked": false
+  }
+]

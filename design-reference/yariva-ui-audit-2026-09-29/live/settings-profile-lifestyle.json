@@ -1,0 +1,152 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Lifestyle",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Smoking",
+    "bounds": "[62,329][1018,503]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Smoking",
+    "bounds": "[221,389][748,443]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Never",
+    "bounds": "[784,389][895,443]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Drinking",
+    "bounds": "[62,503][1018,677]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Drinking",
+    "bounds": "[221,564][657,618]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Occasional",
+    "bounds": "[693,564][895,618]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Exercise",
+    "bounds": "[62,677][1018,851]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Exercise",
+    "bounds": "[221,738][725,792]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Weekly",
+    "bounds": "[761,738][895,792]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Diet",
+    "bounds": "[62,851][1018,1025]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Diet",
+    "bounds": "[221,912][681,966]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Omnivore",
+    "bounds": "[717,912][895,966]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Pets",
+    "bounds": "[62,1025][1018,1199]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Pets",
+    "bounds": "[221,1086][672,1140]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Likes Pets",
+    "bounds": "[708,1086][895,1140]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Sleep",
+    "bounds": "[62,1199][1018,1373]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Sleep",
+    "bounds": "[221,1260][718,1314]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Flexible",
+    "bounds": "[754,1260][895,1314]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Social energy",
+    "bounds": "[62,1373][1018,1547]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Social energy",
+    "bounds": "[221,1434][689,1488]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Balanced",
+    "bounds": "[725,1434][895,1488]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Save changes",
+    "bounds": "[60,2040][1020,2172]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Save changes",
+    "bounds": "[400,2076][680,2136]",
+    "clickable": false,
+    "checked": false
+  }
+]

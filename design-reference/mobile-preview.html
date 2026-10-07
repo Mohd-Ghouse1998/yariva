@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aroha mobile preview</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        background: #08070d;
+        font-family: system-ui, sans-serif;
+      }
+      .device {
+        width: min(var(--device-width, 390px), calc(100vw - 16px));
+        height: min(812px, calc(100vh - 16px));
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 12px;
+        background: #0b0910;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+      }
+      iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: #0b0910;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="device" aria-label="Aroha phone preview">
+      <iframe
+        title="Aroha mobile app"
+        src="http://localhost:8084/login"
+      ></iframe>
+    </main>
+    <script>
+      const query = new URLSearchParams(window.location.search);
+      const width = Math.min(
+        430,
+        Math.max(320, Number(query.get("width")) || 390),
+      );
+      const path = query.get("path") || "/login";
+      document.documentElement.style.setProperty(
+        "--device-width",
+        `${width}px`,
+      );
+      document.querySelector("iframe").src =
+        `http://localhost:8084${path.startsWith("/") ? path : `/${path}`}`;
+    </script>
+  </body>
+</html>

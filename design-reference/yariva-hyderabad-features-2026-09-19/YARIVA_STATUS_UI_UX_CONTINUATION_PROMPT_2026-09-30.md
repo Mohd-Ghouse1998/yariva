@@ -1,0 +1,38 @@
+# Paste into the existing Yariva implementation chat
+
+Continue the Yariva work in **this existing chat and goal**. The workspace is `/Users/mohdghouse/Documents/Aroha`. I authorize you to inspect the code, fix verified UI/UX and implementation gaps, run the local app and checks, and update the existing tracker. Preserve working features, test accounts, local data and existing services. Do not restart, fork, duplicate modules or create a second progress tracker.
+
+Read these sources selectively, in this order:
+
+1. `design-reference/yariva-hyderabad-features-2026-09-19/YARIVA_IMPLEMENTATION_PROGRESS.md` — canonical status and its **30 September status and UI audit**.
+2. `design-reference/yariva-hyderabad-features-2026-09-19/YARIVA_FULL_STACK_UI_UX_MASTER_PROMPT_2026-09-20.md` — feature contract and scope.
+3. `design-reference/yariva-redesign-brief-2026-09-13/MOBILE_APP_V3_THEME_ADDENDUM.md` — visual foundation. The existing mobile app tokens/components are the implementation truth where an older exploratory color suggestion differs.
+4. `frontend-mobile/src/theme/`, shared UI components, the affected screen, localization resources/tests and corresponding backend contract only when needed. Use bounded searches/reads.
+
+## Establish and use a design skill before editing UI
+
+Inspect the design skills already available in your AI environment and use a relevant trustworthy one if available. Read the v3 addendum and the actual Yariva theme/components; learn the established patterns for Space Grotesk headings, Inter body, warm semantic palette, button/input sizes, 48dp touch targets, spacing, responsive layout, Light/Dark mode, 1.3x text, safe areas, keyboard behavior, loading/empty/error states, accessibility and dating-app privacy/safety. Consult current official mobile accessibility guidance only for a specific unresolved question; do not install an unknown third-party skill or use a generic style kit that replaces Yariva.
+
+If you are running **Claude Code**, create/register a concise project skill at `.claude/skills/yariva-mobile-design/SKILL.md` using its supported format, with a clear `name` and `description`, source-file links, rules for reusing the app's theme/components, an audit checklist, and a verify-on-device workflow. If your environment uses another skill mechanism, use its supported project-local equivalent and record the path in the tracker. The skill is reusable reference material, not a place to copy large components or create a parallel design system. Load and apply it for every subsequent UI fix in this task. Do not spend tokens drafting an expansive design essay.
+
+## Reconcile status, then act
+
+The last audited tracker has **6 of 7 active feature groups complete**. Do not mark everything done. FEATURE-H (Scene streaks, Vibe Points and Sunday recap/share card) remains open because P6-06 has unverified export states. P0-06 real APNs/FCM receipt needs provider credentials; record the blocker and continue independent work. QA-02/03/04/06 remain open. FEATURE-F escrow/payments was explicitly removed. Reviewed local venue fixtures are not a live licensed Places feed. Native-speaker localization review, production provider coverage, commercial music, AR lenses and automated moderation are not silently implemented by UI polish. Retain verified A–E/G and avoid broad new feature work unless a real dependency is missing.
+
+Start with the reproduced UI bug **AUDIT-03**: the live Android Weekly recap says `1 days` and `Best · 1 days`. Find the unconditional `activity.days`/`activity.longest` localization strings. Implement a small shared locale-aware 0/1/2 formatter for both values without changing reward math or persisted data. Add a meaningful focused test and verify the singular case on the physical phone.
+
+Then work through P6-06 and independent QA gaps in order of practical impact. Verify actual tracked-zero, nonzero and selected-metrics recap PNG contents, dark export and chooser behavior where available. Do not fabricate activity, change the signed-in user's history or externally post a card. Finish the engineering contract/security sweep within compatible dependencies, measure the remaining performance targets, and complete the realistic device/state matrix. Mark each task complete **only after its own acceptance evidence**; keep iOS/tablet/provider checks open if those environments are unavailable. Use additive migrations and backups only if a necessary backend change emerges; stop dependent writes if backup fails.
+
+## Focused UI/UX review
+
+The 30 September live hierarchy opened Discover, a profile card and Full Profile, Connections, Chats and a solo conversation, Meetups upcoming/past, Profile and Weekly recap. Those routes were usable, but hierarchy/source inspection cannot certify visual polish, portrait treatment, contrast or Gen-Z preference. The phone is wireless ADB `127.0.0.1:5556`; Metro and API are normally mapped through ADB reverse 8081/3001, with MinIO 59000 when needed. Recheck rather than assuming a reconnect preserves mappings. Review those core flows plus Scene, Duo, Blind Vibe, Vibe recording, plan creation and settings/profile editing where safely possible. Inspect empty/loading/offline/permission/error states and Light/Dark, normal/1.3x text, short/narrow layout and keyboard overlap. **Do not capture screenshots, screen recordings or phone images**, per my standing preference. Use live navigation, accessibility hierarchy, source/tokens and direct observation permitted in this chat; state where aesthetic judgment remains unverified without an image or my visual feedback. Avoid submitting likes, chats, plan changes, reports or account edits just to audit layout.
+
+For each issue, record route, state, reproducible evidence, impact and the smallest correction. Prioritize broken or confusing interactions, duplicated choices, inaccessible targets, clipped content, weak readability and inconsistent theme before decorative change. Keep the existing v3/Yariva visual foundation; no automatic switch to pink, blue, gradients, new fonts or a different navigation model. Make the UI compact, calm, modern and premium through coherent hierarchy, spacing, responsive controls and clear copy. Preserve safety/privacy disclosures and feature behavior. Do not claim that aesthetics or market appeal are objectively proven by source code alone.
+
+## Code and verification rules
+
+Reuse existing Expo/React Native components, semantic tokens, typed API contracts, localization helpers and backend services. Avoid hardcoded screen data, duplicate code paths, unused packages, broad abstractions and unrelated refactors. Fix one verified vertical slice at a time; run focused tests, then required mobile/backend gates only when affected. Check the changed screen live through Metro, rebuild the native client only for native changes. Do not stop at a plan: implement the independently actionable fixes, then give a concise evidence-based handoff.
+
+Maintain **only** `YARIVA_IMPLEMENTATION_PROGRESS.md` as the task tracker: update the current checkpoint, AUDIT-03/04/05, P6-06 and affected QA boxes incrementally with actual evidence. `[x]` means verified; `[ ]` means pending/partial/blocked with reason. Preserve earlier evidence and do not declare the existing goal complete until its original scope and final acceptance are actually met. Keep chat updates short to save credits and tokens; use targeted file reads, skip repeated passing checks, and summarize diffs/results rather than pasting long logs.
+
+At the end, report: exact fixes and file paths, live-device states checked, test results, remaining task IDs and external blockers, plus the tracker and new design-skill paths.

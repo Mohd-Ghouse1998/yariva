@@ -1,0 +1,164 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Meetup",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Confirmed",
+    "bounds": "[72,309][252,351]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "with Rohan",
+    "bounds": "[300,303][506,357]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Public art and coffee",
+    "bounds": "[48,369][688,453]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Thu, 24 Sept, 4:44\u202fpm",
+    "bounds": "[206,545][827,611]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "120 min",
+    "bounds": "[851,551][994,605]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Open Selected public caf\u00e9 in Google Maps",
+    "bounds": "[50,665][1030,839]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Selected public caf\u00e9",
+    "bounds": "[206,694][919,760]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Madhapur, Hyderabad \u2014 public meeting point",
+    "bounds": "[206,760][919,814]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Safety tools",
+    "bounds": "[50,879][1030,1065]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Safety tools",
+    "bounds": "[206,912][919,978]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Share, check in or get help",
+    "bounds": "[206,978][919,1032]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Share with a contact",
+    "bounds": "[86,1104][994,1236]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Share with a contact",
+    "bounds": "[335,1140][746,1200]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "I arrived",
+    "bounds": "[86,1260][525,1362]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "I arrived",
+    "bounds": "[232,1281][379,1341]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "I\u2019m okay",
+    "bounds": "[555,1260][994,1362]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "I\u2019m okay",
+    "bounds": "[701,1281][848,1341]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "I need help",
+    "bounds": "[86,1386][525,1488]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "I need help",
+    "bounds": "[207,1407][405,1467]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Call 112",
+    "bounds": "[555,1386][994,1488]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Call 112",
+    "bounds": "[706,1407][843,1467]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Mark complete",
+    "bounds": "[86,1512][994,1644]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Mark complete",
+    "bounds": "[390,1548][691,1608]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Cancel meetup",
+    "bounds": "[48,1718][1032,1850]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Cancel meetup",
+    "bounds": "[388,1754][692,1814]",
+    "clickable": false,
+    "checked": false
+  }
+]

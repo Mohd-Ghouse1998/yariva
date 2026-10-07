@@ -1,0 +1,218 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Profile",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Profile options",
+    "bounds": "[876,123][1020,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Product researcher and Kuchipudi learner. I like museum afternoons, curious questions, and making plans that leave room for serendipity.",
+    "bounds": "[98,303][982,98]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "My ideal unhurried Sunday\u2026",
+    "bounds": "[98,303][982,215]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "A slow breakfast, a long walk, and one plan worth looking forward to.",
+    "bounds": "[98,303][982,359]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "INTERESTS",
+    "bounds": "[60,445][1020,487]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Coffee",
+    "bounds": "[131,561][248,615]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Music",
+    "bounds": "[338,561][441,615]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Travel",
+    "bounds": "[531,561][637,615]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Movies",
+    "bounds": "[727,561][851,615]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "LIFESTYLE",
+    "bounds": "[60,716][1020,758]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "WEEKLY",
+    "bounds": "[131,832][279,886]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "OMNIVORE",
+    "bounds": "[369,832][565,886]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "BALANCED",
+    "bounds": "[655,832][854,886]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Slow and steady",
+    "bounds": "[131,940][422,994]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Telugu",
+    "bounds": "[512,940][628,994]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Hindi",
+    "bounds": "[718,940][810,994]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "English",
+    "bounds": "[131,1048][258,1102]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "VALUES SHARED BY CHOICE",
+    "bounds": "[60,1203][1020,1245]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Relocation openness",
+    "bounds": "[98,1292][982,1346]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Open to discussing within India",
+    "bounds": "[98,1352][982,1418]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Career priority",
+    "bounds": "[98,1469][982,1523]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Ambitious with room for relationships",
+    "bounds": "[98,1529][982,1595]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Family involvement comfort",
+    "bounds": "[98,1646][982,1700]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Comfortable after trust develops",
+    "bounds": "[98,1706][982,1772]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Marriage timeline",
+    "bounds": "[98,1823][982,1877]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Open to a clear timeline together",
+    "bounds": "[98,1883][982,1949]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Children preference",
+    "bounds": "[98,2000][982,2025]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Open to discussing",
+    "bounds": "[98,2060][982,2025]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Religion spirituality",
+    "bounds": "[98,2177][982,2025]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Personal and respectful",
+    "bounds": "[98,2237][982,2025]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Not for me",
+    "bounds": "[60,2064][430,2196]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Not for me",
+    "bounds": "[139,2100][351,2160]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Interested",
+    "bounds": "[466,2064][1020,2196]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Interested",
+    "bounds": "[682,2100][889,2160]",
+    "clickable": false,
+    "checked": false
+  }
+]

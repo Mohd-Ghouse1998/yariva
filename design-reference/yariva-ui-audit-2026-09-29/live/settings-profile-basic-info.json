@@ -1,0 +1,218 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Basic details",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "NAME",
+    "bounds": "[60,327][1020,369]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Chinmoy",
+    "bounds": "[99,400][981,505]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "PRONOUNS (OPTIONAL)",
+    "bounds": "[60,570][1020,612]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "he/him",
+    "bounds": "[99,643][981,748]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Gender (optional)",
+    "bounds": "[60,813][1020,867]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Woman",
+    "bounds": "[60,879][290,1011]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Woman",
+    "bounds": "[105,918][245,972]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Man",
+    "bounds": "[302,879][473,1011]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Man",
+    "bounds": "[347,918][428,972]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Non-binary",
+    "bounds": "[485,879][788,1011]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Non-binary",
+    "bounds": "[530,918][743,972]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Trans woman",
+    "bounds": "[60,1023][400,1155]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Trans woman",
+    "bounds": "[105,1062][355,1116]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Trans man",
+    "bounds": "[412,1023][697,1155]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Trans man",
+    "bounds": "[457,1062][652,1116]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Agender",
+    "bounds": "[709,1023][960,1155]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Agender",
+    "bounds": "[754,1062][915,1116]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Other",
+    "bounds": "[60,1167][258,1299]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Other",
+    "bounds": "[105,1206][213,1260]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Prefer not to say",
+    "bounds": "[270,1167][672,1299]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Prefer not to say",
+    "bounds": "[315,1206][627,1260]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Date of birth",
+    "bounds": "[60,1347][1020,1401]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "15",
+    "bounds": "[99,1429][290,1534]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "6",
+    "bounds": "[391,1429][582,1534]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "1995",
+    "bounds": "[683,1429][981,1534]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "CITY",
+    "bounds": "[60,1599][1020,1641]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Hyderabad",
+    "bounds": "[99,1672][981,1777]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "REGION / STATE",
+    "bounds": "[60,1842][1020,1884]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Telangana",
+    "bounds": "[99,1915][981,2020]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "COUNTRY CODE (2 LETTERS)",
+    "bounds": "[60,2085][1020,2026]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "IN",
+    "bounds": "[99,2158][981,2026]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Using Hyderabad, IN",
+    "bounds": "[60,2328][1020,2026]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Save changes",
+    "bounds": "[60,2064][1020,2196]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Save changes",
+    "bounds": "[400,2100][680,2160]",
+    "clickable": false,
+    "checked": false
+  }
+]

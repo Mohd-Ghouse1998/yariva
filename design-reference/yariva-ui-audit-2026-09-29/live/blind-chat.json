@@ -1,0 +1,122 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[12,117][156,261]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "View Blind Vibe test's profile",
+    "bounds": "[156,129][636,249]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "BL",
+    "bounds": "[179,156][234,222]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Blind Vibe test",
+    "bounds": "[282,129][636,195]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Yariva member",
+    "bounds": "[282,195][515,249]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Start video call",
+    "bounds": "[636,117][780,261]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Start voice call",
+    "bounds": "[780,117][924,261]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Conversation options",
+    "bounds": "[924,117][1068,261]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Photos revealed",
+    "bounds": "[48,306][174,432]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Photos revealed",
+    "bounds": "[210,309][1032,375]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Keep the conversation going.",
+    "bounds": "[210,375][1032,429]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "You matched on Tuesday",
+    "bounds": "[344,519][736,573]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Keep early conversations here. When it feels right, suggest a casual public meetup.",
+    "bounds": "[141,639][1008,747]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Hello from the second test participant",
+    "bounds": "[93,852][750,972]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "3:48\u202fpm",
+    "bounds": "[625,996][750,1038]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Hello from the phone",
+    "bounds": "[572,1137][990,1197]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "3:49\u202fpm",
+    "bounds": "[865,1221][990,1263]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Attach",
+    "bounds": "[36,2028][180,2172]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Message Blind Vibe test\u2026",
+    "bounds": "[249,2047][759,2152]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Send message",
+    "bounds": "[912,2034][1044,2166]",
+    "clickable": true,
+    "checked": false
+  }
+]

@@ -1,0 +1,80 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Language & tone",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "APP LANGUAGE",
+    "bounds": "[60,327][1020,369]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "English",
+    "bounds": "[62,392][1018,566]",
+    "clickable": true,
+    "checked": true
+  },
+  {
+    "text": "English",
+    "bounds": "[221,452][883,506]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Hindi",
+    "bounds": "[62,566][1018,740]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Hindi",
+    "bounds": "[221,627][883,681]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Telugu",
+    "bounds": "[62,740][1018,914]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Telugu",
+    "bounds": "[221,801][883,855]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Tone",
+    "bounds": "[60,964][1020,1006]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Hyderabad casual tone",
+    "bounds": "[62,1029][1018,1290]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Hyderabad casual tone",
+    "bounds": "[101,1053][799,1107]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Adds a light local flavour to friendly, low-risk copy. Safety and consent actions stay clear.",
+    "bounds": "[101,1113][799,1266]",
+    "clickable": false,
+    "checked": false
+  }
+]

@@ -1,0 +1,272 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Activity",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Unread. New message. You have a new message.",
+    "bounds": "[48,303][1032,531]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "BV",
+    "bounds": "[106,384][169,450]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "New message",
+    "bounds": "[231,330][948,396]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "You have a new message.",
+    "bounds": "[231,399][948,453]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Unread",
+    "bounds": "[981,407][1002,428]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "46m ago",
+    "bounds": "[231,462][948,504]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Unread. It\u2019s a Duo match. Both Duos chose each other.",
+    "bounds": "[48,531][1032,759]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "It\u2019s a Duo match",
+    "bounds": "[231,558][948,624]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Both Duos chose each other.",
+    "bounds": "[231,627][948,681]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Unread",
+    "bounds": "[981,635][1002,656]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "5d ago",
+    "bounds": "[231,690][948,732]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Unread. Your Wingman is in. Rohan accepted your Wingman invite.",
+    "bounds": "[48,759][1032,987]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "R",
+    "bounds": "[123,840][152,906]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Your Wingman is in",
+    "bounds": "[231,786][948,852]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Rohan accepted your Wingman invite.",
+    "bounds": "[231,855][948,909]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Unread",
+    "bounds": "[981,863][1002,884]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "5d ago",
+    "bounds": "[231,918][948,960]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Unread. Your date is confirmed. The exact public venue is now visible to both of you.",
+    "bounds": "[48,987][1032,1269]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Your date is confirmed",
+    "bounds": "[231,1014][948,1080]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "The exact public venue is now visible to both of you.",
+    "bounds": "[231,1083][948,1191]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Unread",
+    "bounds": "[981,1118][1002,1139]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "6d ago",
+    "bounds": "[231,1200][948,1242]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "You matched. You and Kabir just matched. Say hi when you're ready.",
+    "bounds": "[48,1269][1032,1551]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "K",
+    "bounds": "[123,1377][153,1443]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "You matched",
+    "bounds": "[231,1296][1002,1362]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "You and Kabir just matched. Say hi when you're ready.",
+    "bounds": "[231,1365][1002,1473]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "6d ago",
+    "bounds": "[231,1482][1002,1524]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Unread. Message from Meera. You have a new message.",
+    "bounds": "[48,1551][1032,1779]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "M",
+    "bounds": "[117,1632][158,1698]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Message from Meera",
+    "bounds": "[231,1578][948,1644]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "You have a new message.",
+    "bounds": "[231,1647][948,1701]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Unread",
+    "bounds": "[981,1655][1002,1676]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "6d ago",
+    "bounds": "[231,1710][948,1752]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "You matched. You and Meera just matched. Say hi when you're ready.",
+    "bounds": "[48,1779][1032,2061]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "M",
+    "bounds": "[117,1887][158,1953]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "You matched",
+    "bounds": "[231,1806][1002,1872]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "You and Meera just matched. Say hi when you're ready.",
+    "bounds": "[231,1875][1002,1983]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "6d ago",
+    "bounds": "[231,1992][1002,2034]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Unread. Message from Rohan. You have a new message.",
+    "bounds": "[48,2061][1032,2196]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "R",
+    "bounds": "[123,2142][152,2196]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Message from Rohan",
+    "bounds": "[231,2088][948,2154]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "You have a new message.",
+    "bounds": "[231,2157][948,2196]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Unread",
+    "bounds": "[981,2165][1002,2186]",
+    "clickable": false,
+    "checked": false
+  }
+]

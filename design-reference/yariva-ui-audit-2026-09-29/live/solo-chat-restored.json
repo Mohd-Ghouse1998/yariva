@@ -1,0 +1,86 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[12,117][156,261]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "View Meera's profile",
+    "bounds": "[156,129][636,249]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Meera",
+    "bounds": "[282,129][636,195]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Yariva member",
+    "bounds": "[282,195][515,249]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Start video call",
+    "bounds": "[636,117][780,261]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Start voice call",
+    "bounds": "[780,117][924,261]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Conversation options",
+    "bounds": "[924,117][1068,261]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "You matched on Wednesday",
+    "bounds": "[320,342][761,396]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Keep early conversations here. When it feels right, suggest a casual public meetup.",
+    "bounds": "[141,462][1008,570]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Just matched! Hi \ud83d\udc4b",
+    "bounds": "[93,675][489,735]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "4:39\u202fpm",
+    "bounds": "[364,759][489,801]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Attach",
+    "bounds": "[36,1929][180,2073]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Message Meera\u2026",
+    "bounds": "[249,1948][759,2053]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Send message",
+    "bounds": "[912,1935][1044,2067]",
+    "clickable": true,
+    "checked": false
+  }
+]

@@ -1,0 +1,248 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Devices & sessions",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Review devices with access to your account. Sign out anything you do not recognise.",
+    "bounds": "[60,327][1020,435]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Android device",
+    "bounds": "[225,561][780,627]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Android \u00b7 vtest \u00b7 seen 1h ago",
+    "bounds": "[225,633][780,675]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Sign out Android device",
+    "bounds": "[816,552][975,684]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Sign out",
+    "bounds": "[816,591][975,645]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Duo final health",
+    "bounds": "[225,756][780,822]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Android \u00b7 v0.3.0 \u00b7 seen 5d ago",
+    "bounds": "[225,828][780,870]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Sign out Duo final health",
+    "bounds": "[816,747][975,879]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Sign out",
+    "bounds": "[816,786][975,840]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Duo vote test",
+    "bounds": "[225,951][780,1017]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Android \u00b7 v0.3.0 \u00b7 seen 5d ago",
+    "bounds": "[225,1023][780,1065]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Sign out Duo vote test",
+    "bounds": "[816,942][975,1074]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Sign out",
+    "bounds": "[816,981][975,1035]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Duo vote test",
+    "bounds": "[225,1146][780,1212]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Android \u00b7 v0.3.0 \u00b7 seen 5d ago",
+    "bounds": "[225,1218][780,1260]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Sign out Duo vote test",
+    "bounds": "[816,1137][975,1269]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Sign out",
+    "bounds": "[816,1176][975,1230]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Duo discovery test",
+    "bounds": "[225,1341][780,1407]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Android \u00b7 v0.3.0 \u00b7 seen 5d ago",
+    "bounds": "[225,1413][780,1455]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Sign out Duo discovery test",
+    "bounds": "[816,1332][975,1464]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Sign out",
+    "bounds": "[816,1371][975,1425]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Duo live test",
+    "bounds": "[225,1536][780,1602]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Android \u00b7 v0.3.0 \u00b7 seen 5d ago",
+    "bounds": "[225,1608][780,1650]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Sign out Duo live test",
+    "bounds": "[816,1527][975,1659]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Sign out",
+    "bounds": "[816,1566][975,1620]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Wingman live verification",
+    "bounds": "[225,1731][780,1797]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Unknown \u00b7 seen 5d ago",
+    "bounds": "[225,1803][780,1845]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Sign out Wingman live verification",
+    "bounds": "[816,1722][975,1854]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Sign out",
+    "bounds": "[816,1761][975,1815]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Codex diagnostic",
+    "bounds": "[225,1926][780,1992]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Android \u00b7 v0.3.0 \u00b7 seen 6d ago",
+    "bounds": "[225,1998][780,2040]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Sign out Codex diagnostic",
+    "bounds": "[816,1917][975,2049]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Sign out",
+    "bounds": "[816,1956][975,2010]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Codex integration",
+    "bounds": "[225,2121][780,2187]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Android \u00b7 v0.3.0 \u00b7 seen 6d ago",
+    "bounds": "[225,2193][780,2196]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Sign out Codex integration",
+    "bounds": "[816,2112][975,2196]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Sign out",
+    "bounds": "[816,2151][975,2196]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Synthetic test",
+    "bounds": "[225,2316][780,2196]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Sign out Synthetic test",
+    "bounds": "[816,2307][975,2196]",
+    "clickable": true,
+    "checked": false
+  }
+]

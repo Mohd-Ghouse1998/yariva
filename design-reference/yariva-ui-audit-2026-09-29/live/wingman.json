@@ -1,0 +1,74 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Your Duo",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "ME",
+    "bounds": "[437,441][505,507]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "R",
+    "bounds": "[594,441][623,507]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Rohan",
+    "bounds": "[459,621][620,693]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Connected privately",
+    "bounds": "[353,705][726,759]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Approve your current Scene",
+    "bounds": "[251,884][886,950]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Find a rooftop live-music cafe tonight",
+    "bounds": "[251,956][886,1064]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Approve this Scene",
+    "bounds": "[101,1100][979,1232]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Approve this Scene",
+    "bounds": "[345,1136][735,1196]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Leave Duo",
+    "bounds": "[60,1321][1020,1453]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Leave Duo",
+    "bounds": "[435,1357][645,1417]",
+    "clickable": false,
+    "checked": false
+  }
+]

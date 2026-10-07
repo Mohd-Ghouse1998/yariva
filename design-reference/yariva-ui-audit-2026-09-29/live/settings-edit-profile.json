@@ -1,0 +1,188 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Edit profile",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "ABOUT YOU",
+    "bounds": "[60,351][1020,393]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Basic details",
+    "bounds": "[62,416][1018,590]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Basic details",
+    "bounds": "[221,449][895,503]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Chinmoy \u00b7 Hyderabad",
+    "bounds": "[221,506][895,557]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Bio & headline",
+    "bounds": "[62,590][1018,764]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Bio & headline",
+    "bounds": "[221,624][895,678]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Slow coffee \u00b7 Long walks \u00b7 Building Aroha",
+    "bounds": "[221,681][895,732]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Photos",
+    "bounds": "[62,764][1018,938]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Photos",
+    "bounds": "[221,798][895,852]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "2 photos",
+    "bounds": "[221,855][895,906]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Interests",
+    "bounds": "[62,938][1018,1112]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Interests",
+    "bounds": "[221,972][895,1026]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "4 selected",
+    "bounds": "[221,1029][895,1080]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Lifestyle",
+    "bounds": "[62,1112][1018,1286]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Lifestyle",
+    "bounds": "[221,1173][895,1227]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "PREFERENCES",
+    "bounds": "[60,1336][1020,1378]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Looking for",
+    "bounds": "[62,1401][1018,1575]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Looking for",
+    "bounds": "[221,1461][895,1515]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Discovery preferences",
+    "bounds": "[62,1575][1018,1749]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Discovery preferences",
+    "bounds": "[221,1636][895,1690]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Usually free",
+    "bounds": "[62,1749][1018,1923]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Usually free",
+    "bounds": "[221,1810][895,1864]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "OPTIONAL DETAILS",
+    "bounds": "[60,1973][1020,2015]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Languages & values",
+    "bounds": "[62,2038][1018,2212]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Languages & values",
+    "bounds": "[221,2071][895,2125]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Add what matters to you",
+    "bounds": "[221,2128][895,2179]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Conversation starters",
+    "bounds": "[62,2212][1018,2340]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Conversation starters",
+    "bounds": "[221,2246][895,2300]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "3 answers",
+    "bounds": "[221,2303][895,2340]",
+    "clickable": false,
+    "checked": false
+  }
+]

@@ -1,0 +1,98 @@
+{
+  "expo": {
+    "name": "Yariva",
+    "slug": "yariva",
+    "scheme": [
+      "yariva",
+      "aroha"
+    ],
+    "version": "0.3.0",
+    "orientation": "portrait",
+    "icon": "./assets/brand/app-icon-ios.png",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aroha.mobile",
+      "buildNumber": "2",
+      "icon": "./assets/brand/app-icon-ios.png",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Yariva uses your camera for profile and Scene photos, your 5-second Vibe, and video calls.",
+        "NSMicrophoneUsageDescription": "Yariva uses your microphone for your 5-second Vibe and voice and video calls.",
+        "NSPhotoLibraryUsageDescription": "Yariva needs access to your photos so you can choose profile and Scene pictures and share photos in chat.",
+        "NSLocationWhenInUseUsageDescription": "Yariva uses your approximate location to show people nearby."
+      }
+    },
+    "android": {
+      "package": "com.aroha.mobile",
+      "versionCode": 2,
+      "icon": "./assets/brand/app-icon-legacy.png",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/brand/adaptive-icon-foreground.png",
+        "monochromeImage": "./assets/brand/adaptive-icon-monochrome.png",
+        "backgroundColor": "#FFFCFB"
+      },
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO",
+        "READ_MEDIA_AUDIO",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "MODIFY_AUDIO_SETTINGS",
+        "BLUETOOTH",
+        "BLUETOOTH_ADMIN"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "./plugins/withYarivaAndroidRelease",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Yariva uses your camera to record your 5-second Vibe.",
+          "microphonePermission": "Yariva uses your microphone to include original audio in your Vibe.",
+          "recordAudioAndroid": true
+        }
+      ],
+      "expo-secure-store",
+      "expo-image-picker",
+      "expo-location",
+      "expo-notifications",
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": "Yariva uses your camera for video calls.",
+          "microphonePermission": "Yariva uses your microphone for voice and video calls."
+        }
+      ],
+      "expo-font",
+      "expo-image",
+      "expo-localization",
+      "./plugins/withYarivaNativeLaunch",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/brand/native-launch-continuity.png",
+          "imageWidth": 152,
+          "resizeMode": "contain",
+          "backgroundColor": "#FFFCFB",
+          "dark": {
+            "image": "./assets/brand/native-launch-continuity.png",
+            "backgroundColor": "#FFFCFB"
+          }
+        }
+      ],
+      "expo-status-bar",
+      "expo-video",
+      "expo-audio",
+      "expo-sharing"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

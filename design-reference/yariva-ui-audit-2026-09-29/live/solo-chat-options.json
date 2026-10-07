@@ -1,0 +1,92 @@
+[
+  {
+    "text": "Close dialog",
+    "bounds": "[0,0][1080,2340]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Conversation options",
+    "bounds": "[60,603][1020,1693]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Conversation options",
+    "bounds": "[110,653][790,719]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Manage your connection with Meera.",
+    "bounds": "[110,731][790,839]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Close conversation options",
+    "bounds": "[826,653][970,797]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Say hello",
+    "bounds": "[110,887][970,1019]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Say hello",
+    "bounds": "[450,923][631,983]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Plan a meetup",
+    "bounds": "[110,1043][970,1175]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Plan a meetup",
+    "bounds": "[440,1079][725,1139]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Match details",
+    "bounds": "[110,1199][970,1331]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Match details",
+    "bounds": "[405,1235][676,1295]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Report conversation",
+    "bounds": "[110,1355][970,1487]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Report conversation",
+    "bounds": "[336,1391][745,1451]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Block Meera",
+    "bounds": "[110,1511][970,1643]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Block Meera",
+    "bounds": "[416,1547][665,1607]",
+    "clickable": false,
+    "checked": false
+  }
+]

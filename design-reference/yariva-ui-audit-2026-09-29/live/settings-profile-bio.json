@@ -1,0 +1,56 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Bio & headline",
+    "bounds": "[192,151][888,239]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "HEADLINE",
+    "bounds": "[60,327][1020,393]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Slow coffee \u00b7 Long walks \u00b7 Building Aroha",
+    "bounds": "[99,447][981,632]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "ABOUT YOU",
+    "bounds": "[60,719][1020,785]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Founder, friend, occasional cyclist. Looking to meet people who care about the same small things \u2014 books, kind conversation, weekend trails.",
+    "bounds": "[99,839][981,1356]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "140 / 1000 \u00b7 20 minimum",
+    "bounds": "[60,1413][1020,1491]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Save changes",
+    "bounds": "[60,2040][1020,2172]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Save changes",
+    "bounds": "[355,2065][725,2148]",
+    "clickable": false,
+    "checked": false
+  }
+]

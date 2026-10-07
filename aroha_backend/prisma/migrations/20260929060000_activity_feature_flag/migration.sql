@@ -1,0 +1,1 @@
+INSERT INTO "FeatureFlag"(id,key,description,enabled,"updatedAt") VALUES(gen_random_uuid(),'activity.v1','Private Scene rewards and weekly recap rollout',false,CURRENT_TIMESTAMP) ON CONFLICT(key) DO NOTHING;

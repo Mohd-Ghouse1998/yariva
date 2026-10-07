@@ -1,0 +1,1 @@
+ALTER TABLE "ReviewedVenue" ADD COLUMN "photoUrl" VARCHAR(1024);

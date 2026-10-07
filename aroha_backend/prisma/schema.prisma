@@ -1,0 +1,1746 @@
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  runtime                = "nodejs"
+  moduleFormat           = "cjs"
+  generatedFileExtension = "ts"
+  engineType             = "client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  RESTRICTED
+  SUSPENDED
+  BANNED
+  DELETED
+}
+
+enum ClientPlatform {
+  IOS
+  ANDROID
+  WEB
+  UNKNOWN
+}
+
+enum PushProvider {
+  APNS
+  FCM
+}
+
+enum PushDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  INVALID
+}
+
+enum ProfileGender {
+  WOMAN
+  MAN
+  NON_BINARY
+  TRANS_WOMAN
+  TRANS_MAN
+  AGENDER
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum ConnectionIntent {
+  FRIENDSHIP
+  COMPANIONSHIP
+  SHARED_INTERESTS
+  RELATIONSHIP
+  DATING
+  COMMITTED_RELATIONSHIP
+  MARRIAGE_MINDED
+}
+
+enum SceneIntent {
+  DATING
+  FRIENDSHIP
+  CASUAL_HANG
+}
+
+enum SceneStatus {
+  ACTIVE
+  ENDED
+  EXPIRED
+  REPLACED
+}
+
+enum WingmanPartyStatus {
+  PENDING
+  ACTIVE
+  DISCONNECTED
+}
+
+enum WingmanMembershipRole {
+  OWNER
+  BUDDY
+}
+
+enum WingmanMembershipStatus {
+  RESERVED
+  ACTIVE
+  DISCONNECTED
+}
+
+enum WingmanInvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  CANCELLED
+}
+
+enum WingmanVoteDecision {
+  APPROVE
+  PASS
+}
+
+enum WingmanPairMatchStatus {
+  ACTIVE
+  ENDED
+}
+
+enum ProfileVerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum RelationshipPace {
+  SLOW_AND_STEADY
+  OPEN_TO_EXPLORING
+  INTENTIONAL
+  READY_TO_COMMIT
+}
+
+enum PhotoModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PhotoPurpose {
+  PROFILE
+  SCENE
+}
+
+enum VibeMediaStatus {
+  UPLOADING
+  PROCESSING
+  READY
+  REJECTED
+  FAILED
+  REMOVED
+}
+
+enum VibeFilter {
+  ORIGINAL
+  WARM
+  COOL
+  MONO
+  POP
+}
+
+enum VibeAudioMode {
+  ORIGINAL
+  MUTED
+  CUSTOM
+}
+
+enum SmokingHabit {
+  NEVER
+  OCCASIONAL
+  REGULAR
+  PREFER_NOT_TO_SAY
+}
+
+enum DrinkingHabit {
+  NEVER
+  OCCASIONAL
+  SOCIAL
+  REGULAR
+  PREFER_NOT_TO_SAY
+}
+
+enum ExerciseHabit {
+  NEVER
+  OCCASIONAL
+  WEEKLY
+  FREQUENT
+}
+
+enum DietPreference {
+  OMNIVORE
+  VEGETARIAN
+  VEGAN
+  PESCATARIAN
+  HALAL
+  KOSHER
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum PetPreference {
+  HAS_PETS
+  LIKES_PETS
+  NO_PETS
+  ALLERGIC
+  PREFER_NOT_TO_SAY
+}
+
+enum SleepPattern {
+  EARLY_BIRD
+  FLEXIBLE
+  NIGHT_OWL
+}
+
+enum SocialEnergyLevel {
+  LOW_KEY
+  BALANCED
+  OUTGOING
+}
+
+enum LikeStatus {
+  ACTIVE
+  MATCHED
+  RETRACTED
+}
+
+enum MatchStatus {
+  ACTIVE
+  ENDED
+}
+
+enum MatchEndReason {
+  UNMATCHED
+  BLOCKED
+  MODERATION
+  ACCOUNT_DELETED
+}
+
+enum DatePlanStatus {
+  DRAFT
+  PROPOSED
+  COUNTERED
+  ACCEPTED
+  DECLINED
+  CANCELLED
+  COMPLETED
+}
+
+enum DatePlanResponseType {
+  ACCEPTED
+  DECLINED
+  COUNTERED
+}
+
+enum VenueReviewStatus {
+  PENDING
+  REVIEWED
+  REJECTED
+}
+
+enum VenueOperationalStatus {
+  OPEN
+  CLOSED
+  UNKNOWN
+}
+
+enum VenueCategory {
+  CAFE
+  RESTAURANT
+  ACTIVITY
+  OTHER
+}
+
+enum DateSafetyStatus {
+  ARRIVED
+  OKAY
+  NEED_HELP
+  LEFT_EARLY
+}
+
+enum ConversationStatus {
+  ACTIVE
+  BLOCKED
+  CLOSED_UNMATCHED
+  CLOSED_MODERATION
+}
+
+enum ConversationCloseReason {
+  BLOCKED
+  UNMATCHED
+  MODERATION
+  ACCOUNT_DELETED
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  SYSTEM
+}
+
+enum ContentModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum MessageStatus {
+  ACTIVE
+  PENDING_MODERATION
+  REMOVED_BY_MODERATION
+  DELETED_BY_SENDER
+}
+
+enum CallType {
+  VOICE
+  VIDEO
+}
+
+enum CallSessionStatus {
+  RINGING
+  ACCEPTED
+  CONNECTING
+  CONNECTED
+  DECLINED
+  CANCELED
+  MISSED
+  ENDED
+  TIMED_OUT
+  FAILED
+}
+
+enum CallEndReason {
+  HANGUP
+  DECLINED
+  CANCELED
+  MISSED
+  BLOCKED
+  UNMATCHED
+  PERMISSION_REVOKED
+  TIMEOUT
+  ERROR
+}
+
+enum ReportTargetType {
+  USER
+  MESSAGE
+  PROFILE_PHOTO
+  CONVERSATION
+  MATCH
+  CALL_SESSION
+  PRIVATE_STORY
+}
+
+enum ReportReasonCode {
+  SPAM
+  HARASSMENT
+  INAPPROPRIATE_CONTENT
+  FAKE_PROFILE
+  UNDERAGE
+  SAFETY_RISK
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  UNDER_REVIEW
+  ACTIONED
+  CLOSED
+  DUPLICATE
+}
+
+enum ModerationCaseType {
+  USER_REPORT
+  PHOTO_REVIEW
+  TRUST_REVIEW
+  PROFILE_REVIEW
+  MESSAGE_REVIEW
+}
+
+enum ModerationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ModerationCaseStatus {
+  OPEN
+  IN_REVIEW
+  ACTIONED
+  CLOSED
+}
+
+enum ModerationAction {
+  NONE
+  NOTE_ONLY
+  WARN
+  REMOVE_PHOTO
+  HIDE_PROFILE
+  FREEZE_DISCOVERY
+  FREEZE_CHAT
+  FREEZE_CALLS
+  SHADOW_BAN
+  SUSPEND
+  BAN
+  RESTORE
+}
+
+enum TrustLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum NotificationType {
+  NEW_LIKE
+  NEW_MATCH
+  NEW_MESSAGE
+  MISSED_CALL
+  DATE_PROPOSED
+  DATE_ACCEPTED
+  DATE_CHANGED
+  DATE_CANCELLED
+  DATE_REMINDER
+  SAFETY_CHECK_IN
+  MUTUAL_MEET_AGAIN
+  REPORT_UPDATE
+  MODERATION_ACTION
+  SYSTEM
+}
+
+enum NotificationChannel {
+  IN_APP
+  PUSH
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  READ
+  CANCELED
+}
+
+enum FeatureFlagScope {
+  GLOBAL
+  USER_PERCENTAGE
+  USER_ALLOWLIST
+}
+
+enum AnalyticsSource {
+  MOBILE
+  SYSTEM
+  ADMIN
+}
+
+model User {
+  id                String     @id @default(uuid()) @db.Uuid
+  /// PostgreSQL unique indexes allow multiple NULLs here, which matches the requirement.
+  email             String?    @unique @db.VarChar(320)
+  phone             String?    @unique @db.VarChar(32)
+  passwordHash      String     @db.VarChar(255)
+  role              UserRole   @default(USER)
+  status            UserStatus @default(ACTIVE)
+  isShadowBanned    Boolean    @default(false)
+  isDiscoveryFrozen Boolean    @default(false)
+  isChatFrozen      Boolean    @default(false)
+  isCallFrozen      Boolean    @default(false)
+  lastActiveAt      DateTime?
+  suspendedAt       DateTime?
+  bannedAt          DateTime?
+  deletedAt         DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  sessions                   UserSession[]
+  pushTokens                 PushToken[]
+  profile                    UserProfile?
+  photos                     ProfilePhoto[]
+  intents                    UserIntent[]
+  interests                  UserInterest[]
+  lifestyle                  UserLifestyle?
+  schedulePreference         UserSchedulePreference?
+  discoveryPreference        UserDiscoveryPreference?
+  communicationPreference    UserCommunicationPreference?
+  outgoingLikes              Like[]                       @relation("LikeActor")
+  incomingLikes              Like[]                       @relation("LikeTarget")
+  outgoingPasses             Pass[]                       @relation("PassActor")
+  incomingPasses             Pass[]                       @relation("PassTarget")
+  matchesLow                 Match[]                      @relation("MatchUserLow")
+  matchesHigh                Match[]                      @relation("MatchUserHigh")
+  matchCommunicationSettings MatchCommunicationSetting[]
+  sentMessages               Message[]                    @relation("MessageSender")
+  conversationReads          ConversationRead[]
+  conversationMemberships    ConversationMember[]
+  duoPlanResponses           DuoPlanResponse[]
+  duoPlanRevisions           DuoPlanRevision[]
+  initiatedCalls             CallSession[]                @relation("CallInitiator")
+  receivedCalls              CallSession[]                @relation("CallReceiver")
+  blocksInitiated            Block[]                      @relation("Blocker")
+  blocksReceived             Block[]                      @relation("Blocked")
+  reportsFiled               Report[]                     @relation("ReportReporter")
+  reportsAgainst             Report[]                     @relation("ReportReported")
+  moderationCasesSubject     ModerationCase[]             @relation("ModerationSubject")
+  moderationCasesAssigned    ModerationCase[]             @relation("ModerationAssignee")
+  trustScore                 TrustScore?
+  notifications              Notification[]               @relation("NotificationUser")
+  notificationActors         Notification[]               @relation("NotificationActor")
+  createdFeatureFlags        FeatureFlag[]                @relation("FeatureFlagCreator")
+  analyticsEvents            AnalyticsEvent[]
+  auditLogsActor             AuditLog[]                   @relation("AuditActor")
+  auditLogsTargetUser        AuditLog[]                   @relation("AuditTargetUser")
+  datePlansCreated           DatePlan[]                   @relation("DatePlanCreator")
+  datePlanResponses          DatePlanResponse[]
+  postDateCheckIns           PostDateCheckIn[]
+  scenes                     Scene[]
+  privateStoriesOwned        PrivateStory[]              @relation("PrivateStoryOwner")
+  privateStoryGrants         PrivateStoryGrant[]         @relation("PrivateStoryRecipient")
+  followsSent                PrivateFollow[]             @relation("PrivateFollowRequester")
+  followsReceived            PrivateFollow[]             @relation("PrivateFollowOwner")
+  privateCommunity           PrivateCommunityPreference?
+  vibes                      VibeMedia[]
+  wingmanPartiesCreated      WingmanParty[]       @relation("WingmanPartyCreator")
+  wingmanMemberships         WingmanPartyMember[]
+  wingmanInvitationsSent     WingmanInvitation[]  @relation("WingmanInvitationInviter")
+  wingmanInvitationsReceived WingmanInvitation[]  @relation("WingmanInvitationInvitee")
+  wingmanVotes               WingmanPartyVote[]
+
+  @@index([status, deletedAt])
+  @@index([lastActiveAt])
+}
+
+model UserSession {
+  id                             String         @id @default(uuid()) @db.Uuid
+  userId                         String         @db.Uuid
+  deviceId                       String?        @db.VarChar(128)
+  deviceName                     String?        @db.VarChar(128)
+  platform                       ClientPlatform @default(UNKNOWN)
+  appVersion                     String?        @db.VarChar(64)
+  ipAddress                      String?        @db.VarChar(64)
+  userAgent                      String?        @db.VarChar(500)
+  currentRefreshTokenHash        String         @db.VarChar(128)
+  currentRefreshTokenJti         String         @unique @db.VarChar(64)
+  previousRefreshTokenHash       String?        @db.VarChar(128)
+  previousRefreshTokenJti        String?        @db.VarChar(64)
+  previousRefreshTokenGraceUntil DateTime?
+  refreshTokenExpiresAt          DateTime
+  lastSeenAt                     DateTime?
+  revokedAt                      DateTime?
+  revokedReason                  String?        @db.VarChar(128)
+  deletedAt                      DateTime?
+  createdAt                      DateTime       @default(now())
+  updatedAt                      DateTime       @updatedAt
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  pushTokens      PushToken[]
+  analyticsEvents AnalyticsEvent[]
+  auditLogs       AuditLog[]
+
+  @@index([userId, revokedAt])
+  @@index([refreshTokenExpiresAt])
+  @@index([lastSeenAt])
+}
+
+model PushToken {
+  id            String         @id @default(uuid()) @db.Uuid
+  userId        String         @db.Uuid
+  sessionId     String?        @db.Uuid
+  token         String         @unique @db.VarChar(512)
+  platform      ClientPlatform
+  provider      PushProvider
+  deviceId      String?        @db.VarChar(128)
+  lastSeenAt    DateTime?
+  invalidatedAt DateTime?
+  deletedAt     DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  user       User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  session    UserSession?   @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  deliveries PushDelivery[]
+
+  @@index([userId, invalidatedAt])
+  @@index([sessionId])
+}
+
+model UserProfile {
+  id                          String                                 @id @default(uuid()) @db.Uuid
+  userId                      String                                 @unique @db.Uuid
+  displayName                 String?                                @db.VarChar(80)
+  headline                    String?                                @db.VarChar(140)
+  bio                         String?                                @db.Text
+  dateOfBirth                 DateTime?
+  gender                      ProfileGender?
+  pronouns                    String?                                @db.VarChar(80)
+  city                        String?                                @db.VarChar(120)
+  region                      String?                                @db.VarChar(120)
+  countryCode                 String?                                @db.Char(2)
+  locationLat                 Decimal?                               @db.Decimal(9, 6)
+  locationLng                 Decimal?                               @db.Decimal(9, 6)
+  locationGeohash             String?                                @db.VarChar(12)
+  locationUpdatedAt           DateTime?
+  /// Maintained by the database from locationLng/locationLat. Longitude is X.
+  locationPoint               Unsupported("geography(Point, 4326)")?
+  hideAge                     Boolean                                @default(false)
+  hideDistance                Boolean                                @default(false)
+  isHidden                    Boolean                                @default(false)
+  isIncognito                 Boolean                                @default(false)
+  hideFromContacts            Boolean                                @default(false)
+  isPaused                    Boolean                                @default(false)
+  verificationStatus          ProfileVerificationStatus              @default(UNVERIFIED)
+  preferredRelationshipPace   RelationshipPace?
+  languages                   String[]                               @default([])
+  foodPreferences             String[]                               @default([])
+  relocationOpenness          String?                                @db.VarChar(80)
+  careerPriority              String?                                @db.VarChar(80)
+  familyInvolvementComfort    String?                                @db.VarChar(120)
+  marriageTimeline            String?                                @db.VarChar(80)
+  childrenPreference          String?                                @db.VarChar(80)
+  religionSpirituality        String?                                @db.VarChar(120)
+  shareSensitiveCompatibility Boolean                                @default(false)
+  promptResponses             Json                                   @default("[]")
+  isComplete                  Boolean                                @default(false)
+  completedAt                 DateTime?
+  deletedAt                   DateTime?
+  createdAt                   DateTime                               @default(now())
+  updatedAt                   DateTime                               @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([isComplete, isHidden, deletedAt])
+  @@index([countryCode, city])
+  @@index([locationGeohash])
+}
+
+/// A follow is a one-way, owner-approved private connection.
+model PrivateFollow {
+  requesterId String @db.Uuid
+  ownerId String @db.Uuid
+  status String @default("PENDING") @db.VarChar(12)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  requester User @relation("PrivateFollowRequester", fields: [requesterId], references: [id], onDelete: Restrict)
+  owner User @relation("PrivateFollowOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  @@id([requesterId, ownerId])
+  @@index([ownerId, status])
+}
+
+/// Sensitive selections are only returned to their owner.
+model PrivateCommunityPreference {
+  userId String @id @db.Uuid
+  identifyAs String[] @default([])
+  connectWith String[] @default([])
+  optedInCommunities String[] @default([])
+  selfDescription String? @db.VarChar(120)
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+}
+
+model PrivateStory {
+  id String @id @default(uuid()) @db.Uuid
+  ownerId String @db.Uuid
+  text String @default("") @db.VarChar(2000)
+  mediaBucket String? @db.VarChar(128)
+  mediaObjectKey String? @db.VarChar(512)
+  mediaMimeType String? @db.VarChar(64)
+  mediaSizeBytes Int?
+  audienceRule String @db.VarChar(16)
+  communityFilter String? @db.VarChar(32)
+  expiresAt DateTime
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  owner User @relation("PrivateStoryOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  grants PrivateStoryGrant[]
+  reports Report[] @relation("ReportTargetPrivateStory")
+  @@index([ownerId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([expiresAt, deletedAt])
+}
+
+model PrivateStoryGrant {
+  storyId String @db.Uuid
+  recipientId String @db.Uuid
+  createdAt DateTime @default(now())
+  story PrivateStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  recipient User @relation("PrivateStoryRecipient", fields: [recipientId], references: [id], onDelete: Restrict)
+  @@id([storyId, recipientId])
+  @@index([recipientId, storyId])
+}
+
+model Scene {
+  id                String      @id @default(uuid()) @db.Uuid
+  ownerId           String      @db.Uuid
+  photoId           String?     @db.Uuid
+  lineageId         String      @db.Uuid
+  version           Int         @default(1)
+  intent            SceneIntent
+  activity          String      @db.VarChar(120)
+  canonicalActivity String      @db.VarChar(80)
+  activityTokens    String[]    @default([])
+  tags              String[]    @default([])
+  availableFrom     DateTime?
+  availableUntil    DateTime?
+  expiresAt         DateTime
+  status            SceneStatus @default(ACTIVE)
+  endedAt           DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  owner User          @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  photo ProfilePhoto? @relation(fields: [photoId], references: [id], onDelete: SetNull)
+  wingmanConsents WingmanPartyMember[]
+  wingmanVoteSources        WingmanPartyVote[] @relation("WingmanVoteSourceScene")
+  wingmanVoteTargetOwners   WingmanPartyVote[] @relation("WingmanVoteTargetOwnerScene")
+  wingmanVoteTargetBuddies  WingmanPartyVote[] @relation("WingmanVoteTargetBuddyScene")
+
+  @@unique([lineageId, version])
+  @@index([ownerId, status, expiresAt])
+  @@index([photoId])
+  @@index([intent, canonicalActivity, status, expiresAt])
+  @@index([expiresAt, status])
+}
+
+model WingmanParty {
+  id                String             @id @default(uuid()) @db.Uuid
+  status            WingmanPartyStatus @default(PENDING)
+  createdByUserId   String             @db.Uuid
+  membershipVersion Int                @default(1)
+  activatedAt       DateTime?
+  disconnectedAt    DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  creator    User                  @relation("WingmanPartyCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  members    WingmanPartyMember[]
+  invitation WingmanInvitation?
+  votesCast          WingmanPartyVote[]      @relation("WingmanVoteSourceParty")
+  votesReceived      WingmanPartyVote[]      @relation("WingmanVoteTargetParty")
+  pairMatchesLow     WingmanPairMatch[]      @relation("WingmanPairMatchLowParty")
+  pairMatchesHigh    WingmanPairMatch[]      @relation("WingmanPairMatchHighParty")
+
+  @@index([createdByUserId, status])
+  @@index([status, updatedAt])
+}
+
+model WingmanPartyMember {
+  id                    String                   @id @default(uuid()) @db.Uuid
+  partyId               String                   @db.Uuid
+  userId                String                   @db.Uuid
+  role                  WingmanMembershipRole
+  status                WingmanMembershipStatus
+  consentedSceneId      String?                  @db.Uuid
+  consentedSceneVersion Int?
+  sceneConsentedAt      DateTime?
+  joinedAt              DateTime?
+  disconnectedAt        DateTime?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+
+  party          WingmanParty @relation(fields: [partyId], references: [id], onDelete: Restrict)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  consentedScene Scene?       @relation(fields: [consentedSceneId], references: [id], onDelete: SetNull)
+
+  @@unique([partyId, userId])
+  @@index([userId, status])
+  @@index([partyId, status])
+  @@index([consentedSceneId])
+}
+
+model WingmanInvitation {
+  id            String                   @id @default(uuid()) @db.Uuid
+  partyId       String                   @unique @db.Uuid
+  inviterUserId String                   @db.Uuid
+  inviteeUserId String                   @db.Uuid
+  tokenHash     String                   @unique @db.VarChar(64)
+  status        WingmanInvitationStatus  @default(PENDING)
+  expiresAt     DateTime
+  consumedAt    DateTime?
+  declinedAt    DateTime?
+  cancelledAt   DateTime?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  party   WingmanParty @relation(fields: [partyId], references: [id], onDelete: Restrict)
+  inviter User         @relation("WingmanInvitationInviter", fields: [inviterUserId], references: [id], onDelete: Restrict)
+  invitee User         @relation("WingmanInvitationInvitee", fields: [inviteeUserId], references: [id], onDelete: Restrict)
+
+  @@index([inviteeUserId, status, expiresAt])
+  @@index([inviterUserId, status, expiresAt])
+  @@index([status, expiresAt])
+}
+
+model WingmanPartyVote {
+  id                       String               @id @default(uuid()) @db.Uuid
+  voterUserId              String               @db.Uuid
+  sourcePartyId            String               @db.Uuid
+  targetPartyId            String               @db.Uuid
+  decision                 WingmanVoteDecision
+  sourceMembershipVersion  Int
+  targetMembershipVersion  Int
+  sourceSceneId            String               @db.Uuid
+  sourceSceneVersion       Int
+  targetOwnerSceneId       String               @db.Uuid
+  targetOwnerSceneVersion  Int
+  targetBuddySceneId       String               @db.Uuid
+  targetBuddySceneVersion  Int
+  pairMatchId              String?              @db.Uuid
+  matchedAt                DateTime?
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+
+  voter            User              @relation(fields: [voterUserId], references: [id], onDelete: Restrict)
+  sourceParty      WingmanParty      @relation("WingmanVoteSourceParty", fields: [sourcePartyId], references: [id], onDelete: Restrict)
+  targetParty      WingmanParty      @relation("WingmanVoteTargetParty", fields: [targetPartyId], references: [id], onDelete: Restrict)
+  sourceScene      Scene             @relation("WingmanVoteSourceScene", fields: [sourceSceneId], references: [id], onDelete: Restrict)
+  targetOwnerScene Scene             @relation("WingmanVoteTargetOwnerScene", fields: [targetOwnerSceneId], references: [id], onDelete: Restrict)
+  targetBuddyScene Scene             @relation("WingmanVoteTargetBuddyScene", fields: [targetBuddySceneId], references: [id], onDelete: Restrict)
+  pairMatch        WingmanPairMatch? @relation(fields: [pairMatchId], references: [id], onDelete: SetNull)
+
+  @@unique([sourcePartyId, targetPartyId, voterUserId])
+  @@index([voterUserId, decision, updatedAt])
+  @@index([sourcePartyId, targetPartyId, decision])
+  @@index([targetPartyId, sourcePartyId, decision])
+  @@index([pairMatchId])
+}
+
+model WingmanPairMatch {
+  id                         String                  @id @default(uuid()) @db.Uuid
+  partyLowId                 String                  @db.Uuid
+  partyHighId                String                  @db.Uuid
+  partyLowMembershipVersion  Int
+  partyHighMembershipVersion Int
+  status                     WingmanPairMatchStatus  @default(ACTIVE)
+  matchedAt                  DateTime                @default(now())
+  endedAt                    DateTime?
+  createdAt                  DateTime                @default(now())
+  updatedAt                  DateTime                @updatedAt
+
+  partyLow  WingmanParty       @relation("WingmanPairMatchLowParty", fields: [partyLowId], references: [id], onDelete: Restrict)
+  partyHigh WingmanParty       @relation("WingmanPairMatchHighParty", fields: [partyHighId], references: [id], onDelete: Restrict)
+  votes     WingmanPartyVote[]
+  conversation Conversation?
+
+  @@unique([partyLowId, partyHighId])
+  @@index([partyLowId, status, matchedAt])
+  @@index([partyHighId, status, matchedAt])
+  @@index([status, matchedAt])
+}
+
+model ProfilePhoto {
+  id               String                @id @default(uuid()) @db.Uuid
+  userId           String                @db.Uuid
+  objectKey        String                @db.VarChar(512)
+  bucket           String                @db.VarChar(128)
+  mimeType         String                @db.VarChar(128)
+  sizeBytes        Int
+  width            Int?
+  height           Int?
+  sha256           String?               @db.VarChar(128)
+  position         Int                   @default(0)
+  isPrimary        Boolean               @default(false)
+  purpose          PhotoPurpose          @default(PROFILE)
+  moderationStatus PhotoModerationStatus @default(PENDING)
+  moderationReason String?               @db.VarChar(500)
+  reviewedAt       DateTime?
+  approvedAt       DateTime?
+  rejectedAt       DateTime?
+  deletedAt        DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  reports Report[] @relation("ReportTargetPhoto")
+  scenes  Scene[]
+
+  @@index([userId, moderationStatus, deletedAt])
+  @@index([userId, purpose, moderationStatus, deletedAt])
+  @@index([userId, isPrimary, deletedAt])
+  @@index([userId, position])
+}
+
+model VibeMedia {
+  id                    String                @id @default(uuid()) @db.Uuid
+  userId                String                @db.Uuid
+  status                VibeMediaStatus       @default(UPLOADING)
+  filter                VibeFilter            @default(ORIGINAL)
+  audioMode             VibeAudioMode         @default(ORIGINAL)
+  sourceBucket          String                @db.VarChar(128)
+  sourceObjectKey       String                @db.VarChar(512)
+  sourceMimeType        String                @db.VarChar(128)
+  sourceSizeBytes       Int
+  sourceUploadTokenHash String                @db.VarChar(64)
+  musicBucket           String?               @db.VarChar(128)
+  musicObjectKey        String?               @db.VarChar(512)
+  musicMimeType         String?               @db.VarChar(128)
+  musicSizeBytes        Int?
+  musicName             String?               @db.VarChar(180)
+  musicUploadTokenHash  String?               @db.VarChar(64)
+  processedBucket       String?               @db.VarChar(128)
+  processedObjectKey    String?               @db.VarChar(512)
+  processedMimeType     String?               @db.VarChar(128)
+  processedSizeBytes    Int?
+  thumbnailBucket       String?               @db.VarChar(128)
+  thumbnailObjectKey    String?               @db.VarChar(512)
+  durationMs            Int?
+  width                 Int?
+  height                Int?
+  videoCodec            String?               @db.VarChar(64)
+  audioCodec            String?               @db.VarChar(64)
+  moderationStatus      PhotoModerationStatus @default(PENDING)
+  moderationProvider    String?               @db.VarChar(80)
+  moderationReason      String?               @db.VarChar(500)
+  moderatedAt           DateTime?
+  processingCompletedAt DateTime?
+  failureReason         String?               @db.VarChar(500)
+  uploadExpiresAt       DateTime
+  readyAt               DateTime?
+  deletedAt             DateTime?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, status, deletedAt, createdAt])
+  @@index([status, updatedAt])
+}
+
+model UserIntent {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @db.Uuid
+  intent    ConnectionIntent
+  deletedAt DateTime?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, intent])
+  @@index([intent, deletedAt])
+  @@index([userId, deletedAt])
+}
+
+model InterestTag {
+  id          String   @id @default(uuid()) @db.Uuid
+  slug        String   @unique @db.VarChar(80)
+  displayName String   @unique @db.VarChar(120)
+  category    String?  @db.VarChar(80)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userInterests UserInterest[]
+
+  @@index([category, isActive])
+}
+
+model UserInterest {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @db.Uuid
+  interestTagId String    @db.Uuid
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  interestTag InterestTag @relation(fields: [interestTagId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, interestTagId])
+  @@index([interestTagId, deletedAt])
+  @@index([userId, deletedAt])
+}
+
+model UserLifestyle {
+  id            String             @id @default(uuid()) @db.Uuid
+  userId        String             @unique @db.Uuid
+  smoking       SmokingHabit?
+  drinking      DrinkingHabit?
+  exercise      ExerciseHabit?
+  diet          DietPreference?
+  petPreference PetPreference?
+  sleepPattern  SleepPattern?
+  socialEnergy  SocialEnergyLevel?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+}
+
+model UserSchedulePreference {
+  id                    String   @id @default(uuid()) @db.Uuid
+  userId                String   @unique @db.Uuid
+  weekdayMask           Int      @default(0)
+  timeBlockMask         Int      @default(0)
+  prefersWeekends       Boolean  @default(false)
+  remoteFriendly        Boolean  @default(false)
+  maxMeetupsPerWeek     Int?
+  preferredLeadTimeDays Int?
+  timezone              String?  @db.VarChar(64)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+}
+
+model UserDiscoveryPreference {
+  id                        String             @id @default(uuid()) @db.Uuid
+  userId                    String             @unique @db.Uuid
+  minAge                    Int?
+  maxAge                    Int?
+  maxDistanceKm             Int?
+  intentFilter              ConnectionIntent[] @default([])
+  preferredGenders          ProfileGender[]    @default([])
+  includeRecentlyActiveOnly Boolean            @default(false)
+  preferSameCity            Boolean            @default(false)
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+}
+
+model UserCommunicationPreference {
+  id                String   @id @default(uuid()) @db.Uuid
+  userId            String   @unique @db.Uuid
+  allowVoiceCalls   Boolean  @default(true)
+  allowVideoCalls   Boolean  @default(true)
+  allowPushMatches  Boolean  @default(true)
+  allowPushMessages Boolean  @default(true)
+  allowPushCalls    Boolean  @default(true)
+  allowReadReceipts Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+}
+
+model Like {
+  id          String     @id @default(uuid()) @db.Uuid
+  actorId     String     @db.Uuid
+  targetId    String     @db.Uuid
+  introNote   String?    @db.VarChar(300)
+  status      LikeStatus @default(ACTIVE)
+  matchedAt   DateTime?
+  retractedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  actor  User @relation("LikeActor", fields: [actorId], references: [id], onDelete: Restrict)
+  target User @relation("LikeTarget", fields: [targetId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, targetId])
+  @@index([actorId, status])
+  @@index([targetId, status])
+}
+
+model Pass {
+  id        String    @id @default(uuid()) @db.Uuid
+  actorId   String    @db.Uuid
+  targetId  String    @db.Uuid
+  expiresAt DateTime
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  actor  User @relation("PassActor", fields: [actorId], references: [id], onDelete: Restrict)
+  target User @relation("PassTarget", fields: [targetId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, targetId])
+  @@index([actorId, expiresAt, deletedAt])
+  @@index([targetId, expiresAt, deletedAt])
+}
+
+model Match {
+  id            String          @id @default(uuid()) @db.Uuid
+  /// Canonical sorted user pair. Application code must always place the smaller UUID into userLowId.
+  userLowId     String          @db.Uuid
+  userHighId    String          @db.Uuid
+  status        MatchStatus     @default(ACTIVE)
+  matchedAt     DateTime        @default(now())
+  endedAt       DateTime?
+  endedReason   MatchEndReason?
+  endedByUserId String?         @db.Uuid
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  userLow               User                        @relation("MatchUserLow", fields: [userLowId], references: [id], onDelete: Restrict)
+  userHigh              User                        @relation("MatchUserHigh", fields: [userHighId], references: [id], onDelete: Restrict)
+  communicationSettings MatchCommunicationSetting[]
+  conversation          Conversation?
+  reports               Report[]                    @relation("ReportTargetMatch")
+  callSessions          CallSession[]
+  datePlans             DatePlan[]
+
+  @@unique([userLowId, userHighId])
+  @@index([userLowId, status])
+  @@index([userHighId, status])
+  @@index([status, matchedAt])
+}
+
+model DatePlan {
+  id                  String         @id @default(uuid()) @db.Uuid
+  matchId             String         @db.Uuid
+  createdByUserId     String         @db.Uuid
+  reviewedVenueId     String?        @db.Uuid
+  status              DatePlanStatus @default(DRAFT)
+  proposalVersion     Int            @default(1)
+  title               String         @db.VarChar(140)
+  description         String         @db.VarChar(1000)
+  activityType        String         @db.VarChar(80)
+  proposedStartAt     DateTime
+  durationMinutes     Int
+  timezone            String         @db.VarChar(64)
+  publicLocality      String         @db.VarChar(160)
+  venueName           String?        @db.VarChar(200)
+  venueAddress        String?        @db.VarChar(500)
+  latitude            Decimal?       @db.Decimal(9, 6)
+  longitude           Decimal?       @db.Decimal(9, 6)
+  exactVenueVisibleAt DateTime?
+  estimatedCostMin    Int?
+  estimatedCostMax    Int?
+  currency            String         @default("INR") @db.Char(3)
+  idempotencyKey      String?        @db.VarChar(128)
+  acceptedAt          DateTime?
+  declinedAt          DateTime?
+  cancelledAt         DateTime?
+  completedAt         DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  match         Match              @relation(fields: [matchId], references: [id], onDelete: Restrict)
+  createdByUser User               @relation("DatePlanCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  reviewedVenue ReviewedVenue?     @relation(fields: [reviewedVenueId], references: [id], onDelete: SetNull)
+  responses     DatePlanResponse[]
+  checkIns      PostDateCheckIn[]
+
+  @@unique([matchId, createdByUserId, idempotencyKey])
+  @@index([matchId, status, proposedStartAt])
+  @@index([createdByUserId, createdAt])
+  @@index([reviewedVenueId])
+  @@index([status, proposedStartAt])
+}
+
+model ReviewedVenue {
+  id                 String                                 @id @default(uuid()) @db.Uuid
+  name               String                                 @db.VarChar(200)
+  photoUrl           String?                                @db.VarChar(1024)
+  address            String                                 @db.VarChar(500)
+  publicLocality     String                                 @db.VarChar(160)
+  city               String                                 @db.VarChar(120)
+  countryCode        String                                 @db.Char(2)
+  latitude           Decimal                                @db.Decimal(9, 6)
+  longitude          Decimal                                @db.Decimal(9, 6)
+  locationPoint      Unsupported("geography(Point, 4326)")?
+  reviewStatus       VenueReviewStatus                      @default(PENDING)
+  reviewSource       String?                                @db.VarChar(200)
+  reviewedAt         DateTime?
+  operationalStatus  VenueOperationalStatus                 @default(UNKNOWN)
+  category           VenueCategory                          @default(OTHER)
+  openingHours       Json?
+  priceMinPerPerson  Int?
+  priceMaxPerPerson  Int?
+  currency           String                                 @default("INR") @db.Char(3)
+  rating             Decimal?                               @db.Decimal(2, 1)
+  ratingCount        Int?
+  ratingSource       String?                                @db.VarChar(120)
+  accessibilityFacts String[]                               @default([])
+  atmosphereTags     String[]                               @default([])
+  isSynthetic        Boolean                                @default(false)
+  deletedAt          DateTime?
+  createdAt          DateTime                               @default(now())
+  updatedAt          DateTime                               @updatedAt
+
+  selectedPlans DatePlan[]
+
+  @@index([reviewStatus, operationalStatus, deletedAt])
+  @@index([city, publicLocality])
+  @@index([rating, ratingCount])
+}
+
+model DatePlanResponse {
+  id              String               @id @default(uuid()) @db.Uuid
+  datePlanId      String               @db.Uuid
+  userId          String               @db.Uuid
+  proposalVersion Int
+  response        DatePlanResponseType
+  counterProposal Json?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  datePlan DatePlan @relation(fields: [datePlanId], references: [id], onDelete: Restrict)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([datePlanId, userId, proposalVersion])
+  @@index([userId, createdAt])
+  @@index([datePlanId, proposalVersion])
+}
+
+model PostDateCheckIn {
+  id                  String            @id @default(uuid()) @db.Uuid
+  datePlanId          String            @db.Uuid
+  userId              String            @db.Uuid
+  safetyStatus        DateSafetyStatus?
+  wantsToMeetAgain    Boolean?
+  safetySubmittedAt   DateTime?
+  postDateSubmittedAt DateTime?
+  submittedAt         DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  datePlan DatePlan @relation(fields: [datePlanId], references: [id], onDelete: Restrict)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([datePlanId, userId])
+  @@index([userId, submittedAt])
+  @@index([datePlanId])
+}
+
+model MatchCommunicationSetting {
+  id              String   @id @default(uuid()) @db.Uuid
+  matchId         String   @db.Uuid
+  userId          String   @db.Uuid
+  allowVoiceCalls Boolean  @default(true)
+  allowVideoCalls Boolean  @default(true)
+  muted           Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Restrict)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([matchId, userId])
+  @@index([userId])
+  @@index([matchId])
+}
+
+model Conversation {
+  id                  String                   @id @default(uuid()) @db.Uuid
+  matchId             String?                  @unique @db.Uuid
+  duoMatchId          String?                  @unique @db.Uuid
+  status              ConversationStatus       @default(ACTIVE)
+  lastMessageSequence Int                      @default(0)
+  lastMessagePreview  String?                  @db.VarChar(160)
+  lastMessageType     MessageType?
+  lastMessageSentAt   DateTime?
+  lastSenderId        String?                  @db.Uuid
+  closedAt            DateTime?
+  closedReason        ConversationCloseReason?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+
+  match        Match?             @relation(fields: [matchId], references: [id], onDelete: Restrict)
+  duoMatch     WingmanPairMatch?  @relation(fields: [duoMatchId], references: [id], onDelete: Restrict)
+  members      ConversationMember[]
+  duoPlans     DuoPlan[]
+  messages     Message[]
+  reads        ConversationRead[]
+  callSessions CallSession[]
+  reports      Report[]           @relation("ReportTargetConversation")
+
+  @@index([status, lastMessageSentAt])
+}
+
+/// Immutable membership snapshot. A replacement buddy never inherits old messages.
+model ConversationMember {
+  conversationId String @db.Uuid
+  userId String @db.Uuid
+  createdAt DateTime @default(now())
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@id([conversationId, userId])
+  @@index([userId, conversationId])
+}
+
+/// Four participants must accept the same version; these plans carry no money.
+model DuoPlan {
+  id String @id @default(uuid()) @db.Uuid
+  conversationId String @db.Uuid
+  createdByUserId String @db.Uuid
+  status DatePlanStatus @default(PROPOSED)
+  version Int @default(1)
+  activity String @db.VarChar(140)
+  venueName String @db.VarChar(200)
+  publicLocality String @db.VarChar(160)
+  startAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  responses DuoPlanResponse[]
+  revisions DuoPlanRevision[]
+  @@index([conversationId, createdAt])
+}
+
+model DuoPlanResponse {
+  planId String @db.Uuid
+  userId String @db.Uuid
+  version Int
+  response DatePlanResponseType
+  updatedAt DateTime @updatedAt
+  plan DuoPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@id([planId, userId, version])
+}
+
+model DuoPlanRevision {
+  requestId String @id @db.Uuid
+  planId String @db.Uuid
+  userId String @db.Uuid
+  version Int
+  activity String @db.VarChar(140)
+  venueName String @db.VarChar(200)
+  publicLocality String @db.VarChar(160)
+  startAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now())
+  plan DuoPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@unique([planId, version])
+}
+
+// Consent/progress is independent of event lifetime. Scalar FKs are added in SQL
+// so the policy stays isolated from the ordinary relationship projection.
+model BlindRelationship {
+  matchId String @id @db.Uuid
+  userLowId String @db.Uuid
+  userHighId String @db.Uuid
+  occurrenceId String? @db.Uuid
+  perParticipantTarget Int @default(5)
+  initialBlurRadius Int @default(20)
+  lowCount Int @default(0)
+  highCount Int @default(0)
+  lowRevealConsent Boolean @default(false)
+  highRevealConsent Boolean @default(false)
+  revealedAt DateTime?
+  createdAt DateTime @default(now())
+  @@unique([userLowId, userHighId])
+}
+
+model BlindContribution {
+  messageId String @id @db.Uuid
+  matchId String @db.Uuid
+  senderId String @db.Uuid
+  contentHash String @db.VarChar(64)
+  createdAt DateTime @default(now())
+  @@unique([matchId, senderId, contentHash])
+  @@index([matchId, senderId, createdAt])
+}
+
+model MediaExposure {
+  viewerId String @db.Uuid
+  ownerId String @db.Uuid
+  createdAt DateTime @default(now())
+  @@id([viewerId, ownerId])
+}
+
+model BlindRollout {
+  id Int @id @default(1)
+  // Older accounts have unknown historical photo exposure and are not eligible
+  // for NEW blind relationships. Their existing discovery is unchanged.
+  exposureTrackingStartedAt DateTime @default(now())
+}
+
+model BlindEventOccurrence {
+  id String @id @default(uuid()) @db.Uuid
+  occurrenceKey String @unique @db.VarChar(100)
+  startsAt DateTime
+  endsAt DateTime
+  city String @default("Hyderabad") @db.VarChar(120)
+  state String @default("UPCOMING") @db.VarChar(16)
+  cancelledAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([startsAt, endsAt])
+}
+
+model BlindEventEnrollment {
+  occurrenceId String @db.Uuid
+  userId String @db.Uuid
+  intent String @db.VarChar(16)
+  notificationsEnabled Boolean @default(false)
+  joinedAt DateTime @default(now())
+  leftAt DateTime?
+  @@id([occurrenceId, userId])
+  @@index([userId, joinedAt])
+}
+
+model BlindEventInterest {
+  occurrenceId String @db.Uuid
+  actorId String @db.Uuid
+  targetId String @db.Uuid
+  createdAt DateTime @default(now())
+  @@id([occurrenceId, actorId, targetId])
+}
+
+model Message {
+  id                         String                   @id @default(uuid()) @db.Uuid
+  conversationId             String                   @db.Uuid
+  senderId                   String                   @db.Uuid
+  sequence                   Int
+  clientMessageId            String?                  @db.VarChar(64)
+  type                       MessageType              @default(TEXT)
+  textBody                   String?                  @db.Text
+  attachmentObjectKey        String?                  @db.VarChar(512)
+  attachmentBucket           String?                  @db.VarChar(128)
+  attachmentMimeType         String?                  @db.VarChar(128)
+  attachmentSizeBytes        Int?
+  attachmentWidth            Int?
+  attachmentHeight           Int?
+  attachmentDurationSeconds  Int?
+  attachmentModerationStatus ContentModerationStatus?
+  status                     MessageStatus            @default(ACTIVE)
+  replyToMessageId           String?                  @db.Uuid
+  editedAt                   DateTime?
+  deletedAt                  DateTime?
+  createdAt                  DateTime                 @default(now())
+  updatedAt                  DateTime                 @updatedAt
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  sender         User         @relation("MessageSender", fields: [senderId], references: [id], onDelete: Restrict)
+  replyToMessage Message?     @relation("MessageReplies", fields: [replyToMessageId], references: [id], onDelete: SetNull)
+  replies        Message[]    @relation("MessageReplies")
+  reports        Report[]     @relation("ReportTargetMessage")
+
+  @@unique([conversationId, sequence])
+  @@unique([conversationId, senderId, clientMessageId])
+  @@index([conversationId, createdAt])
+  @@index([senderId, createdAt])
+  @@index([status, deletedAt])
+}
+
+model ConversationRead {
+  id                String    @id @default(uuid()) @db.Uuid
+  conversationId    String    @db.Uuid
+  userId            String    @db.Uuid
+  lastReadMessageId String?   @db.Uuid
+  lastReadSequence  Int       @default(0)
+  lastReadAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([conversationId, userId])
+  @@index([userId, lastReadAt])
+  @@index([conversationId])
+}
+
+model CallSession {
+  id                  String            @id @default(uuid()) @db.Uuid
+  matchId             String            @db.Uuid
+  conversationId      String            @db.Uuid
+  initiatorUserId     String            @db.Uuid
+  receiverUserId      String            @db.Uuid
+  callType            CallType
+  purpose             String            @default("STANDARD") @db.VarChar(32)
+  introductionPrompt  String?           @db.VarChar(255)
+  status              CallSessionStatus @default(RINGING)
+  signalingVersion    Int               @default(1)
+  initiatorSessionId  String?           @db.Uuid
+  acceptedBySessionId String?           @db.Uuid
+  ringStartedAt       DateTime?
+  acceptedAt          DateTime?
+  connectedAt         DateTime?
+  endedAt             DateTime?
+  expiresAt           DateTime
+  endedByUserId       String?           @db.Uuid
+  endReason           CallEndReason?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  match         Match        @relation(fields: [matchId], references: [id], onDelete: Restrict)
+  conversation  Conversation @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  initiatorUser User         @relation("CallInitiator", fields: [initiatorUserId], references: [id], onDelete: Restrict)
+  receiverUser  User         @relation("CallReceiver", fields: [receiverUserId], references: [id], onDelete: Restrict)
+  reports       Report[]     @relation("ReportTargetCall")
+
+  @@index([matchId, status])
+  @@index([receiverUserId, status])
+  @@index([initiatorUserId, status])
+  @@index([expiresAt])
+}
+
+model Block {
+  id        String    @id @default(uuid()) @db.Uuid
+  blockerId String    @db.Uuid
+  blockedId String    @db.Uuid
+  reason    String?   @db.VarChar(500)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  blocker User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Restrict)
+  blocked User @relation("Blocked", fields: [blockedId], references: [id], onDelete: Restrict)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId, deletedAt])
+  @@index([blockedId, deletedAt])
+}
+
+model Report {
+  id                   String           @id @default(uuid()) @db.Uuid
+  reporterUserId       String           @db.Uuid
+  reportedUserId       String           @db.Uuid
+  targetType           ReportTargetType
+  reasonCode           ReportReasonCode
+  description          String?          @db.VarChar(2000)
+  targetMatchId        String?          @db.Uuid
+  targetConversationId String?          @db.Uuid
+  targetMessageId      String?          @db.Uuid
+  targetPhotoId        String?          @db.Uuid
+  targetCallSessionId  String?          @db.Uuid
+  targetPrivateStoryId String?          @db.Uuid
+  status               ReportStatus     @default(OPEN)
+  dedupeKey            String           @unique @db.VarChar(255)
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  closedAt             DateTime?
+
+  reporter           User             @relation("ReportReporter", fields: [reporterUserId], references: [id], onDelete: Restrict)
+  reported           User             @relation("ReportReported", fields: [reportedUserId], references: [id], onDelete: Restrict)
+  targetMatch        Match?           @relation("ReportTargetMatch", fields: [targetMatchId], references: [id], onDelete: SetNull)
+  targetConversation Conversation?    @relation("ReportTargetConversation", fields: [targetConversationId], references: [id], onDelete: SetNull)
+  targetMessage      Message?         @relation("ReportTargetMessage", fields: [targetMessageId], references: [id], onDelete: SetNull)
+  targetPhoto        ProfilePhoto?    @relation("ReportTargetPhoto", fields: [targetPhotoId], references: [id], onDelete: SetNull)
+  targetCallSession  CallSession?     @relation("ReportTargetCall", fields: [targetCallSessionId], references: [id], onDelete: SetNull)
+  targetPrivateStory PrivateStory?    @relation("ReportTargetPrivateStory", fields: [targetPrivateStoryId], references: [id], onDelete: SetNull)
+  moderationCases    ModerationCase[]
+
+  @@index([reportedUserId, status, createdAt])
+  @@index([reporterUserId, createdAt])
+  @@index([targetMessageId])
+  @@index([targetPhotoId])
+  @@index([targetPrivateStoryId])
+}
+
+model ModerationCase {
+  id                  String               @id @default(uuid()) @db.Uuid
+  subjectUserId       String               @db.Uuid
+  sourceReportId      String?              @db.Uuid
+  caseType            ModerationCaseType
+  priority            ModerationPriority   @default(MEDIUM)
+  status              ModerationCaseStatus @default(OPEN)
+  assignedAdminUserId String?              @db.Uuid
+  summary             String?              @db.VarChar(500)
+  findings            Json?
+  actionTaken         ModerationAction     @default(NONE)
+  actionNotes         String?              @db.VarChar(2000)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  closedAt            DateTime?
+
+  subjectUser   User    @relation("ModerationSubject", fields: [subjectUserId], references: [id], onDelete: Restrict)
+  sourceReport  Report? @relation(fields: [sourceReportId], references: [id], onDelete: SetNull)
+  assignedAdmin User?   @relation("ModerationAssignee", fields: [assignedAdminUserId], references: [id], onDelete: SetNull)
+
+  @@index([subjectUserId, status])
+  @@index([priority, status])
+  @@index([assignedAdminUserId, status])
+}
+
+model TrustScore {
+  id                   String     @id @default(uuid()) @db.Uuid
+  userId               String     @unique @db.Uuid
+  score                Int        @default(70)
+  level                TrustLevel @default(HIGH)
+  factors              Json?
+  lastComputedAt       DateTime   @default(now())
+  manualOverrideScore  Int?
+  manualOverrideReason String?    @db.VarChar(500)
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([score])
+  @@index([level, lastComputedAt])
+}
+
+model Notification {
+  id          String              @id @default(uuid()) @db.Uuid
+  userId      String              @db.Uuid
+  actorUserId String?             @db.Uuid
+  type        NotificationType
+  channel     NotificationChannel @default(IN_APP)
+  title       String              @db.VarChar(140)
+  body        String              @db.VarChar(500)
+  data        Json?
+  status      NotificationStatus  @default(PENDING)
+  dedupeKey   String?             @unique @db.VarChar(255)
+  readAt      DateTime?
+  sentAt      DateTime?
+  failedAt    DateTime?
+  deletedAt   DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  user           User           @relation("NotificationUser", fields: [userId], references: [id], onDelete: Restrict)
+  actorUser      User?          @relation("NotificationActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  pushDeliveries PushDelivery[]
+
+  @@index([userId, status, createdAt])
+  @@index([userId, readAt])
+}
+
+model PushDelivery {
+  id                String             @id @default(uuid()) @db.Uuid
+  notificationId    String             @db.Uuid
+  pushTokenId       String             @db.Uuid
+  provider          PushProvider
+  status            PushDeliveryStatus @default(PENDING)
+  attempts          Int                @default(0)
+  providerMessageId String?            @db.VarChar(255)
+  lastErrorCode     String?            @db.VarChar(120)
+  sentAt            DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Restrict)
+  pushToken    PushToken    @relation(fields: [pushTokenId], references: [id], onDelete: Restrict)
+
+  @@unique([notificationId, pushTokenId])
+  @@index([status, updatedAt])
+}
+
+model FeatureFlag {
+  id                String           @id @default(uuid()) @db.Uuid
+  key               String           @unique @db.VarChar(120)
+  description       String?          @db.VarChar(500)
+  scope             FeatureFlagScope @default(GLOBAL)
+  enabled           Boolean          @default(false)
+  rolloutPercentage Int?
+  variant           String?          @db.VarChar(50)
+  config            Json?
+  allowlistUserIds  Json?
+  createdByUserId   String?          @db.Uuid
+  deletedAt         DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  createdByUser User? @relation("FeatureFlagCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([scope, enabled])
+}
+
+model AnalyticsEvent {
+  id         String          @id @default(uuid()) @db.Uuid
+  userId     String?         @db.Uuid
+  sessionId  String?         @db.Uuid
+  eventName  String          @db.VarChar(120)
+  source     AnalyticsSource @default(MOBILE)
+  properties Json?
+  occurredAt DateTime
+  receivedAt DateTime        @default(now())
+
+  user    User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  session UserSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([eventName, occurredAt])
+  @@index([userId, occurredAt])
+  @@index([sessionId, occurredAt])
+}
+
+model UserStreak {
+  userId String @id @db.Uuid
+  currentStreak Int @default(0)
+  longestStreak Int @default(0)
+  balance Int @default(0)
+  lastActivityDate DateTime? @db.Date
+  displayEnabled Boolean @default(true)
+  recapNotificationsEnabled Boolean @default(false)
+}
+
+model QualifyingActivity {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  sceneId String @unique @db.Uuid
+  occurredAt DateTime @default(now())
+  activityDate DateTime @db.Date
+  transactionId BigInt @default(dbgenerated("txid_current()"))
+  @@index([userId, occurredAt])
+}
+
+model VibePointsLedger {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  activityId String @unique @db.Uuid
+  activityDate DateTime @db.Date
+  amount Int
+  streak Int
+  awardedAt DateTime @default(now())
+  @@unique([userId, activityDate])
+  @@index([userId, awardedAt])
+}
+
+model StreakIntegrityAnomaly {
+  activityId String @id @db.Uuid
+  userId String @db.Uuid
+  detectedAt DateTime @default(now())
+}
+
+model AcceptedPlanFact {
+  planId String @db.Uuid
+  kind String @db.VarChar(8)
+  userIds String[] @db.Uuid
+  acceptedAt DateTime @default(now())
+  @@id([kind, planId])
+  @@index([acceptedAt])
+}
+
+model WeeklyRecap {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  periodStart DateTime
+  periodEnd DateTime
+  version Int @default(1)
+  scenesPublished Int
+  plansAccepted Int
+  activityDays Int
+  pointsEarned Int
+  generatedAt DateTime @default(now())
+  historyStartedAt DateTime
+  @@unique([userId, periodStart, version])
+  @@index([periodEnd, userId])
+}
+
+model ActivityRollout {
+  id Int @id @default(1)
+  startedAt DateTime @default(now())
+}
+
+model AuditLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  actorUserId    String?  @db.Uuid
+  actorSessionId String?  @db.Uuid
+  action         String   @db.VarChar(120)
+  entityType     String   @db.VarChar(80)
+  entityId       String?  @db.VarChar(64)
+  targetUserId   String?  @db.Uuid
+  ipAddress      String?  @db.VarChar(64)
+  userAgent      String?  @db.VarChar(500)
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  actorUser    User?        @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorSession UserSession? @relation(fields: [actorSessionId], references: [id], onDelete: SetNull)
+  targetUser   User?        @relation("AuditTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId, createdAt])
+  @@index([entityType, entityId])
+  @@index([targetUserId, createdAt])
+}

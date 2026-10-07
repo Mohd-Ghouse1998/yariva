@@ -1,0 +1,122 @@
+[
+  {
+    "text": "Connections",
+    "bounds": "[353,142][727,223]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Notifications",
+    "bounds": "[888,117][1020,249]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Connections sections",
+    "bounds": "[60,291][1020,423]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Interested in you, 0",
+    "bounds": "[75,306][540,408]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Interested in you 0",
+    "bounds": "[128,330][487,384]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Matches, 5",
+    "bounds": "[540,306][1005,408]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Matches 5",
+    "bounds": "[672,330][873,384]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "No new interest yet",
+    "bounds": "[307,1057][773,1123]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "View my profile",
+    "bounds": "[338,1208][743,1340]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "View my profile",
+    "bounds": "[386,1244][695,1304]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Discover",
+    "bounds": "[52,2028][247,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Discover",
+    "bounds": "[77,2110][221,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Connections",
+    "bounds": "[247,2028][442,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Connect",
+    "bounds": "[274,2110][414,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Meetups",
+    "bounds": "[442,2028][638,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Meet",
+    "bounds": "[498,2110][581,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Chats",
+    "bounds": "[638,2028][833,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Chats",
+    "bounds": "[687,2110][784,2149]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Profile",
+    "bounds": "[833,2028][1028,2160]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Profile",
+    "bounds": "[877,2110][984,2149]",
+    "clickable": false,
+    "checked": false
+  }
+]

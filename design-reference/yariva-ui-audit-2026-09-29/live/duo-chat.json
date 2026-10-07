@@ -1,0 +1,80 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[12,117][156,261]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "View Duo chat members",
+    "bounds": "[156,129][924,249]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "DU",
+    "bounds": "[174,156][240,222]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Duo chat",
+    "bounds": "[282,129][924,195]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "4 people",
+    "bounds": "[282,195][418,249]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Conversation options",
+    "bounds": "[924,117][1068,261]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "You matched on Tuesday",
+    "bounds": "[344,342][736,396]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Keep early conversations here. When it feels right, suggest a casual public meetup.",
+    "bounds": "[141,462][1008,570]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Duo test: hello from the phone",
+    "bounds": "[387,672][990,732]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "2:47\u202fpm \u00b7 Seen by 3",
+    "bounds": "[686,756][990,798]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Attach",
+    "bounds": "[36,2028][180,2172]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Message Duo chat\u2026",
+    "bounds": "[249,2047][759,2152]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Send message",
+    "bounds": "[912,2034][1044,2166]",
+    "clickable": true,
+    "checked": false
+  }
+]

@@ -1,0 +1,80 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Conversation starters",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "My ideal unhurried Sunday\u2026",
+    "bounds": "[62,353][1018,527]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "My ideal unhurried Sunday\u2026",
+    "bounds": "[221,386][895,440]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "A slow breakfast, a long walk, and one plan worth looking forward to.",
+    "bounds": "[221,443][895,494]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Something I would love to learn with someone\u2026",
+    "bounds": "[62,527][1018,745]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Something I would love to learn with someone\u2026",
+    "bounds": "[221,556][895,664]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "A recipe neither of us has tried, without pretending the first attempt will be perfect.",
+    "bounds": "[221,667][895,718]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "A relationship feels healthy to me when\u2026",
+    "bounds": "[62,745][1018,963]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "A relationship feels healthy to me when\u2026",
+    "bounds": "[221,774][895,882]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Both people can be direct, kind, and still keep their own lives.",
+    "bounds": "[221,885][895,936]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Save changes",
+    "bounds": "[60,2064][1020,2196]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Save changes",
+    "bounds": "[400,2100][680,2160]",
+    "clickable": false,
+    "checked": false
+  }
+]

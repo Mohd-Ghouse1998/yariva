@@ -1,0 +1,200 @@
+[
+  {
+    "text": "Back",
+    "bounds": "[60,123][204,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Profile",
+    "bounds": "[192,162][888,228]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Profile options",
+    "bounds": "[876,123][1020,267]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "INTERESTS",
+    "bounds": "[60,303][1020,123]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Coffee",
+    "bounds": "[131,303][248,251]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Music",
+    "bounds": "[338,303][441,251]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Travel",
+    "bounds": "[531,303][637,251]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Movies",
+    "bounds": "[727,303][851,251]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "LIFESTYLE",
+    "bounds": "[60,352][1020,394]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "WEEKLY",
+    "bounds": "[131,468][279,522]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "OMNIVORE",
+    "bounds": "[369,468][565,522]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "BALANCED",
+    "bounds": "[655,468][854,522]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Slow and steady",
+    "bounds": "[131,576][422,630]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Telugu",
+    "bounds": "[512,576][628,630]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Hindi",
+    "bounds": "[718,576][810,630]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "English",
+    "bounds": "[131,684][258,738]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "VALUES SHARED BY CHOICE",
+    "bounds": "[60,839][1020,881]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Relocation openness",
+    "bounds": "[98,928][982,982]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Open to discussing within India",
+    "bounds": "[98,988][982,1054]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Career priority",
+    "bounds": "[98,1105][982,1159]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Ambitious with room for relationships",
+    "bounds": "[98,1165][982,1231]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Family involvement comfort",
+    "bounds": "[98,1282][982,1336]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Comfortable after trust develops",
+    "bounds": "[98,1342][982,1408]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Marriage timeline",
+    "bounds": "[98,1459][982,1513]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Open to a clear timeline together",
+    "bounds": "[98,1519][982,1585]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Children preference",
+    "bounds": "[98,1636][982,1690]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Open to discussing",
+    "bounds": "[98,1696][982,1762]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Religion spirituality",
+    "bounds": "[98,1813][982,1867]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Personal and respectful",
+    "bounds": "[98,1873][982,1939]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Not for me",
+    "bounds": "[60,2064][430,2196]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Not for me",
+    "bounds": "[139,2100][351,2160]",
+    "clickable": false,
+    "checked": false
+  },
+  {
+    "text": "Interested",
+    "bounds": "[466,2064][1020,2196]",
+    "clickable": true,
+    "checked": false
+  },
+  {
+    "text": "Interested",
+    "bounds": "[682,2100][889,2160]",
+    "clickable": false,
+    "checked": false
+  }
+]
