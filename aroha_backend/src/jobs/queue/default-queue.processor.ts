@@ -13,6 +13,7 @@ import { NotificationDispatchProcessor } from "../notification/notification-disp
 import { SessionsCleanupInactiveProcessor } from "../sessions/sessions-cleanup-inactive.processor";
 import { VibeMediaProcessor } from "../vibes/vibe-media.processor";
 import { BlindEventsProcessor } from "../blind/blind-events.processor";
+import { PrivateStoryCleanupProcessor } from "../private-stories/private-story-cleanup.processor";
 
 @Processor("default", {
   concurrency: 5,
@@ -32,6 +33,7 @@ export class DefaultQueueProcessor extends WorkerHost {
     private readonly logger: AppLogger,
     private readonly blindEventsProcessor: BlindEventsProcessor,
     private readonly weeklyRecapProcessor: WeeklyRecapProcessor,
+    private readonly privateStoryCleanupProcessor: PrivateStoryCleanupProcessor,
   ) {
     super();
   }
@@ -43,6 +45,9 @@ export class DefaultQueueProcessor extends WorkerHost {
         return;
       case "blind.events.reconcile":
         await this.blindEventsProcessor.process();
+        return;
+      case "notification.reconcile":
+        await this.notificationDispatchProcessor.reconcile();
         return;
       case "notification.dispatch":
         await this.notificationDispatchProcessor.process(job);
@@ -73,6 +78,9 @@ export class DefaultQueueProcessor extends WorkerHost {
         return;
       case "vibe.media.process":
         await this.vibeMediaProcessor.process(job);
+        return;
+      case "private-story.cleanup":
+        await this.privateStoryCleanupProcessor.process();
         return;
       default:
         this.logger.warn(`Ignoring unknown job ${job.name}`);

@@ -3,5 +3,7 @@ import { PrivateFollowsController, PrivateStoriesCapabilitiesController, Private
 import { PrivateStoriesService } from "./application/private-stories.service";
 import { FeatureFlagsModule } from "../feature-flags/feature-flags.module";
 import { PrivateStoriesFlagGuard } from "./private-stories-flag.guard";
-@Module({ imports: [FeatureFlagsModule], controllers: [PrivateStoriesCapabilitiesController, PrivateFollowsController, PrivateStoriesController], providers: [PrivateStoriesService, PrivateStoriesFlagGuard], exports: [PrivateStoriesService] })
+import { AuditLogService } from "../../common/services/audit-log.service";
+import { NotificationIntentModule } from "../notifications/notification-intent.module";
+@Module({ imports: [FeatureFlagsModule, NotificationIntentModule], controllers: [PrivateStoriesCapabilitiesController, PrivateFollowsController, PrivateStoriesController], providers: [PrivateStoriesService, PrivateStoriesFlagGuard, AuditLogService], exports: [PrivateStoriesService] })
 export class PrivateStoriesModule {}

@@ -19,6 +19,8 @@ import { AdminModerationController } from "./controllers/admin-moderation.contro
 import { AdminUsersController } from "./controllers/admin-users.controller";
 import { AdminVibeModerationController } from "./controllers/admin-vibe-moderation.controller";
 import { AdminRoleGuard } from "./policies/admin-role.guard";
+import { PrivateStoriesModule } from "../private-stories/private-stories.module";
+import { AdminStoryModerationController } from "./controllers/admin-story-moderation.controller";
 
 @Module({
   imports: [
@@ -27,6 +29,7 @@ import { AdminRoleGuard } from "./policies/admin-role.guard";
     ModerationModule,
     NotificationsModule,
     VibesModule,
+    PrivateStoriesModule,
   ],
   controllers: [
     AdminModerationController,
@@ -35,6 +38,7 @@ import { AdminRoleGuard } from "./policies/admin-role.guard";
     AdminAnalyticsController,
     AdminAuditController,
     AdminVibeModerationController,
+    AdminStoryModerationController,
   ],
   providers: [
     AuditLogService,

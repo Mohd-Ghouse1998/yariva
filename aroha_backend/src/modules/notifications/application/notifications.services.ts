@@ -1,12 +1,15 @@
+import { NotificationIntentService, mapNotification, normalizeJsonObject, type CreateNotificationInput } from "./notification-intent.service";
+export { mapNotification, type CreateNotificationInput } from "./notification-intent.service";
+import { resolveMutualMeetAgain } from "../../date-plans/domain/date-plans.privacy";
+import type { PrismaTransactionalClient } from "../../../database/prisma/prisma.transaction";
 import { Injectable } from "@nestjs/common";
 import { EvaluateFeatureFlagService } from "../../feature-flags/application/feature-flags.services";
+import { PrivateStoriesService } from "../../private-stories/application/private-stories.service";
 import { AppLogger } from "../../../common/logger/app-logger.service";
 import { DomainEventPublisher } from "../../../common/services/domain-event.publisher";
 import { PrismaService } from "../../../database/prisma/prisma.service";
-import { BullmqProducer } from "../../../integrations/bullmq/bullmq.producer";
 import type {
   Notification,
-  NotificationChannel,
   NotificationType,
   Prisma,
 } from "../../../generated/prisma/client";
@@ -22,7 +25,6 @@ import { NotificationOwnershipPolicy } from "../domain/notifications.domain";
 import {
   NotificationRepository,
   PushDeliveryRepository,
-  type NotificationWithActor,
   PushTokenReadRepository,
 } from "../infrastructure/notifications.infrastructure";
 import {
@@ -31,21 +33,12 @@ import {
   PushTransportError,
 } from "../infrastructure/push-transports";
 
-export interface CreateNotificationInput {
-  userId: string;
-  actorUserId?: string | null;
-  type: NotificationType;
-  channel?: NotificationChannel;
-  title: string;
-  body: string;
-  data?: Record<string, unknown>;
-  dedupeKey?: string | null;
-}
-
 @Injectable()
 export class ListNotificationsService {
   constructor(
     private readonly notificationRepository: NotificationRepository,
+    private readonly stories: PrivateStoriesService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async execute(input: {
@@ -53,16 +46,24 @@ export class ListNotificationsService {
     cursor?: string;
     limit?: number;
   }): Promise<NotificationPageDto> {
-    const page = await this.notificationRepository.listByUser({
-      userId: input.userId,
-      cursor: input.cursor,
-      limit: input.limit ?? 20,
-    });
-
-    return {
-      items: page.items.map(mapNotification),
-      nextCursor: page.nextCursor,
-    };
+    const limit = input.limit ?? 20;
+    const items: NotificationDto[] = [];
+    let cursor = input.cursor;
+    let nextCursor: string | null = null;
+    // Continue past inaccessible Stories without hiding later valid activity.
+    // Bound work per request; callers can continue with the scanned cursor.
+    for (let scan = 0; scan < 5; scan++) {
+      const page = await this.notificationRepository.listByUser({
+        userId: input.userId, cursor, limit: limit - items.length,
+      });
+      for (const notification of page.items) {
+        if (await canReadNotification(this.stories, this.prisma, notification)) items.push(mapNotification(notification));
+      }
+      nextCursor = page.nextCursor;
+      if (items.length === limit || !nextCursor) break;
+      cursor = nextCursor;
+    }
+    return { items, nextCursor };
   }
 }
 
@@ -73,6 +74,7 @@ export class MarkNotificationReadService {
     private readonly notificationRepository: NotificationRepository,
     private readonly ownershipPolicy: NotificationOwnershipPolicy,
     private readonly domainEventPublisher: DomainEventPublisher,
+    private readonly stories: PrivateStoriesService,
   ) {}
 
   async execute(input: {
@@ -90,6 +92,7 @@ export class MarkNotificationReadService {
       );
     }
     this.ownershipPolicy.assertOwned(input.userId, notification);
+    if (!await canReadNotification(this.stories, this.prisma, notification)) throw notificationMissing();
 
     const updated = await this.prisma.$transaction((tx) =>
       this.notificationRepository.markRead(tx, {
@@ -112,56 +115,28 @@ export class MarkNotificationReadService {
 export class CreateNotificationService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly notificationRepository: NotificationRepository,
-    private readonly bullmqProducer: BullmqProducer,
-    private readonly domainEventPublisher: DomainEventPublisher,
-    private readonly logger: AppLogger,
+    private readonly intents: NotificationIntentService,
+    private readonly stories: PrivateStoriesService,
   ) {}
 
-  async execute(input: CreateNotificationInput): Promise<{
-    notification: NotificationDto;
-    created: boolean;
-  }> {
-    const result = await this.prisma.$transaction((tx) =>
-      this.notificationRepository.createOrGet(tx, {
-        userId: input.userId,
-        actorUserId: input.actorUserId ?? null,
-        type: input.type,
-        channel: input.channel ?? "PUSH",
-        title: input.title,
-        body: input.body,
-        data: (input.data ?? {}) as Prisma.InputJsonValue,
-        dedupeKey: input.dedupeKey ?? null,
-      }),
-    );
-
-    const dto = mapNotification(result.notification);
-    if (!result.created) {
-      return { notification: dto, created: false };
-    }
-
-    await this.domainEventPublisher.publishSafely(NOTIFICATION_EVENTS.CREATED, {
-      notification: dto,
-      recipientUserIds: [result.notification.userId],
-    });
-
-    await this.enqueueDispatchSafely(result.notification.id);
-    return { notification: dto, created: true };
+  async execute(input: CreateNotificationInput): Promise<{ notification: NotificationDto; created: boolean }> {
+    const result = await this.prisma.$transaction((tx) => this.persist(tx, input));
+    await this.dispatchPersisted(result);
+    return { notification: mapNotification(result.notification), created: result.created };
   }
 
-  private async enqueueDispatchSafely(notificationId: string): Promise<void> {
-    try {
-      await this.bullmqProducer.enqueue(
-        "notification.dispatch",
-        { notificationId },
-        { jobId: `notification.dispatch:${notificationId}` },
-      );
-    } catch (error) {
-      this.logger.error(
-        `Failed to enqueue notification dispatch ${notificationId}`,
-        error instanceof Error ? error.stack : undefined,
-      );
-    }
+  async persist(tx: PrismaTransactionalClient, input: CreateNotificationInput) {
+    if (!await canReadNotification(this.stories, tx, input)) throw notificationMissing();
+    return this.intents.persist(tx, input);
+  }
+
+  async dispatchPersisted(result: { notification: Notification; created: boolean }): Promise<void> {
+    if (!await canReadNotification(this.stories, this.prisma, result.notification)) return;
+    await this.intents.dispatchPersisted(result);
+  }
+
+  async recoverPending(now = new Date()): Promise<void> {
+    await this.intents.recoverPending(now);
   }
 }
 
@@ -173,6 +148,8 @@ export class PushDispatcherService {
     private readonly fcm: FcmPushTransport,
     private readonly apns: ApnsPushTransport,
     private readonly logger: AppLogger,
+    private readonly stories: PrivateStoriesService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async dispatch(
@@ -195,6 +172,8 @@ export class PushDispatcherService {
     let delivered = sentTokenIds.size > 0;
     let firstFailure: unknown = null;
     for (const token of pending) {
+      // A relationship can be revoked while another token/provider is pending.
+      if (!await canReadNotification(this.stories, this.prisma, notification)) return "SUPPRESSED";
       const transport = token.provider === "FCM" ? this.fcm : this.apns;
       const now = new Date();
       try {
@@ -260,6 +239,7 @@ export class NotificationDispatchService {
     private readonly pushDispatcherService: PushDispatcherService,
     private readonly createNotificationService: CreateNotificationService,
     private readonly featureFlags: EvaluateFeatureFlagService,
+    private readonly stories: PrivateStoriesService,
   ) {}
 
   async execute(payload: Record<string, unknown>): Promise<void> {
@@ -269,6 +249,26 @@ export class NotificationDispatchService {
         : null;
 
     if (!notificationId) {
+      if (payload.type === "PRIVATE_STORY_SHARED" && typeof payload.storyId === "string") {
+        const grants = await this.prisma.privateStoryGrant.findMany({
+          where: { storyId: payload.storyId }, select: { recipientId: true },
+        });
+        for (const { recipientId } of grants) {
+          if (!await this.stories.canAccess(recipientId, payload.storyId)) continue;
+          try {
+            await this.createNotificationService.execute({
+              userId: recipientId, type: "SYSTEM", title: "New update",
+              body: "A private Story is available in Yariva.",
+              data: { route: "private-story", storyId: payload.storyId },
+              dedupeKey: `private-story:${payload.storyId}:${recipientId}`,
+            });
+          } catch (error) {
+            // A revoke between the audience check and creation is expected.
+            if (!(error instanceof AppException && error.getStatus() === 404)) throw error;
+          }
+        }
+        return;
+      }
       await this.createFromLegacyPayload(payload);
       return;
     }
@@ -279,8 +279,14 @@ export class NotificationDispatchService {
       !notification ||
       notification.deletedAt ||
       notification.status === "READ" ||
+      notification.status === "SENT" ||
       notification.status === "CANCELED"
     ) {
+      return;
+    }
+
+    if (!await canReadNotification(this.stories, this.prisma, notification)) {
+      await this.prisma.$transaction((tx) => this.notificationRepository.markCanceled(tx, notification.id));
       return;
     }
 
@@ -355,6 +361,41 @@ export class NotificationDispatchService {
   }
 }
 
+function notificationMissing() {
+  return new AppException(404, ERROR_CODES.RESOURCE_NOT_FOUND, "Notification not found");
+}
+
+async function canReadNotification(
+  stories: PrivateStoriesService,
+  db: PrismaTransactionalClient,
+  notification: { userId: string; type?: NotificationType; data?: unknown },
+): Promise<boolean> {
+  const data = normalizeJsonObject(notification.data as Prisma.JsonValue | null);
+  if (data.route === "private-story") {
+    return typeof data.storyId === "string" && await stories.canAccess(notification.userId, data.storyId, db);
+  }
+  if (notification.type !== "MUTUAL_MEET_AGAIN") return true;
+  if (typeof data.datePlanId !== "string") return false;
+  const plan = await db.datePlan.findUnique({
+    where: { id: data.datePlanId },
+    select: { status: true, checkIns: { select: { userId: true, wantsToMeetAgain: true, postDateSubmittedAt: true } },
+      match: { select: { status: true, userLowId: true, userHighId: true,
+        userLow: { select: { status: true, deletedAt: true } }, userHigh: { select: { status: true, deletedAt: true } } } } },
+  });
+  if (!plan || plan.status !== "COMPLETED" || plan.match.status !== "ACTIVE") return false;
+  const { userLowId, userHighId, userLow, userHigh } = plan.match;
+  if (![userLowId, userHighId].includes(notification.userId) ||
+      [userLow, userHigh].some(user => user.status !== "ACTIVE" || user.deletedAt)) return false;
+  const responses = [userLowId, userHighId].map(userId => {
+    const answer = plan.checkIns.find(item => item.userId === userId && item.postDateSubmittedAt);
+    return answer?.wantsToMeetAgain;
+  });
+  if (resolveMutualMeetAgain(responses) !== "MUTUAL") return false;
+  return !await db.block.findFirst({ where: { deletedAt: null, OR: [
+    { blockerId: userLowId, blockedId: userHighId }, { blockerId: userHighId, blockedId: userLowId },
+  ] }, select: { id: true } });
+}
+
 function isPushAllowed(
   type: NotificationType,
   preferences: {
@@ -369,38 +410,4 @@ function isPushAllowed(
   if (type === "NEW_MESSAGE") return preferences.allowPushMessages;
   if (type === "MISSED_CALL") return preferences.allowPushCalls;
   return true;
-}
-
-export function mapNotification(
-  notification: Notification | NotificationWithActor,
-): NotificationDto {
-  const actorUser = "actorUser" in notification ? notification.actorUser : null;
-  return {
-    id: notification.id,
-    type: notification.type,
-    channel: notification.channel,
-    title: notification.title,
-    body: notification.body,
-    data: normalizeJsonObject(notification.data),
-    actor: notification.actorUserId
-      ? {
-          userId: notification.actorUserId,
-          displayName: actorUser?.profile?.displayName ?? null,
-        }
-      : null,
-    status: notification.status,
-    readAt: notification.readAt?.toISOString() ?? null,
-    sentAt: notification.sentAt?.toISOString() ?? null,
-    createdAt: notification.createdAt.toISOString(),
-  };
-}
-
-function normalizeJsonObject(
-  value: Prisma.JsonValue | null,
-): Record<string, unknown> {
-  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
-    return value as Record<string, unknown>;
-  }
-
-  return {};
 }

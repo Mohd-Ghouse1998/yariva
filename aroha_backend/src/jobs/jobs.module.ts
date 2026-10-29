@@ -38,6 +38,7 @@ import { DefaultQueueProcessor } from "./queue/default-queue.processor";
 import { SessionsCleanupInactiveProcessor } from "./sessions/sessions-cleanup-inactive.processor";
 import { DatePlanReminderProcessor } from "./date-plans/date-plan-reminder.processor";
 import { VibeMediaProcessor } from "./vibes/vibe-media.processor";
+import { PrivateStoryCleanupProcessor } from "./private-stories/private-story-cleanup.processor";
 
 @Module({
   imports: [
@@ -86,6 +87,7 @@ import { VibeMediaProcessor } from "./vibes/vibe-media.processor";
     SessionsCleanupInactiveProcessor,
     DatePlanReminderProcessor,
     VibeMediaProcessor,
+    PrivateStoryCleanupProcessor,
     DefaultQueueProcessor,
   ],
 })

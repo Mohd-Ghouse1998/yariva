@@ -20,7 +20,7 @@ export default function AppLayout() {
   }
 
   return (
-    <>
+    <React.Fragment key={user?.id ?? "pending-account"}>
       <PushRegistrationEffect />
       <Stack
         screenOptions={{
@@ -51,6 +51,6 @@ export default function AppLayout() {
         <Stack.Screen name="settings/language" />
         <Stack.Screen name="report" options={{ presentation: "modal" }} />
       </Stack>
-    </>
+    </React.Fragment>
   );
 }

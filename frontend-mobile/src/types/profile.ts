@@ -55,7 +55,22 @@ export interface SchedulePreferenceDto {
   timezone: string | null;
 }
 
-export interface DiscoveryPreferenceDto {
+export type OccupationCategory =
+  | "TECHNOLOGY" | "HEALTHCARE" | "EDUCATION" | "CREATIVE"
+  | "BUSINESS" | "HOSPITALITY" | "STUDENT" | "OTHER";
+export interface OccupationCategoryOption { value: OccupationCategory; label: string }
+
+export interface DiscoveryPeopleFilters {
+  interestTagIds?: string[];
+  languageFilter?: string[];
+  occupationFilter?: string | null;
+  occupationCategoryFilter?: OccupationCategory[];
+  smokingFilter?: SmokingHabit[];
+  drinkingFilter?: DrinkingHabit[];
+  exerciseFilter?: ExerciseHabit[];
+}
+
+export interface DiscoveryPreferenceDto extends DiscoveryPeopleFilters {
   minAge: number | null;
   maxAge: number | null;
   maxDistanceKm: number | null;
@@ -86,7 +101,7 @@ export interface UpdateSchedulePreferenceRequest {
   timezone?: string | null;
 }
 
-export interface UpdateDiscoveryPreferenceRequest {
+export interface UpdateDiscoveryPreferenceRequest extends DiscoveryPeopleFilters {
   minAge: number;
   maxAge: number;
   maxDistanceKm: number;
@@ -156,6 +171,8 @@ export interface MyProfileDto {
   isPaused: boolean;
   verificationStatus: ProfileVerificationStatus;
   preferredRelationshipPace: RelationshipPace | null;
+  occupation?: string | null;
+  occupationCategory?: OccupationCategory | null;
   languages: string[];
   foodPreferences: string[];
   relocationOpenness: string | null;
@@ -164,6 +181,7 @@ export interface MyProfileDto {
   marriageTimeline: string | null;
   childrenPreference: string | null;
   religionSpirituality: string | null;
+  shareWorkDetails?: boolean;
   shareSensitiveCompatibility: boolean;
   promptResponses: Array<{ promptId: ProfilePromptId; answer: string }>;
   isComplete: boolean;
@@ -201,6 +219,9 @@ export interface UpdateMyProfileRequest {
   hideFromContacts?: boolean;
   isPaused?: boolean;
   preferredRelationshipPace?: RelationshipPace | null;
+  occupation?: string | null;
+  occupationCategory?: OccupationCategory | null;
+  shareWorkDetails?: boolean;
   languages?: string[];
   foodPreferences?: string[];
   relocationOpenness?: string | null;
@@ -223,6 +244,7 @@ export interface PublicProfileDto {
   pronouns: string | null;
   verificationStatus: ProfileVerificationStatus;
   preferredRelationshipPace: RelationshipPace | null;
+  occupation?: string | null;
   languages: string[];
   foodPreferences: string[];
   profilePrompts: Array<{ promptId: string; answer: string }>;

@@ -14,11 +14,7 @@ import { ToggleRow } from "../../components/ui/ToggleRow";
 import { NavigationListSection } from "../../components/ui/NavigationList";
 import { useToast } from "../../components/ui/Toast";
 import { useTheme } from "../../theme/ThemeContext";
-import {
-  PROFILE_GENDER,
-  type ConnectionIntent,
-  type ProfileGender,
-} from "../../types/enums";
+import { PROFILE_GENDER, type ConnectionIntent, type ProfileGender } from "../../types/enums";
 import type { UpdateDiscoveryPreferenceRequest } from "../../types/profile";
 import { DISCOVERY_DEFAULTS, DISCOVERY_LIMITS } from "../../config/discoveryPreferences";
 import { CONNECTION_INTENT_OPTIONS } from "../../config/connectionIntents";
@@ -64,6 +60,7 @@ export const DiscoveryPreferencesScreen: React.FC = () => {
     if (!hydration.profile) return;
     const preference = hydration.profile.discoveryPreference;
     setValue({
+      ...preference,
       minAge: preference.minAge ?? DISCOVERY_DEFAULTS.minimumAge,
       maxAge: preference.maxAge ?? DISCOVERY_DEFAULTS.maximumAge,
       maxDistanceKm: preference.maxDistanceKm ?? DISCOVERY_DEFAULTS.distanceKm,
@@ -84,9 +81,11 @@ export const DiscoveryPreferencesScreen: React.FC = () => {
   const toggleIntent = (i: ConnectionIntent) =>
     setValue((s) => ({
       ...s,
-      intentFilter: s.intentFilter.includes(i)
-        ? s.intentFilter.filter((x) => x !== i)
-        : [...s.intentFilter, i],
+      intentFilter: s.intentFilter.length === CONNECTION_INTENT_OPTIONS.length
+        ? [i]
+        : s.intentFilter.includes(i)
+          ? s.intentFilter.filter((x) => x !== i)
+          : [...s.intentFilter, i],
     }));
 
   const onContinue = async () => {
@@ -185,6 +184,12 @@ export const DiscoveryPreferencesScreen: React.FC = () => {
               Show me
             </Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+              <Chip
+                label="All"
+                selected={value.preferredGenders.length === 0}
+                onPress={() => setValue((s) => ({ ...s, preferredGenders: [] }))}
+                size="sm"
+              />
               {PROFILE_GENDER.map((g) => (
                 <Chip
                   key={g}
@@ -203,8 +208,18 @@ export const DiscoveryPreferencesScreen: React.FC = () => {
               People looking for
             </Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+              <Chip
+                label="All"
+                selected={value.intentFilter.length === CONNECTION_INTENT_OPTIONS.length}
+                onPress={() => setValue((s) => ({
+                  ...s,
+                  intentFilter: CONNECTION_INTENT_OPTIONS.map((option) => option.value),
+                }))}
+                size="sm"
+              />
               {CONNECTION_INTENT_OPTIONS.map(({ value: i, label }) => {
-                const active = value.intentFilter.includes(i);
+                const active = value.intentFilter.length < CONNECTION_INTENT_OPTIONS.length &&
+                  value.intentFilter.includes(i);
                 return (
                   <Chip
                     key={i}
@@ -222,15 +237,15 @@ export const DiscoveryPreferencesScreen: React.FC = () => {
             <ToggleRow
               grouped
               first
-              label="Same-city only"
-              sub="Show people who live in your city."
+              label="Prefer same city"
+              sub="Prioritize people who live in your city."
               value={value.preferSameCity}
               onValueChange={(v) => setValue((s) => ({ ...s, preferSameCity: v }))}
             />
             <ToggleRow
               grouped
               label="Recently active only"
-              sub="People active in the past 14 days."
+              sub="People active in the past 7 days."
               value={value.includeRecentlyActiveOnly}
               onValueChange={(v) => setValue((s) => ({ ...s, includeRecentlyActiveOnly: v }))}
             />

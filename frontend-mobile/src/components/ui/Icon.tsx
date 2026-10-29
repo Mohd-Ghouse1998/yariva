@@ -7,6 +7,7 @@ import { useTheme } from "../../theme/ThemeContext";
 // shared Ionicons approach used in mobile_app_v3: each semantic icon has a
 // matched outline and filled form so screens cannot drift into mixed styles.
 export type IconName =
+  | "bookmark"
   | "arrowLeft"
   | "user"
   | "personAdd"
@@ -84,6 +85,7 @@ type IconSpec = {
 };
 
 const ICONS: Record<IconName, IconSpec> = {
+  bookmark: { outline: "bookmark-outline", solid: "bookmark" },
   arrowLeft: { outline: "arrow-back" },
   user: { outline: "person-outline", solid: "person" },
   personAdd: { outline: "person-add-outline", solid: "person-add" },

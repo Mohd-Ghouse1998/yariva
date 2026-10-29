@@ -7,12 +7,13 @@ import { configureHttpServer } from "../../src/bootstrap/http.bootstrap";
 import { PrismaService } from "../../src/database/prisma/prisma.service";
 import { ActivityService } from "../../src/modules/activity/application/activity.service";
 import { ScenesService } from "../../src/modules/scenes/application/scenes.services";
-import { istDay } from "../../src/modules/activity/domain/activity.domain";
+import { closedRecapPeriod, istDay } from "../../src/modules/activity/domain/activity.domain";
 
 const live =
   process.env.AROHA_RUN_LIVE_INTEGRATION === "1" ? describe : describe.skip;
 live("Trusted activity: real database rewards and private recaps", () => {
   let app: NestExpressApplication, db: PrismaService, activity: ActivityService;
+  let previousFlag: { enabled: boolean; scope: "GLOBAL" | "USER_ALLOWLIST" | "USER_PERCENTAGE"; rolloutPercentage: number | null } | null;
   const users: Array<{ id: string; token: string }> = [],
     run = randomUUID();
   beforeAll(async () => {
@@ -25,10 +26,11 @@ live("Trusted activity: real database rewards and private recaps", () => {
     await app.init();
     db = app.get(PrismaService);
     activity = app.get(ActivityService);
+    previousFlag = await db.featureFlag.findUnique({ where: { key: "activity.v1" }, select: { enabled: true, scope: true, rolloutPercentage: true } });
     await db.featureFlag.upsert({
       where: { key: "activity.v1" },
-      create: { key: "activity.v1", enabled: true },
-      update: { enabled: true },
+      create: { key: "activity.v1", enabled: true, scope: "GLOBAL" },
+      update: { enabled: true, scope: "GLOBAL", rolloutPercentage: null },
     });
     await db.featureFlag.upsert({
       where: { key: "scenes.v1" },
@@ -64,6 +66,8 @@ live("Trusted activity: real database rewards and private recaps", () => {
     }
   });
   afterAll(async () => {
+    if (db && previousFlag) await db.featureFlag.update({ where: { key: "activity.v1" }, data: previousFlag });
+    else if (db) await db.featureFlag.deleteMany({ where: { key: "activity.v1" } });
     await app?.close();
   });
   const api = (i: number) =>
@@ -322,7 +326,7 @@ live("Trusted activity: real database rewards and private recaps", () => {
       where: { userId: users[0]!.id },
       data: { recapNotificationsEnabled: true },
     });
-    const cutoff = new Date("2026-10-04T14:30:00Z");
+    const cutoff = closedRecapPeriod(new Date(Date.now() + 8 * 86_400_000)).end;
     const reports = await Promise.all(
       Array.from({ length: 4 }, () => activity.generate(users[0]!.id, cutoff)),
     );

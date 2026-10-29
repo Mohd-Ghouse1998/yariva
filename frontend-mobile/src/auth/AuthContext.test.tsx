@@ -10,6 +10,9 @@ const mocks = vi.hoisted(() => ({
   clear: vi.fn(),
   usersMe: vi.fn(),
   configureHttpClient: vi.fn(),
+  refresh: vi.fn(),
+  login: vi.fn(),
+  logout: vi.fn(),
 }));
 
 vi.mock("./storage", () => ({
@@ -28,10 +31,10 @@ vi.mock("../api/endpoints/users", () => ({
 
 vi.mock("../api/endpoints/auth", () => ({
   authApi: {
-    refresh: vi.fn(),
+    refresh: mocks.refresh,
     signup: vi.fn(),
-    login: vi.fn(),
-    logout: vi.fn(),
+    login: mocks.login,
+    logout: mocks.logout,
   },
 }));
 
@@ -100,6 +103,9 @@ beforeEach(() => {
   mocks.clear.mockReset().mockResolvedValue(undefined);
   mocks.usersMe.mockReset();
   mocks.configureHttpClient.mockReset();
+  mocks.refresh.mockReset();
+  mocks.login.mockReset();
+  mocks.logout.mockReset().mockResolvedValue(undefined);
 });
 
 afterEach(async () => {
@@ -110,6 +116,72 @@ afterEach(async () => {
 });
 
 describe("persisted session recovery", () => {
+  it("discards boot and profile responses that finish after logout", async () => {
+    let finish!: (response: GetMeResponseDto) => void;
+    mocks.usersMe.mockImplementation(() => new Promise<GetMeResponseDto>(resolve => { finish = resolve; }));
+    let auth!: ReturnType<typeof useAuth>;
+    const Probe = () => { auth = useAuth(); return null; };
+    await act(async () => { renderer = create(<AuthProvider><Probe /></AuthProvider>); });
+    await act(async () => { await auth.logout(); });
+    await act(async () => { finish(me); });
+    expect(auth.status).toBe("unauthenticated");
+
+    let pending!: Promise<void>;
+    await act(async () => { pending = auth.refreshUser(); });
+    await act(async () => { await auth.logout(); });
+    await act(async () => { finish(me); await pending; });
+    expect(auth.user).toBeNull();
+    expect(auth.tokens).toBeNull();
+  });
+
+  it("cannot restore a previous account from a delayed token refresh", async () => {
+    mocks.usersMe.mockResolvedValue(me);
+    let auth!: ReturnType<typeof useAuth>;
+    const Probe = () => { auth = useAuth(); return null; };
+    await act(async () => { renderer = create(<AuthProvider><Probe /></AuthProvider>); });
+    let finish!: (value: unknown) => void;
+    mocks.refresh.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+    const config = mocks.configureHttpClient.mock.calls.at(-1)![0] as { refresh: () => Promise<string | null> };
+    let pending!: Promise<string | null>;
+    await act(async () => { pending = config.refresh(); });
+    await act(async () => { await auth.logout(); });
+    await act(async () => {
+      finish({ user: me.user, tokens: { accessToken: "late-token", refreshToken: "late-refresh", session: { id: "late-session" } } });
+      expect(await pending).toBeNull();
+    });
+    expect(auth.user).toBeNull();
+    expect(mocks.save).not.toHaveBeenCalled();
+  });
+
+  it("keeps the new account when the old account's refresh and logout finish late", async () => {
+    mocks.usersMe.mockResolvedValue(me);
+    let auth!: ReturnType<typeof useAuth>;
+    const Probe = () => { auth = useAuth(); return null; };
+    await act(async () => { renderer = create(<AuthProvider><Probe /></AuthProvider>); });
+    let finishRefresh!: (value: unknown) => void;
+    let finishLogout!: () => void;
+    mocks.refresh.mockImplementation(() => new Promise(resolve => { finishRefresh = resolve; }));
+    mocks.logout.mockImplementation(() => new Promise<void>(resolve => { finishLogout = resolve; }));
+    const config = mocks.configureHttpClient.mock.calls.at(-1)![0] as { refresh: () => Promise<string | null> };
+    let pendingRefresh!: Promise<string | null>;
+    let pendingLogout!: Promise<void>;
+    await act(async () => { pendingRefresh = config.refresh(); pendingLogout = auth.logout(); });
+    const nextUser = { ...me.user, id: "22222222-2222-2222-2222-222222222222" };
+    mocks.login.mockResolvedValue({ user: nextUser, profileCompletion: me.profileCompletion,
+      tokens: { accessToken: "account-b", refreshToken: "refresh-b", session: { id: "session-b" } } });
+    await act(async () => { await auth.login({ identifier: "b@example.test", password: "password" }); });
+    await act(async () => {
+      finishRefresh({ user: me.user, tokens: { accessToken: "late-a", refreshToken: "late-refresh", session: { id: "late-session" } } });
+      finishLogout();
+      await pendingLogout;
+      expect(await pendingRefresh).toBeNull();
+    });
+    expect(auth.user?.id).toBe(nextUser.id);
+    expect(auth.tokens?.accessToken).toBe("account-b");
+    expect(mocks.save).toHaveBeenCalledTimes(1);
+    expect(mocks.clear).not.toHaveBeenCalled();
+  });
+
   it("keeps tokens and exposes retry after a boot-time network failure", async () => {
     mocks.usersMe
       .mockRejectedValueOnce(new TypeError("Network request failed"))

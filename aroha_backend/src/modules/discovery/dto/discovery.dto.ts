@@ -1,4 +1,7 @@
-import type { InterestTagDto, LifestyleDto } from "../../profiles/dto/profiles.dto";
+import type {
+  InterestTagDto,
+  LifestyleDto,
+} from "../../profiles/dto/profiles.dto";
 
 export type DistanceBandValue = "LOCAL" | "NEARBY" | "CITY_EDGE" | "REGIONAL" | null;
 
@@ -43,6 +46,7 @@ export interface PublicProfileDto {
     | "INTENTIONAL"
     | "READY_TO_COMMIT"
     | null;
+  occupation: string | null;
   languages: string[];
   foodPreferences: string[];
   profilePrompts: Array<{ promptId: string; answer: string }>;

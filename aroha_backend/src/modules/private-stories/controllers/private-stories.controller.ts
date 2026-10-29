@@ -3,7 +3,7 @@ import { Throttle } from "@nestjs/throttler";
 import { CurrentUser } from "../../../common/decorators/current-user.decorator";
 import type { AuthContext } from "../../../common/types/auth-context.type";
 import { PrivateStoriesService } from "../application/private-stories.service";
-import { AudienceDto, CreatePrivateStoryDto, InitiatePrivateStoryMediaDto, PrivateCommunityDto, UpdatePrivateStoryDto } from "../dto/private-stories.dto";
+import { SavePrivateStoryDto, AudienceDto, CreatePrivateStoryDto, InitiatePrivateStoryMediaDto, PrivateCommunityDto, UpdatePrivateStoryDto } from "../dto/private-stories.dto";
 import { PrivateStoriesFlagGuard } from "../private-stories-flag.guard";
 import { EvaluateFeatureFlagService } from "../../feature-flags/application/feature-flags.services";
 
@@ -27,7 +27,12 @@ export class PrivateStoriesController {
   @Header("Cache-Control", "private, no-store")
   @Post("audience-preview") preview(@CurrentUser() user: AuthContext["user"], @Body() body: AudienceDto) { return this.stories.preview(user.id, body); }
   @Header("Cache-Control", "private, no-store")
-  @Get("me") mine(@CurrentUser() user: AuthContext["user"]) { return this.stories.mine(user.id); }
+  @Get("me") mine(@CurrentUser() user: AuthContext["user"], @Query("cursor") cursor?: string) { return this.stories.mine(user.id, cursor); }
+  @Header("Cache-Control", "private, no-store")
+  @Get("saved")
+  saved(@CurrentUser() user: AuthContext["user"], @Query("cursor") cursor?: string) { return this.stories.mine(user.id, cursor, true); }
+  @Patch(":storyId/saved") @Header("Cache-Control", "private, no-store")
+  save(@CurrentUser() user: AuthContext["user"], @Param("storyId", new ParseUUIDPipe()) storyId: string, @Body() body: SavePrivateStoryDto) { return this.stories.setSaved(user.id, storyId, body.saved); }
   @Header("Cache-Control", "private, no-store")
   @Get("feed") feed(@CurrentUser() user: AuthContext["user"], @Query("cursor") cursor?: string) { return this.stories.feed(user.id, cursor); }
   @Header("Cache-Control", "private, no-store")

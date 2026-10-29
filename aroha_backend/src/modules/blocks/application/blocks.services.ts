@@ -1,4 +1,6 @@
+import { InvalidateDiscoverySnapshotService } from "../../discovery/application/discovery.services";
 import { Injectable } from "@nestjs/common";
+import { AppLogger } from "../../../common/logger/app-logger.service";
 import { mediaPairKey } from "../../../integrations/object-storage/media-disclosure.service";
 import { DuoRevocationService } from "../../conversations/application/duo-revocation.service";
 import { ERROR_CODES } from "../../../common/constants/error-codes";
@@ -62,6 +64,8 @@ export class CreateBlockService {
     private readonly auditLogService: AuditLogService,
     private readonly domainEventPublisher: DomainEventPublisher,
     private readonly duoRevocation: DuoRevocationService,
+    private readonly invalidateDiscovery: InvalidateDiscoverySnapshotService,
+    private readonly logger: AppLogger,
   ) {}
 
   async execute(input: {
@@ -105,6 +109,15 @@ export class CreateBlockService {
       return { block, cascade };
     });
 
+    const invalidations = await Promise.allSettled([
+      this.invalidateDiscovery.execute(result.block.blockerId),
+      this.invalidateDiscovery.execute(result.block.blockedId),
+    ]);
+    if (invalidations.some(result => result.status === "rejected")) {
+      // The committed block and revocation events must survive a cache outage.
+      // Every cached feed read independently checks current DB eligibility.
+      this.logger.warn(JSON.stringify({ event: "block.discovery-cache-invalidation.failed" }));
+    }
     await this.publishCascadeEvents(input.actor.user.id, result.cascade);
     await this.duoRevocation.publishClosed({ AND: [input.actor.user.id, input.payload.blockedUserId].map(userId => ({ members: { some: { userId } } })) });
     await this.domainEventPublisher.publishSafely(BLOCK_EVENTS.CREATED, {

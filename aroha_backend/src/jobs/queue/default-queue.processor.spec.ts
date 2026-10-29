@@ -2,7 +2,7 @@ import { DefaultQueueProcessor } from "./default-queue.processor";
 
 describe("DefaultQueueProcessor", () => {
   it("routes known jobs to their processor", async () => {
-    const notificationDispatchProcessor = { process: jest.fn() };
+    const notificationDispatchProcessor = { process: jest.fn(), reconcile: jest.fn() };
     const processor = new DefaultQueueProcessor(
       notificationDispatchProcessor as any,
       { process: jest.fn() } as any,
@@ -17,11 +17,14 @@ describe("DefaultQueueProcessor", () => {
       { warn: jest.fn(), error: jest.fn() } as any,
       { process: jest.fn() } as any,
       { process: jest.fn() } as any,
+      { process: jest.fn() } as any,
     );
 
     await processor.process({ name: "notification.dispatch" } as any);
 
     expect(notificationDispatchProcessor.process).toHaveBeenCalledTimes(1);
+    await processor.process({ name: "notification.reconcile" } as any);
+    expect(notificationDispatchProcessor.reconcile).toHaveBeenCalledTimes(1);
   });
 
   it("ignores unknown jobs without throwing", async () => {
@@ -38,6 +41,7 @@ describe("DefaultQueueProcessor", () => {
       { process: jest.fn() } as any,
       { process: jest.fn() } as any,
       logger as any,
+      { process: jest.fn() } as any,
       { process: jest.fn() } as any,
       { process: jest.fn() } as any,
     );

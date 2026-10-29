@@ -1,7 +1,8 @@
-import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, View } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useRef, useState } from "react";
+import { ActivityIndicator, AppState, FlatList, Pressable, View } from "react-native";
 import { notificationsApi } from "../../api/endpoints/notifications";
+import { ApiError } from "../../api/errors";
 import { Header, Screen } from "../../components/layout";
 import { Avatar } from "../../components/ui/Avatar";
 import { Button } from "../../components/ui/Button";
@@ -50,11 +51,15 @@ export const NotificationsScreen: React.FC = () => {
   const [loadError, setLoadError] = useState(false);
   const cursorRef = useRef<string | null>(null);
   const requestBusyRef = useRef(false);
+  const focusedRef = useRef(false);
+  const activeRef = useRef(AppState.currentState === "active");
+  const requestVersion = useRef(0);
 
   const load = useCallback(
     async (mode: "initial" | "refresh" | "more") => {
-      if (requestBusyRef.current) return;
+      if (requestBusyRef.current || !focusedRef.current || !activeRef.current) return;
       requestBusyRef.current = true;
+      const version = ++requestVersion.current;
       if (mode === "initial") setLoading(true);
       if (mode === "refresh") setRefreshing(true);
       if (mode === "more") setLoadingMore(true);
@@ -64,36 +69,60 @@ export const NotificationsScreen: React.FC = () => {
           cursor: mode === "more" ? cursorRef.current : null,
           limit: 30,
         });
+        if (version !== requestVersion.current) return;
         setItems((current) => (mode === "more" ? mergeUnique(current, page.items) : page.items));
         cursorRef.current = page.nextCursor;
         setNextCursor(page.nextCursor);
       } catch {
+        if (version !== requestVersion.current) return;
         if (mode === "initial") setLoadError(true);
         else toast.show("Activity couldn’t refresh.", "error");
       } finally {
-        requestBusyRef.current = false;
-        setLoading(false);
-        setRefreshing(false);
-        setLoadingMore(false);
+        if (version === requestVersion.current) {
+          requestBusyRef.current = false;
+          setLoading(false);
+          setRefreshing(false);
+          setLoadingMore(false);
+        }
       }
     },
     [toast],
   );
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
+    focusedRef.current = true;
+    activeRef.current = AppState.currentState === "active";
     void load("initial");
-  }, [load]);
-
-  useEffect(
-    () =>
-      realtime.onNotification(({ notification }) => {
+    const clearPrivateActivity = () => {
+      // Invalidate in-flight reads as well as removing already displayed rows.
+      requestVersion.current++;
+      requestBusyRef.current = false;
+      setItems(current => current.filter(item => item.data?.route !== "private-story"));
+    };
+    const unsubscribe = realtime.onNotification(({ notification }) => {
+        if (!activeRef.current) return;
+        if (notification.data?.route === "private-story") {
+          // Recheck the server policy instead of trusting an earlier event.
+          void load("refresh");
+          return;
+        }
         setItems((current) => [
           notification,
           ...current.filter((item) => item.id !== notification.id),
         ]);
-      }),
-    [realtime],
-  );
+      });
+    const appState = AppState.addEventListener("change", state => {
+      activeRef.current = state === "active";
+      if (activeRef.current) void load("refresh");
+      else clearPrivateActivity();
+    });
+    return () => {
+      focusedRef.current = false;
+      unsubscribe();
+      appState.remove();
+      clearPrivateActivity();
+    };
+  }, [load, realtime]));
 
   const handlePress = (notification: NotificationDto) => {
     const href = resolveNotificationHref(notification);
@@ -108,7 +137,11 @@ export const NotificationsScreen: React.FC = () => {
           : item,
       ),
     );
-    void notificationsApi.read(notification.id).catch(() => {
+    void notificationsApi.read(notification.id).catch((error: unknown) => {
+      if (error instanceof ApiError && error.status === 404) {
+        setItems(current => current.filter(item => item.id !== notification.id));
+        return;
+      }
       setItems((current) =>
         current.map((item) =>
           item.id === notification.id

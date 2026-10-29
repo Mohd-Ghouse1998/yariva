@@ -1,25 +1,39 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { ConfigType } from "@nestjs/config";
 import { randomBytes, randomUUID } from "node:crypto";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import objectStorageConfig from "../../../config/object-storage.config";
+import vibesConfig from "../../../config/vibes.config";
 import { ObjectStorageService } from "../../../integrations/object-storage/object-storage.service";
+import { NotificationIntentService } from "../../notifications/application/notification-intent.service";
+import { EvaluateFeatureFlagService } from "../../feature-flags/application/feature-flags.services";
 import { ERROR_CODES } from "../../../common/constants/error-codes";
 import { AppException } from "../../../common/errors/app.exception";
+import { AuditLogService, type AuditLogInput } from "../../../common/services/audit-log.service";
 import { decodeDateIdCursor, encodeDateIdCursor } from "../../../common/utils/cursor.util";
 import { PrismaService } from "../../../database/prisma/prisma.service";
 import type { PrismaTransactionalClient } from "../../../database/prisma/prisma.transaction";
-import type { PrivateStory } from "../../../generated/prisma/client";
+import { Prisma, type Notification, type PrivateStory } from "../../../generated/prisma/client";
 import { activeStory, PRIVATE_STORY_POLICY } from "../domain/private-story.policy";
+import { probeMedia, runMediaTool } from "../../../jobs/vibes/vibe-media.processor";
 import type { AudienceDto, CreatePrivateStoryDto, InitiatePrivateStoryMediaDto, PrivateCommunityDto, PrivateStoryMediaDto, UpdatePrivateStoryDto } from "../dto/private-stories.dto";
 
 type Db = PrismaService | PrismaTransactionalClient;
+type ReviewActor = Pick<AuditLogInput, "actorUserId" | "actorSessionId" | "ipAddress" | "userAgent">;
 const missing = () => new AppException(404, ERROR_CODES.RESOURCE_NOT_FOUND, "Private Story not found");
 const invalid = (message: string) => new AppException(400, ERROR_CODES.VALIDATION_FAILED, message);
 
 @Injectable()
 export class PrivateStoriesService {
+  private readonly logger = new Logger(PrivateStoriesService.name);
   constructor(private readonly prisma: PrismaService, private readonly storage: ObjectStorageService,
-    @Inject(objectStorageConfig.KEY) private readonly storageConfig: ConfigType<typeof objectStorageConfig>) {}
+    @Inject(objectStorageConfig.KEY) private readonly storageConfig: ConfigType<typeof objectStorageConfig>,
+    @Inject(vibesConfig.KEY) private readonly mediaTools: ConfigType<typeof vibesConfig>,
+    private readonly notificationIntents: NotificationIntentService,
+    private readonly flags: EvaluateFeatureFlagService,
+    private readonly audit: AuditLogService) {}
 
   async initiateMedia(ownerId: string, input: InitiatePrivateStoryMediaDto) {
     if (!await this.activeUser(this.prisma, ownerId)) throw invalid("Account is not active");
@@ -64,6 +78,43 @@ export class PrivateStoriesService {
     }
   }
 
+  private async sanitizeMedia(ownerId: string, media: PrivateStoryMediaDto) {
+    const bucket = this.storageConfig.bucketMessageAttachments;
+    const workspace = await mkdtemp(join(tmpdir(), "yariva-story-"));
+    const source = join(workspace, "source");
+    const isVideo = media.mimeType.startsWith("video/");
+    const mimeType = media.mimeType === "video/quicktime" ? "video/mp4" : media.mimeType;
+    const extension = mimeType.split("/")[1];
+    const output = join(workspace, `clean.${extension}`);
+    const objectKey = `private-stories/${ownerId}/${randomUUID()}.clean.${extension}`;
+    try {
+      await this.storage.downloadObjectToFile({ bucket, objectKey: media.objectKey, destinationPath: source, maxBytes: media.sizeBytes });
+      const probe = await probeMedia(this.mediaTools.ffprobePath, source);
+      const image = probe.streams?.find(stream => stream.codec_type === "video");
+      if (!image?.width || !image.height || image.width > 4096 || image.height > 4096) throw invalid("Story media dimensions are invalid");
+      if (isVideo) {
+        const duration = Number(probe.format?.duration);
+        if (!Number.isFinite(duration) || duration <= 0 || duration > 30) throw invalid("Story video must be 30 seconds or less");
+      }
+      const args = ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", source,
+        "-map_metadata", "-1", "-map_chapters", "-1", "-map", "0:v:0"];
+      if (isVideo) args.push("-map", "0:a:0?", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-movflags", "+faststart");
+      else args.push("-frames:v", "1", "-update", "1");
+      await runMediaTool(this.mediaTools.ffmpegPath, [...args, output], isVideo ? 90_000 : 30_000);
+      const sizeBytes = await this.storage.putFile({ bucket, objectKey, sourcePath: output, mimeType });
+      if (sizeBytes < 1 || sizeBytes > (isVideo ? 40 : 10) * 1024 * 1024) {
+        await this.storage.deleteObject({ bucket, objectKey });
+        throw invalid("Processed Story media is too large");
+      }
+      return { bucket, objectKey, mimeType, sizeBytes };
+    } catch (error) {
+      if (error instanceof AppException) throw error;
+      throw invalid("Story media could not be processed");
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  }
+
   private async activeUser(db: Db, userId: string): Promise<boolean> {
     return !!await db.user.findFirst({ where: { id: userId, status: "ACTIVE", deletedAt: null, isShadowBanned: false }, select: { id: true } });
   }
@@ -73,23 +124,92 @@ export class PrivateStoriesService {
   }
 
   private async approved(db: Db, ownerId: string, viewerId: string): Promise<boolean> {
-    if (ownerId === viewerId || await this.blocked(db, ownerId, viewerId)) return false;
-    const [match, follow] = await Promise.all([
-      db.match.findFirst({ where: { status: "ACTIVE", OR: [{ userLowId: ownerId, userHighId: viewerId }, { userLowId: viewerId, userHighId: ownerId }] }, select: { id: true } }),
-      db.privateFollow.findUnique({ where: { requesterId_ownerId: { requesterId: viewerId, ownerId } }, select: { status: true } }),
-    ]);
-    return !!match || follow?.status === "APPROVED";
+    return !!await db.user.findFirst({ where: { AND: [{ id: ownerId }, this.approvedConnectionOwner(viewerId)] }, select: { id: true } });
+  }
+
+  private approvedConnectionOwner(viewerId: string): Prisma.UserWhereInput {
+    return {
+      ...this.eligibleFollowPeer(viewerId), id: { not: viewerId },
+      OR: [
+        { matchesLow: { some: { status: "ACTIVE", userHighId: viewerId } } },
+        { matchesHigh: { some: { status: "ACTIVE", userLowId: viewerId } } },
+        { followsReceived: { some: { status: "APPROVED", requesterId: viewerId } } },
+      ],
+    };
   }
 
   private async canView(db: Db, story: PrivateStory, viewerId: string, now = new Date()): Promise<boolean> {
-    if (story.ownerId === viewerId) return await this.activeUser(db, viewerId) && activeStory(story, now);
-    if (!activeStory(story, now) || !await this.activeUser(db, story.ownerId) || !await this.activeUser(db, viewerId)) return false;
-    if (!await this.approved(db, story.ownerId, viewerId)) return false;
-    const grant = await db.privateStoryGrant.findUnique({ where: { storyId_recipientId: { storyId: story.id, recipientId: viewerId } }, select: { storyId: true } });
-    if (!grant) return false;
-    if (!story.communityFilter) return true;
-    const preference = await db.privateCommunityPreference.findUnique({ where: { userId: viewerId }, select: { optedInCommunities: true } });
-    return preference?.optedInCommunities.includes(story.communityFilter) ?? false;
+    return (await this.visibleStoryIds(db, [story], viewerId, now)).has(story.id);
+  }
+
+  // One policy for single reads and bounded feed/list batches. All context is
+  // freshly loaded for this call, including grants and affirmative consent.
+  private async visibleStoryIds(db: Db, stories: PrivateStory[], viewerId: string, now = new Date()): Promise<Set<string>> {
+    const active = stories.filter(story => story.deletedAt === null
+      && (activeStory(story, now) || (story.ownerId === viewerId && story.savedAt != null))
+      && (!story.mediaObjectKey || this.isProcessedMedia(story)));
+    if (!active.length) return new Set();
+    const viewer = await db.user.findFirst({
+      where: { id: viewerId, status: "ACTIVE", deletedAt: null, isShadowBanned: false },
+      select: { id: true, privateCommunity: { select: { optedInCommunities: true } } },
+    });
+    if (!viewer) return new Set();
+    const visible = new Set(active.filter(story => story.ownerId === viewerId).map(story => story.id));
+    const candidates = active.filter(story => story.ownerId !== viewerId && activeStory(story, now) && story.moderationStatus === "APPROVED");
+    if (!candidates.length) return visible;
+    const [owners, grants] = await Promise.all([
+      db.user.findMany({ where: { AND: [
+        { id: { in: [...new Set(candidates.map(story => story.ownerId))] } }, this.approvedConnectionOwner(viewerId),
+      ] }, select: { id: true } }),
+      db.privateStoryGrant.findMany({ where: { recipientId: viewerId, storyId: { in: candidates.map(story => story.id) } }, select: { storyId: true } }),
+    ]);
+    const approvedOwners = new Set(owners.map(owner => owner.id));
+    const grantedStories = new Set(grants.map(grant => grant.storyId));
+    for (const story of candidates) {
+      if (approvedOwners.has(story.ownerId) && grantedStories.has(story.id)
+        && (!story.communityFilter || viewer.privateCommunity?.optedInCommunities.includes(story.communityFilter))) visible.add(story.id);
+    }
+    return visible;
+  }
+
+  // Background jobs and notification reads use the same policy as Story detail.
+  // They do not pass through the HTTP rollout guard.
+  async canAccess(viewerId: string, storyId: string, db: Db = this.prisma): Promise<boolean> {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storyId)) return false;
+    const flag = await this.flags.execute({ key: "private_stories.v1", userId: viewerId });
+    if (!flag.enabled) return false;
+    const story = await db.privateStory.findUnique({ where: { id: storyId } });
+    return !!story && await this.canView(db, story, viewerId);
+  }
+
+  private async persistShared(db: PrismaTransactionalClient, storyId: string, recipientIds: string[]) {
+    const notices: Array<{ notification: Notification; created: boolean }> = [];
+    for (const recipientId of recipientIds) {
+      if (!await this.canAccess(recipientId, storyId, db)) continue;
+      notices.push(await this.notificationIntents.persist(db, {
+        userId: recipientId, type: "SYSTEM", title: "New update",
+        body: "A private Story is available in Yariva.",
+        data: { route: "private-story", storyId }, dedupeKey: `private-story:${storyId}:${recipientId}`,
+      }));
+    }
+    return notices;
+  }
+
+  private async dispatchShared(storyId: string, notices: Array<{ notification: Notification; created: boolean }>): Promise<void> {
+    for (const notice of notices) {
+      try {
+        if (!await this.canAccess(notice.notification.userId, storyId)) continue;
+        await this.notificationIntents.dispatchPersisted(notice);
+      } catch (error) {
+        // The committed PENDING row remains recoverable if dispatch exits/fails.
+        this.logger.error(`Failed to dispatch Story notification ${notice.notification.id}`, error);
+      }
+    }
+  }
+
+  private isProcessedMedia(story: PrivateStory) {
+    return !!story.mediaObjectKey && story.mediaBucket === this.storageConfig.bucketMessageAttachments
+      && new RegExp(`^private-stories/${story.ownerId}/[0-9a-f-]{36}\\.clean\\.(jpeg|png|webp|mp4)$`).test(story.mediaObjectKey);
   }
 
   async connections(ownerId: string, db: Db = this.prisma) {
@@ -133,29 +253,56 @@ export class PrivateStoriesService {
     if (!await this.activeUser(this.prisma, ownerId)) throw invalid("Account is not active");
     const text = body.text?.trim() ?? "";
     if (!text && !body.media) throw invalid("Add a photo, video or words before sharing");
+    await this.resolveAudience(ownerId, body, this.prisma);
     if (body.media) await this.validateMedia(ownerId, body.media);
-    return this.prisma.$transaction(async tx => {
+    const processed = body.media ? await this.sanitizeMedia(ownerId, body.media) : null;
+    try {
+      const result = await this.prisma.$transaction(async tx => {
       const ids = await this.resolveAudience(ownerId, body, tx);
       const story = await tx.privateStory.create({ data: {
         ownerId, text, audienceRule: body.audienceRule, communityFilter: body.communityFilter ?? null,
-        ...(body.media ? { mediaBucket: this.storageConfig.bucketMessageAttachments, mediaObjectKey: body.media.objectKey,
-          mediaMimeType: body.media.mimeType, mediaSizeBytes: body.media.sizeBytes } : {}),
+        moderationStatus: processed ? "PENDING" : "APPROVED",
+        ...(processed ? { mediaBucket: processed.bucket, mediaObjectKey: processed.objectKey,
+          mediaMimeType: processed.mimeType, mediaSizeBytes: processed.sizeBytes } : {}),
         expiresAt: new Date(Date.now() + PRIVATE_STORY_POLICY.lifetimeHours * 3_600_000),
         grants: { create: ids.map(recipientId => ({ recipientId })) },
       } });
-      return { story: this.map(story), eligibleCount: ids.length };
-    }, { isolationLevel: "Serializable" });
+      const notices = story.moderationStatus === "APPROVED" ? await this.persistShared(tx, story.id, ids) : [];
+      return { response: { story: this.map(story), eligibleCount: ids.length }, notices };
+      }, { isolationLevel: "Serializable" });
+      await this.dispatchShared(result.response.story.id, result.notices);
+      return result.response;
+    } catch (error) {
+      if (processed) await this.storage.deleteObject({ bucket: processed.bucket, objectKey: processed.objectKey }).catch(cleanupError =>
+        this.logger.error(`Failed to remove unpublished Story media ${processed.objectKey}`, cleanupError));
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034")
+        throw new AppException(409, ERROR_CODES.VALIDATION_FAILED, "Connections changed; review the Story audience and try again");
+      throw error;
+    } finally {
+      if (body.media && processed) await this.storage.deleteObject({ bucket: processed.bucket, objectKey: body.media.objectKey }).catch(cleanupError =>
+        this.logger.error(`Failed to remove Story upload ${body.media!.objectKey}`, cleanupError));
+    }
   }
 
   private map(story: PrivateStory) {
-    return { id: story.id, ownerId: story.ownerId, text: story.text, mediaMimeType: story.mediaMimeType, audienceRule: story.audienceRule,
-      communityFilter: story.communityFilter, expiresAt: story.expiresAt.toISOString(), createdAt: story.createdAt.toISOString() };
+    return { id: story.id, ownerId: story.ownerId, text: story.text, mediaMimeType: story.mediaMimeType, moderationStatus: story.moderationStatus, audienceRule: story.audienceRule,
+      savedAt: story.savedAt?.toISOString() ?? null, communityFilter: story.communityFilter, expiresAt: story.expiresAt.toISOString(), createdAt: story.createdAt.toISOString() };
   }
 
   private mapForViewer(story: PrivateStory, viewerId: string) {
     const mapped = this.map(story);
     // The author's private community choice is not part of recipient content.
-    return viewerId === story.ownerId ? mapped : { ...mapped, communityFilter: null };
+    return viewerId === story.ownerId ? mapped : { ...mapped, communityFilter: null, savedAt: null };
+  }
+
+  private async mediaUrl(story: PrivateStory, viewerId: string, maxSeconds: number) {
+    if (story.moderationStatus === "REJECTED" || !story.mediaBucket || !story.mediaObjectKey) return null;
+    // Owner archives do not extend previously issued audience URLs. Round down
+    // so a signed GET cannot outlive the 24-hour audience window.
+    const seconds = story.ownerId === viewerId && story.savedAt != null ? maxSeconds
+      : Math.min(maxSeconds, Math.floor((story.expiresAt.getTime() - Date.now()) / 1000));
+    return seconds > 0 ? this.storage.createPresignedGetObject({ bucket: story.mediaBucket,
+      objectKey: story.mediaObjectKey, expiresInSeconds: seconds, noStore: true }) : null;
   }
 
   async detail(viewerId: string, storyId: string) {
@@ -164,9 +311,7 @@ export class PrivateStoriesService {
     const recipientIds = viewerId === story.ownerId
       ? (await this.prisma.privateStoryGrant.findMany({ where: { storyId }, select: { recipientId: true } })).map(grant => grant.recipientId)
       : undefined;
-    const mediaUrl = story.mediaBucket && story.mediaObjectKey
-      ? await this.storage.createPresignedGetObject({ bucket: story.mediaBucket, objectKey: story.mediaObjectKey, expiresInSeconds: 60, noStore: true })
-      : null;
+    const mediaUrl = await this.mediaUrl(story, viewerId, 60);
     return { story: { ...this.mapForViewer(story, viewerId), ownerName: story.owner.profile?.displayName ?? "Connection", mediaUrl }, ...(recipientIds ? { recipientIds } : {}) };
   }
 
@@ -175,11 +320,26 @@ export class PrivateStoriesService {
     if (!story || story.ownerId !== ownerId || !await this.canView(this.prisma, story, viewerId)) throw missing();
   }
 
-  async mine(ownerId: string) {
-    if (!await this.activeUser(this.prisma, ownerId)) return { items: [] };
-    const rows = await this.prisma.privateStory.findMany({ where: { ownerId, deletedAt: null, expiresAt: { gt: new Date() } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: PRIVATE_STORY_POLICY.pageSize });
-    return { items: await Promise.all(rows.map(async row => ({ ...this.map(row), previewUrl: row.mediaMimeType?.startsWith("image/") && row.mediaBucket && row.mediaObjectKey
-      ? await this.storage.createPresignedGetObject({ bucket: row.mediaBucket, objectKey: row.mediaObjectKey, expiresInSeconds: 10, noStore: true }) : null }))) };
+  async mine(ownerId: string, cursor?: string, saved = false) {
+    if (!await this.activeUser(this.prisma, ownerId)) return { items: [], nextCursor: null };
+    const parsed = cursor ? decodeDateIdCursor(cursor) : null;
+    if (parsed && (!Number.isFinite(Date.parse(parsed.createdAt)) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(parsed.id)))
+      throw new AppException(400, ERROR_CODES.INVALID_CURSOR, "Invalid cursor");
+    const rows = await this.prisma.privateStory.findMany({
+      where: { ownerId, deletedAt: null, ...(saved ? { savedAt: { not: null } } : { expiresAt: { gt: new Date() } }),
+        ...(parsed ? { OR: [{ createdAt: { lt: new Date(parsed.createdAt) } }, { createdAt: new Date(parsed.createdAt), id: { lt: parsed.id } }] } : {}) },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: PRIVATE_STORY_POLICY.pageSize + 1,
+    });
+    const page = rows.slice(0, PRIVATE_STORY_POLICY.pageSize);
+    const visibleIds = await this.visibleStoryIds(this.prisma, page, ownerId);
+    const visible = page.filter(row => visibleIds.has(row.id));
+    // Advance over consumed candidates, including denied media rows. Signing
+    // and returning content still require the shared policy on every page.
+    const last = page.at(-1);
+    const nextCursor = rows.length > PRIVATE_STORY_POLICY.pageSize && last
+      ? encodeDateIdCursor({ createdAt: last.createdAt.toISOString(), id: last.id }) : null;
+    return { items: await Promise.all(visible.map(async row => ({ ...this.map(row), previewUrl: row.moderationStatus !== "REJECTED" && this.isProcessedMedia(row) && row.mediaMimeType?.startsWith("image/") && row.mediaBucket && row.mediaObjectKey
+      ? await this.mediaUrl(row, ownerId, 10) : null }))), nextCursor };
   }
 
   async feed(viewerId: string, cursor?: string) {
@@ -191,7 +351,9 @@ export class PrivateStoriesService {
     const visible: Array<ReturnType<PrivateStoriesService["map"]> & { ownerName: string; previewUrl: string | null }> = [];
     let position = parsed;
     let hasMore = false;
+    let scannedPages = 0;
     do {
+      scannedPages += 1;
       const rows = await this.prisma.privateStory.findMany({
         where: { ownerId: { not: viewerId }, deletedAt: null, expiresAt: { gt: new Date() }, grants: { some: { recipientId: viewerId } },
           ...(position ? { OR: [{ createdAt: { lt: new Date(position.createdAt) } }, { createdAt: new Date(position.createdAt), id: { lt: position.id } }] } : {}) },
@@ -199,13 +361,14 @@ export class PrivateStoriesService {
         orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 50,
       });
       hasMore = rows.length === 50;
+      const visibleIds = await this.visibleStoryIds(this.prisma, rows, viewerId);
       for (const [index, row] of rows.entries()) {
         position = { createdAt: row.createdAt.toISOString(), id: row.id };
-        if (!await this.canView(this.prisma, row, viewerId)) continue;
+        if (!visibleIds.has(row.id)) continue;
         // A rail preview is an ephemeral, read-only URL minted only after the
         // same policy as detail. It is never a permanent media field or cache.
         const previewUrl = row.mediaMimeType?.startsWith("image/") && row.mediaBucket && row.mediaObjectKey
-          ? await this.storage.createPresignedGetObject({ bucket: row.mediaBucket, objectKey: row.mediaObjectKey, expiresInSeconds: 10, noStore: true }) : null;
+          ? await this.mediaUrl(row, viewerId, 10) : null;
         visible.push({ ...this.mapForViewer(row, viewerId), ownerName: row.owner.profile?.displayName ?? "Connection", previewUrl });
         if (visible.length === PRIVATE_STORY_POLICY.pageSize) {
           hasMore = index < rows.length - 1 || rows.length === 50;
@@ -214,14 +377,17 @@ export class PrivateStoriesService {
       }
       if (visible.length === PRIVATE_STORY_POLICY.pageSize) break;
       if (!hasMore) break;
-    } while (position);
+    } while (position && scannedPages < 5);
     return { items: visible, nextCursor: hasMore && position ? encodeDateIdCursor(position) : null };
   }
 
   async update(ownerId: string, storyId: string, body: UpdatePrivateStoryDto) {
-    return this.prisma.$transaction(async tx => {
+    try {
+      return await this.prisma.$transaction(async tx => {
       const story = await tx.privateStory.findUnique({ where: { id: storyId }, include: { grants: { select: { recipientId: true } } } });
       if (!story || story.ownerId !== ownerId || !activeStory(story, new Date())) throw missing();
+      if (!await this.activeUser(tx, ownerId)) throw missing();
+      if (story.moderationStatus === "REJECTED") throw invalid("This Story did not pass review. Delete it before sharing a new Story.");
       const ids = await this.resolveAudience(ownerId, body, tx);
       const old = new Set(story.grants.map(g => g.recipientId));
       const filterBroadened = !!story.communityFilter && body.communityFilter !== story.communityFilter;
@@ -230,15 +396,94 @@ export class PrivateStoriesService {
       if (body.text !== undefined && !text && !story.mediaObjectKey) throw invalid("Story text cannot be empty");
       await tx.privateStoryGrant.deleteMany({ where: { storyId } });
       await tx.privateStoryGrant.createMany({ data: ids.map(recipientId => ({ storyId, recipientId })) });
-      const updated = await tx.privateStory.update({ where: { id: storyId }, data: { ...(body.text !== undefined ? { text: text ?? "" } : {}), audienceRule: body.audienceRule, communityFilter: body.communityFilter ?? null } });
+      const contentChanged = body.text !== undefined && text !== story.text;
+      const updated = await tx.privateStory.update({ where: { id: storyId }, data: {
+        ...(body.text !== undefined ? { text: text ?? "" } : {}),
+        ...(contentChanged && story.mediaObjectKey ? { moderationStatus: "PENDING", moderatedAt: null } : {}),
+        audienceRule: body.audienceRule, communityFilter: body.communityFilter ?? null,
+      } });
       return { story: this.map(updated), eligibleCount: ids.length };
-    }, { isolationLevel: "Serializable" });
+      }, { isolationLevel: "Serializable" });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034")
+        throw new AppException(409, ERROR_CODES.VALIDATION_FAILED, "Story changed; review its audience and try again");
+      throw error;
+    }
+  }
+
+  async setSaved(ownerId: string, storyId: string, saved: boolean) {
+    return this.prisma.$transaction(async tx => {
+      // Serialize repeated saves, unsaves and deletion on the same row. Read
+      // the deadline after acquiring the lock, not before waiting for it.
+      await tx.$queryRaw`SELECT "id" FROM "PrivateStory" WHERE "id" = ${storyId}::uuid FOR UPDATE`;
+      const story = await tx.privateStory.findUnique({ where: { id: storyId } });
+      if (!story || story.ownerId !== ownerId || story.deletedAt || !await this.activeUser(tx, ownerId)) throw missing();
+      const now = new Date();
+      if (saved && !story.savedAt && !activeStory(story, now)) throw missing();
+      const updated = await tx.privateStory.update({ where: { id: storyId },
+        data: { savedAt: saved ? story.savedAt ?? now : null } });
+      return { story: this.map(updated) };
+    });
   }
 
   async remove(ownerId: string, storyId: string) {
-    const result = await this.prisma.privateStory.updateMany({ where: { id: storyId, ownerId, deletedAt: null }, data: { deletedAt: new Date() } });
-    if (!result.count) throw missing();
+    if (!await this.activeUser(this.prisma, ownerId)) throw missing();
+    // Repeated deletion is safe, but a different owner still sees not-found.
+    const result = await this.prisma.privateStory.updateMany({ where: { id: storyId, ownerId, deletedAt: null }, data: { deletedAt: new Date(), savedAt: null } });
+    if (!result.count && !await this.prisma.privateStory.findFirst({ where: { id: storyId, ownerId, deletedAt: { not: null } }, select: { id: true } })) throw missing();
     return { deleted: true };
+  }
+
+  // Administrative review is separate from recipient access. It requires the
+  // existing ADMIN guard, and content reads/decisions are auditable.
+  async moderationQueue(cursor?: string) {
+    const parsed = cursor ? decodeDateIdCursor(cursor) : null;
+    if (parsed && (!Number.isFinite(Date.parse(parsed.createdAt)) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(parsed.id)))
+      throw new AppException(400, ERROR_CODES.INVALID_CURSOR, "Invalid cursor");
+    const rows = await this.prisma.privateStory.findMany({
+      where: { moderationStatus: "PENDING", deletedAt: null, expiresAt: { gt: new Date() },
+        ...(parsed ? { OR: [{ createdAt: { lt: new Date(parsed.createdAt) } }, { createdAt: new Date(parsed.createdAt), id: { lt: parsed.id } }] } : {}) },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: PRIVATE_STORY_POLICY.pageSize + 1,
+      select: { id: true, mediaMimeType: true, createdAt: true, expiresAt: true },
+    });
+    const items = rows.slice(0, PRIVATE_STORY_POLICY.pageSize);
+    const last = items.at(-1);
+    return { items, nextCursor: rows.length > PRIVATE_STORY_POLICY.pageSize && last
+      ? encodeDateIdCursor({ createdAt: last.createdAt.toISOString(), id: last.id }) : null };
+  }
+
+  async moderationPreview(storyId: string, actor: ReviewActor) {
+    const story = await this.prisma.privateStory.findUnique({ where: { id: storyId } });
+    if (!story || !activeStory(story, new Date())) throw missing();
+    await this.audit.write({ ...actor, action: "private-story.moderation.view", entityType: "PrivateStory", entityId: story.id, targetUserId: story.ownerId });
+    const mediaUrl = this.isProcessedMedia(story) && story.mediaBucket && story.mediaObjectKey
+      ? await this.storage.createPresignedGetObject({ bucket: story.mediaBucket, objectKey: story.mediaObjectKey, expiresInSeconds: 60, noStore: true }) : null;
+    return { story: { id: story.id, text: story.text, mediaMimeType: story.mediaMimeType,
+      moderationStatus: story.moderationStatus, updatedAt: story.updatedAt, expiresAt: story.expiresAt, mediaUrl } };
+  }
+
+  async review(storyId: string, input: { decision: "APPROVED" | "REJECTED"; expectedUpdatedAt: string; reason?: string | null }, actor: ReviewActor): Promise<boolean> {
+    const story = await this.prisma.privateStory.findUnique({ where: { id: storyId } });
+    if (!story || !activeStory(story, new Date()) || story.moderationStatus === "REJECTED"
+      || story.updatedAt.toISOString() !== input.expectedUpdatedAt) return false;
+    if (input.decision === "APPROVED" && (story.moderationStatus !== "PENDING"
+      || (story.mediaObjectKey && !this.isProcessedMedia(story)))) return false;
+    const applied = await this.prisma.$transaction(async tx => {
+      const update = await tx.privateStory.updateMany({
+        where: { id: story.id, moderationStatus: story.moderationStatus, updatedAt: story.updatedAt,
+          text: story.text, deletedAt: null, expiresAt: { gt: new Date() } },
+        data: { moderationStatus: input.decision, moderatedAt: new Date() },
+      });
+      if (!update.count) return null;
+      await this.audit.write({ ...actor, action: input.decision === "APPROVED" ? "private-story.moderation.approve" : "private-story.moderation.reject",
+        entityType: "PrivateStory", entityId: story.id, targetUserId: story.ownerId,
+        metadata: { provider: "admin-manual-review", reason: input.reason ?? null } }, tx);
+      if (input.decision !== "APPROVED") return [];
+      const grants = await tx.privateStoryGrant.findMany({ where: { storyId }, select: { recipientId: true } });
+      return this.persistShared(tx, storyId, grants.map(grant => grant.recipientId));
+    });
+    if (applied !== null) await this.dispatchShared(storyId, applied);
+    return applied !== null;
   }
 
   async getCommunity(userId: string) {

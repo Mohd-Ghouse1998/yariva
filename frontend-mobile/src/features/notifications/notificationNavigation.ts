@@ -29,6 +29,10 @@ export const resolveNotificationHref = (
   notification: Pick<NotificationDto, "type" | "data">,
 ): Href | null => {
   const data = notification.data ?? {};
+  if (notification.type === "SYSTEM" && data.route === "private-story") {
+    const storyId = stringValue(data.storyId);
+    return storyId ? { pathname: "/(app)/private-stories", params: { storyId } } : null;
+  }
   if (notification.type === "SYSTEM" && data.route === "weekly-recap") return "/(app)/weekly-recap";
   const blindOccurrenceId = stringValue(data.blindOccurrenceId);
   if (notification.type === "SYSTEM" && blindOccurrenceId) return { pathname: "/(app)/blind/[occurrenceId]", params: { occurrenceId: blindOccurrenceId } };

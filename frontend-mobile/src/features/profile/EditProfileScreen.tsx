@@ -104,7 +104,7 @@ export const EditProfileScreen = () => {
             <NavigationListRow
               first
               icon="globe"
-              label="Languages & values"
+              label="Work, languages & values"
               meta="Add what matters to you"
               onPress={() => router.push("/(app)/settings/profile/details")}
             />

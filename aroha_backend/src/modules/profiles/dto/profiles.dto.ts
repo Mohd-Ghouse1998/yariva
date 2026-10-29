@@ -1,3 +1,5 @@
+import type { OccupationCategory } from "../../../generated/prisma/client";
+import { WORK_CATEGORY_VALUES } from "../domain/work-categories";
 import { Type } from "class-transformer";
 import {
   ArrayUnique,
@@ -19,9 +21,13 @@ import {
   MinLength,
   Min,
   ValidateNested,
+  ValidateIf,
 } from "class-validator";
 import type { ProfileCompletionStatusDto } from "../../auth/dto/auth.dto";
-import { PROFILE_PROMPT_IDS, type ProfilePromptId } from "../domain/profile-prompts";
+import {
+  PROFILE_PROMPT_IDS,
+  type ProfilePromptId,
+} from "../domain/profile-prompts";
 
 export const PROFILE_GENDER_VALUES = [
   "WOMAN",
@@ -244,6 +250,19 @@ export class UpdateMyProfileDto {
   @IsOptional()
   @IsString()
   @MaxLength(80)
+  readonly occupation?: string | null;
+
+  @IsOptional()
+  @IsIn(WORK_CATEGORY_VALUES)
+  readonly occupationCategory?: OccupationCategory | null;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @IsBoolean()
+  readonly shareWorkDetails?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
   readonly relocationOpenness?: string | null;
 
   @IsOptional()
@@ -355,16 +374,66 @@ export class UpdateSchedulePreferenceDto {
 }
 
 export class UpdateDiscoveryPreferenceDto {
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(WORK_CATEGORY_VALUES.length)
+  @IsIn(WORK_CATEGORY_VALUES, { each: true })
+  readonly occupationCategoryFilter?: OccupationCategory[];
+
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(20)
+  @IsUUID("4", { each: true })
+  readonly interestTagIds?: string[];
+
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(10)
+  @IsString({ each: true })
+  @MaxLength(80, { each: true })
+  readonly languageFilter?: string[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  readonly occupationFilter?: string | null;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(SMOKING_HABIT_VALUES.length)
+  @IsIn(SMOKING_HABIT_VALUES, { each: true })
+  readonly smokingFilter?: SmokingHabitValue[];
+
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(DRINKING_HABIT_VALUES.length)
+  @IsIn(DRINKING_HABIT_VALUES, { each: true })
+  readonly drinkingFilter?: DrinkingHabitValue[];
+
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(EXERCISE_HABIT_VALUES.length)
+  @IsIn(EXERCISE_HABIT_VALUES, { each: true })
+  readonly exerciseFilter?: ExerciseHabitValue[];
+
   @IsInt()
   @Min(18)
+  @Max(99)
   readonly minAge!: number;
 
   @IsInt()
   @Min(18)
+  @Max(99)
   readonly maxAge!: number;
 
   @IsInt()
   @Min(1)
+  @Max(250)
   readonly maxDistanceKm!: number;
 
   @IsArray()
@@ -504,6 +573,13 @@ export interface SchedulePreferenceDto {
 }
 
 export interface DiscoveryPreferenceDto {
+  interestTagIds: string[];
+  languageFilter: string[];
+  occupationFilter: string | null;
+  occupationCategoryFilter: OccupationCategory[];
+  smokingFilter: SmokingHabitValue[];
+  drinkingFilter: DrinkingHabitValue[];
+  exerciseFilter: ExerciseHabitValue[];
   minAge: number | null;
   maxAge: number | null;
   maxDistanceKm: number | null;
@@ -561,6 +637,9 @@ export interface MyProfileDto {
   isPaused: boolean;
   verificationStatus: "UNVERIFIED" | "PENDING" | "VERIFIED" | "REJECTED";
   preferredRelationshipPace: RelationshipPaceValue | null;
+  occupation: string | null;
+  occupationCategory: OccupationCategory | null;
+  shareWorkDetails: boolean;
   languages: string[];
   foodPreferences: string[];
   relocationOpenness: string | null;

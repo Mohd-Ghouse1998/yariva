@@ -72,6 +72,7 @@ describe("DatePlansService idempotency", () => {
       { enqueue: jest.fn() } as any,
       { warn: jest.fn() } as any,
       { venueSuggestionsEnabled: true, venueRadiusMeters: 12000, maxVenueSuggestions: 3 } as any,
+      {} as any,
     );
 
   it("returns an existing identical request without creating or notifying again", async () => {

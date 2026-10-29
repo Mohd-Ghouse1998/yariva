@@ -3,6 +3,7 @@ import {
   GetPublicProfileService,
   ProfileCompletionSyncService,
   UpdateProfileService,
+  UpdateDiscoveryPreferenceService,
 } from "./profiles.services";
 
 const publicAggregate = (
@@ -301,7 +302,7 @@ describe("ProfileCompletionSyncService", () => {
 });
 
 describe("UpdateProfileService", () => {
-  it("updates the profile and returns the recomputed profile payload", async () => {
+  it.each([{}, { occupationCategory: "TECHNOLOGY" as const }, { occupationCategory: null }])("updates only explicit work category patches: %p", async (categoryPatch) => {
     const tx = {};
     const prisma = {
       $transaction: jest.fn(async (callback: (client: object) => Promise<unknown>) =>
@@ -392,6 +393,7 @@ describe("UpdateProfileService", () => {
     const result = await service.execute({
       userId: "user-1",
       payload: {
+        ...categoryPatch,
         displayName: "Aroha User",
         city: "Bengaluru",
         region: "Karnataka",
@@ -413,6 +415,12 @@ describe("UpdateProfileService", () => {
         countryCode: "IN",
       }),
     );
+    const written = userProfileRepository.updateProfile.mock.calls[0][2];
+    if ("occupationCategory" in categoryPatch) {
+      expect(written.occupationCategory).toBe(categoryPatch.occupationCategory);
+    } else {
+      expect(written).not.toHaveProperty("occupationCategory");
+    }
     expect(result.profile.userId).toBe("user-1");
     expect(result.profile.completion.missingCriteria).toContain("APPROVED_PHOTO");
   });
@@ -463,5 +471,34 @@ describe("UpdateProfileService", () => {
       code: "VALIDATION_FAILED",
     });
     expect(userProfileRepository.updateProfile).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("Discovery category preference updates", () => {
+  it.each([{ categories: undefined }, { categories: [] }, { categories: ["TECHNOLOGY"] }])("preserves omission and persists explicit selections: %p", async ({ categories }) => {
+    const tx = {};
+    const upsert = jest.fn().mockResolvedValue(undefined);
+    const preference = {
+      minAge: 18, maxAge: 99, maxDistanceKm: 15, intentFilter: [], preferredGenders: [],
+      includeRecentlyActiveOnly: false, preferSameCity: false,
+    };
+    const service = new UpdateDiscoveryPreferenceService(
+      { $transaction: jest.fn(async (callback) => callback(tx)) } as any,
+      { getRequiredById: jest.fn().mockResolvedValue({ id: "viewer" }) } as any,
+      { upsert } as any,
+      { assertValid: jest.fn() } as any,
+      { recomputeAndPersist: jest.fn().mockResolvedValue({ aggregate: {
+        discoveryPreference: { ...preference, occupationCategoryFilter: categories ?? ["CREATIVE"] },
+      } }) } as any,
+      { write: jest.fn().mockResolvedValue(undefined) } as any,
+    );
+    const result = await service.execute({ userId: "viewer", payload: {
+      ...preference, ...(categories === undefined ? {} : { occupationCategoryFilter: categories }),
+    } as any, metadata: { ipAddress: null, userAgent: null } });
+    const written = upsert.mock.calls[0][2];
+    if (categories === undefined) expect(written).not.toHaveProperty("occupationCategoryFilter");
+    else expect(written.occupationCategoryFilter).toEqual(categories);
+    expect(result.value.occupationCategoryFilter).toEqual(categories ?? ["CREATIVE"]);
   });
 });

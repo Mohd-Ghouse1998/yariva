@@ -5,6 +5,7 @@ type DatingProfileFields = Pick<
   PublicProfileDto,
   | "verificationStatus"
   | "preferredRelationshipPace"
+  | "occupation"
   | "languages"
   | "foodPreferences"
   | "profilePrompts"
@@ -19,6 +20,7 @@ export function mapDatingProfileFields(
   return {
     verificationStatus: profile?.verificationStatus ?? "UNVERIFIED",
     preferredRelationshipPace: profile?.preferredRelationshipPace ?? null,
+    occupation: profile?.shareWorkDetails ? profile.occupation : null,
     languages: profile?.languages ?? [],
     foodPreferences: profile?.foodPreferences ?? [],
     profilePrompts: normalizePromptResponses(profile?.promptResponses),
@@ -42,7 +44,9 @@ export function mapDatingProfileFields(
   };
 }
 
-function normalizePromptResponses(value: unknown): Array<{ promptId: string; answer: string }> {
+function normalizePromptResponses(
+  value: unknown,
+): Array<{ promptId: string; answer: string }> {
   if (!Array.isArray(value)) return [];
   return value
     .filter(
@@ -52,6 +56,9 @@ function normalizePromptResponses(value: unknown): Array<{ promptId: string; ans
         typeof (entry as { promptId?: unknown }).promptId === "string" &&
         typeof (entry as { answer?: unknown }).answer === "string",
     )
-    .map((entry) => ({ promptId: entry.promptId, answer: entry.answer.slice(0, 500) }))
+    .map((entry) => ({
+      promptId: entry.promptId,
+      answer: entry.answer.slice(0, 500),
+    }))
     .slice(0, 3);
 }

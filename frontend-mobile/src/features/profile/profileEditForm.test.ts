@@ -26,6 +26,31 @@ const profile = {
 } as unknown as MyProfileDto;
 
 describe("profile edit form", () => {
+  it("keeps work private by default and saves explicit visibility independently", () => {
+    const form = profileToEditForm(profile);
+    expect(form.occupation).toBe("");
+    expect(form.occupationCategory).toBeNull();
+    expect(form.shareWorkDetails).toBe(false);
+    const shared = profileToEditForm({
+      ...profile,
+      occupation: " Engineer ",
+      occupationCategory: "TECHNOLOGY",
+      shareWorkDetails: true,
+    });
+    expect(profileExtrasUpdate(shared, false)).toMatchObject({
+      occupation: "Engineer",
+      occupationCategory: "TECHNOLOGY",
+      shareWorkDetails: true,
+    });
+    expect(profileExtrasUpdate({ ...shared, occupation: " " }, false).occupation).toBeNull();
+    expect(profileExtrasUpdate({ ...shared, occupationCategory: null }, false).occupationCategory).toBeNull();
+    expect(profileExtrasUpdate(shared, true)).not.toHaveProperty("occupationCategory");
+    expect(profileExtrasUpdate(shared, true)).not.toHaveProperty("occupation");
+    expect(validateProfileEditForm({ ...form, occupation: "x".repeat(81) })).toEqual({
+      valid: false,
+      message: "Keep work or study within 80 characters.",
+    });
+  });
   it("patches only fields owned by the selected editor", () => {
     const form = profileToEditForm(profile);
     const details = profileExtrasUpdate(form, false);

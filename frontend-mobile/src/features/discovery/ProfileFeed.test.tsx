@@ -33,6 +33,7 @@ vi.mock("react-native", () => ({
   View: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) =>
     React.createElement("View", props, children),
   RefreshControl: (props: Record<string, unknown>) => React.createElement("RefreshControl", props),
+  useColorScheme: () => "light",
   useWindowDimensions: () => ({ width: 360, height: 780, fontScale: 1, scale: 3 }),
 }));
 vi.mock("../../components/dating/ProfilePreviewCard", () => ({
@@ -41,6 +42,7 @@ vi.mock("../../components/dating/ProfilePreviewCard", () => ({
 }));
 
 import { ProfileFeed } from "./ProfileFeed";
+import { ThemeProvider } from "../../theme/ThemeContext";
 
 const people = ["a", "b", "c"].map((userId) => ({ userId }) as PublicProfileDto);
 const setup = async (initial = people) => {
@@ -53,14 +55,14 @@ const setup = async (initial = people) => {
   };
   let renderer!: ReactTestRenderer;
   const element = (profiles: PublicProfileDto[], selectedUserId?: string) => (
-    <ProfileFeed
+    <ThemeProvider><ProfileFeed
       profiles={profiles}
       header={<React.Fragment>Discover header and Scenes</React.Fragment>}
       refreshing={false}
       selectedUserId={selectedUserId}
       {...handlers}
       empty={<React.Fragment>Finished</React.Fragment>}
-    />
+    /></ThemeProvider>
   );
   await act(async () => {
     renderer = create(element(initial));
@@ -125,6 +127,23 @@ describe("one-profile Discover pages", () => {
     expect(handlers.onOpen).not.toHaveBeenCalled();
     list().props.refreshControl.props.onRefresh();
     expect(handlers.onRefresh).toHaveBeenCalledOnce();
+  });
+  it("keeps the header at the top when the feed is empty or the last person is removed", async () => {
+    const { list, update } = await setup([]);
+    const expectTopAlignedEmptyFeed = () => {
+      expect(list().props.contentContainerStyle).toEqual({ flexGrow: 1 });
+      expect(list().props.ListEmptyComponent.props.style).toMatchObject({
+        flexGrow: 1,
+        justifyContent: "center",
+      });
+      expect(list().props.ListHeaderComponent.props.style?.justifyContent).toBeUndefined();
+    };
+    expectTopAlignedEmptyFeed();
+    await update([people[0]]);
+    expect(list().props.contentContainerStyle).toBeUndefined();
+    await update([]);
+    expectTopAlignedEmptyFeed();
+    expect(list().props.refreshControl).toBeDefined();
   });
   it("preserves the header position at the top and the full first card after refresh", async () => {
     const { browse, update, measureHeader } = await setup();

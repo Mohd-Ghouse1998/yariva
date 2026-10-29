@@ -2,6 +2,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -9,8 +10,10 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Inject, Injectable } from "@nestjs/common";
 import { ConfigType } from "@nestjs/config";
 import objectStorageConfig from "../../config/object-storage.config";
-import { createReadStream } from "node:fs";
-import { stat, writeFile } from "node:fs/promises";
+import { createReadStream, createWriteStream } from "node:fs";
+import { stat } from "node:fs/promises";
+import { Readable, Transform } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { MediaDisclosureService, type MediaViewer } from "./media-disclosure.service";
 
 export interface PresignedUploadInstruction {
@@ -113,6 +116,17 @@ export class ObjectStorageService {
     };
   }
 
+  async listObjects(input: { bucket: string; prefix: string; continuationToken?: string }) {
+    const result = await this.client.send(new ListObjectsV2Command({
+      Bucket: input.bucket, Prefix: input.prefix, ContinuationToken: input.continuationToken,
+    }));
+    return {
+      objects: (result.Contents ?? []).filter(item => item.Key && item.LastModified)
+        .map(item => ({ objectKey: item.Key!, lastModified: item.LastModified! })),
+      nextToken: result.NextContinuationToken,
+    };
+  }
+
   async createPresignedGetObject(input: {
     bucket: string;
     objectKey: string;
@@ -148,6 +162,7 @@ export class ObjectStorageService {
     bucket: string;
     objectKey: string;
     destinationPath: string;
+    maxBytes?: number;
   }): Promise<void> {
     const result = await this.client.send(
       new GetObjectCommand({ Bucket: input.bucket, Key: input.objectKey }),
@@ -155,7 +170,15 @@ export class ObjectStorageService {
     if (!result.Body) {
       throw new Error("Object storage returned an empty body");
     }
-    await writeFile(input.destinationPath, await result.Body.transformToByteArray());
+    let bytes = 0;
+    await pipeline(
+      Readable.from(result.Body as AsyncIterable<Uint8Array>),
+      new Transform({ transform(chunk: Buffer, _encoding, callback) {
+        bytes += chunk.length;
+        callback(input.maxBytes !== undefined && bytes > input.maxBytes ? new Error("Object exceeds download limit") : null, chunk);
+      } }),
+      createWriteStream(input.destinationPath),
+    );
   }
 
   async readObjectStream(input: { bucket: string; objectKey: string; range?: string }) {

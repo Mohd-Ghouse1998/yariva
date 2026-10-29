@@ -111,12 +111,40 @@ export class GetDiscoveryFeedService {
       snapshot = await this.buildSnapshot(viewer, preferenceHash, now);
     }
 
-    const pageIds = snapshot.candidateIds.slice(nextIndex, nextIndex + limit);
-    const pageRecords = await this.discoveryQueryRepository.findCandidatesByIds(pageIds);
+    // Snapshots preserve ordering only. Re-read permissions and relationships before
+    // issuing profile metadata or signed media, including on subsequent pages.
+    const remainingIds = snapshot.candidateIds.slice(nextIndex);
+    const [pageRecords, exclusionState] = await Promise.all([
+      this.discoveryQueryRepository.findCandidatesByIds(remainingIds),
+      this.discoveryQueryRepository.loadExclusionState(viewer.id, now),
+    ]);
     const recordsById = new Map(pageRecords.map((record) => [record.id, record]));
-    const candidates = pageIds
-      .map((candidateId) => recordsById.get(candidateId))
-      .filter((candidate): candidate is CandidateDiscoveryRecord => !!candidate);
+    const eligibilityInput = {
+      // Preserve the existing ordinary-discovery fallback radius; Scene discovery
+      // has its own strict radius and never uses this snapshot.
+      maxDistanceKm: Math.min(250, 2 * (viewer.discoveryPreference?.maxDistanceKm ?? 50)),
+      selectedIntents: viewer.discoveryPreference?.intentFilter.length
+        ? viewer.discoveryPreference.intentFilter
+        : viewer.intents.map((intent) => intent.intent),
+      preferredGenders: viewer.discoveryPreference?.preferredGenders ?? [],
+      excludedUserIds: new Set([
+        viewer.id, ...exclusionState.blockedUserIds, ...exclusionState.matchedUserIds,
+        ...exclusionState.activePassUserIds, ...exclusionState.activeLikeUserIds,
+      ]),
+    };
+    const eligibleIds = new Set(pageRecords.filter((candidate) =>
+      this.candidateEligibilityService.isEligible(viewer, candidate, eligibilityInput).eligible,
+    ).map((candidate) => candidate.id));
+    const candidates: CandidateDiscoveryRecord[] = [];
+    let newIndex = nextIndex;
+    while (newIndex < snapshot.candidateIds.length && candidates.length < limit) {
+      const id = snapshot.candidateIds[newIndex++]!;
+      if (eligibleIds.has(id)) candidates.push(recordsById.get(id)!);
+    }
+    // Avoid an empty terminal page when all remaining cached IDs were revoked.
+    if (!snapshot.candidateIds.slice(newIndex).some(id => eligibleIds.has(id))) {
+      newIndex = snapshot.candidateIds.length;
+    }
     const items = await Promise.all(
       candidates.map((candidate) =>
         mapPublicProfile(viewer, candidate, this.objectStorageService),
@@ -128,7 +156,6 @@ export class GetDiscoveryFeedService {
       items.map((item) => item.userId),
     );
 
-    const newIndex = nextIndex + pageIds.length;
     const nextCursor =
       newIndex < snapshot.candidateIds.length
         ? signCursor(
@@ -147,7 +174,7 @@ export class GetDiscoveryFeedService {
       nextCursor,
       snapshotExpiresAt: snapshot.expiresAt,
       dailyLimit: DAILY_CURATED_PROFILE_LIMIT,
-      remainingToday: Math.max(0, DAILY_CURATED_PROFILE_LIMIT - newIndex),
+      remainingToday: snapshot.candidateIds.slice(newIndex).filter(id => eligibleIds.has(id)).length,
     };
   }
 
@@ -540,6 +567,7 @@ function parseCursorOrThrow(
   if (
     typeof decoded.snapshotId !== "string" ||
     typeof decoded.nextIndex !== "number" ||
+    !Number.isSafeInteger(decoded.nextIndex) || decoded.nextIndex < 0 ||
     typeof decoded.expiresAt !== "string" ||
     decoded.viewerId !== viewerId ||
     new Date(decoded.expiresAt).getTime() < Date.now()

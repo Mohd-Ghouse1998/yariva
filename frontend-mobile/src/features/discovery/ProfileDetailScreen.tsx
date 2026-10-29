@@ -311,7 +311,11 @@ export const ProfileDetailScreen: React.FC = () => {
         minute: "2-digit",
       })
     : t("scene.availability.flexible");
-  const lifestyleDetails = [...lifestyle, ...profile.languages];
+  const lifestyleDetails = [
+    ...lifestyle,
+    ...profile.languages,
+    ...(profile.occupation ? [profile.occupation] : []),
+  ];
   const featuredPrompt = profile.profilePrompts.find((prompt) => prompt.answer.trim().length > 0);
 
   return (
@@ -496,6 +500,7 @@ export const ProfileDetailScreen: React.FC = () => {
             {lifestyleDetails.length > 0 ? (
               <NavigationListSection label="LIFESTYLE">
                 <View style={[styles.contentBlock, styles.wrapRow]}>
+                  {profile.occupation ? <Chip label={profile.occupation} size="sm" /> : null}
                   {lifestyle.map((item) => (
                     <Chip key={item} label={item} size="sm" tone="soft" />
                   ))}

@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
+import { NotificationIntentModule } from "./notification-intent.module";
 import { FeatureFlagsModule } from "../feature-flags/feature-flags.module";
+import { PrivateStoriesModule } from "../private-stories/private-stories.module";
 import { AppLogger } from "../../common/logger/app-logger.service";
 import { DomainEventPublisher } from "../../common/services/domain-event.publisher";
 import {
@@ -14,7 +16,6 @@ import {
   NotificationOwnershipPolicy,
 } from "./domain/notifications.domain";
 import {
-  NotificationRepository,
   PushDeliveryRepository,
   PushTokenReadRepository,
 } from "./infrastructure/notifications.infrastructure";
@@ -24,7 +25,7 @@ import {
 } from "./infrastructure/push-transports";
 
 @Module({
-  imports: [FeatureFlagsModule],
+  imports: [FeatureFlagsModule, PrivateStoriesModule, NotificationIntentModule],
   providers: [
     AppLogger,
     DomainEventPublisher,
@@ -35,7 +36,6 @@ import {
     PushDispatcherService,
     NotificationDedupService,
     NotificationOwnershipPolicy,
-    NotificationRepository,
     PushTokenReadRepository,
     PushDeliveryRepository,
     FcmPushTransport,

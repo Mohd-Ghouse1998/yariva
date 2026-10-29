@@ -28,6 +28,10 @@ describe("notification navigation", () => {
     expect(resolveNotificationHref({ type: "SYSTEM", data: { route: "https://foreign.invalid" } })).toBeNull();
     expect(resolveNotificationHref({ type: "NEW_MATCH", data: {} })).toBeNull();
     expect(resolveNotificationHref({ type: "SYSTEM", data: {} })).toBeNull();
+    expect(resolveNotificationHref({ type: "SYSTEM", data: { route: "private-story" } })).toBeNull();
+    expect(resolveNotificationHref({ type: "SYSTEM", data: { route: "private-story", storyId: "story-1" } })).toEqual({
+      pathname: "/(app)/private-stories", params: { storyId: "story-1" },
+    });
   });
 
   it("derives initials only from stable actor identity", () => {

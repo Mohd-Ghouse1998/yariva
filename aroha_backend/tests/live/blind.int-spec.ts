@@ -11,6 +11,7 @@ import { ObjectStorageService } from "../../src/integrations/object-storage/obje
 const live = process.env.AROHA_RUN_LIVE_INTEGRATION === "1" ? describe : describe.skip;
 live("Blind introductions: real persisted privacy, consent and time", () => {
   let app: NestExpressApplication, db: PrismaService, blind: BlindService;
+  let previousFlag: { enabled: boolean; scope: "GLOBAL" | "USER_ALLOWLIST" | "USER_PERCENTAGE"; rolloutPercentage: number | null } | null;
   const accounts: Array<{ id: string; token: string }> = [];
   const run = randomUUID();
   beforeAll(async () => {
@@ -18,7 +19,8 @@ live("Blind introductions: real persisted privacy, consent and time", () => {
     app = module.createNestApplication<NestExpressApplication>();
     await configureHttpServer(app); app.useLogger(false); await app.init();
     db = app.get(PrismaService); blind = app.get(BlindService);
-    await db.featureFlag.upsert({ where: { key: "blind.v1" }, create: { key: "blind.v1", enabled: true }, update: { enabled: true } });
+    previousFlag = await db.featureFlag.findUnique({ where: { key: "blind.v1" }, select: { enabled: true, scope: true, rolloutPercentage: true } });
+    await db.featureFlag.upsert({ where: { key: "blind.v1" }, create: { key: "blind.v1", enabled: true, scope: "GLOBAL" }, update: { enabled: true, scope: "GLOBAL", rolloutPercentage: null } });
     for (let i = 0; i < 8; i++) {
       const signup = await request(app.getHttpServer()).post("/api/v1/auth/signup").send({ email: `blind-${run}-${i}@example.com`, password: "StrongPassw0rd!", device: { deviceId: `${run}-${i}`, platform: "ANDROID", appVersion: "test" } }).expect(201);
       accounts.push({ id: signup.body.user.id, token: signup.body.tokens.accessToken });
@@ -26,7 +28,11 @@ live("Blind introductions: real persisted privacy, consent and time", () => {
       await db.profilePhoto.create({ data: { userId: signup.body.user.id, bucket: "external", objectKey: `https://example.com/private-${run}-${i}.jpg`, mimeType: "image/jpeg", sizeBytes: 100, position: 0, isPrimary: true, moderationStatus: "APPROVED" } });
     }
   });
-  afterAll(async () => { await app?.close(); });
+  afterAll(async () => {
+    if (db && previousFlag) await db.featureFlag.update({ where: { key: "blind.v1" }, data: previousFlag });
+    else if (db) await db.featureFlag.deleteMany({ where: { key: "blind.v1" } });
+    await app?.close();
+  });
   const api = (i: number, method: "get" | "post", path: string) => request(app.getHttpServer())[method](`/api/v1/${path}`).set("Authorization", `Bearer ${accounts[i]!.token}`).timeout(10000);
   async function event(indices: number[], offset = -1000, end = 3600000) {
     const e = await blind.schedule({ startsAt: new Date(Date.now() + offset).toISOString(), endsAt: new Date(Date.now() + end).toISOString(), city: "Hyderabad" });

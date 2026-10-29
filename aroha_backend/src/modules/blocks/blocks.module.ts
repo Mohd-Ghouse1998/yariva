@@ -1,3 +1,4 @@
+import { DiscoveryModule } from "../discovery/discovery.module";
 import { Module } from "@nestjs/common";
 import { ConversationsModule } from "../conversations/conversations.module";
 import { AppLogger } from "../../common/logger/app-logger.service";
@@ -16,7 +17,7 @@ import {
 } from "./infrastructure/blocks.infrastructure";
 
 @Module({
-  imports: [ConversationsModule],
+  imports: [ConversationsModule, DiscoveryModule],
   controllers: [BlocksController],
   providers: [
     AppLogger,

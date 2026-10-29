@@ -153,7 +153,7 @@ describeLive("Scene HTTP vertical slice", () => {
       .expect(200);
     expect(renewedSecond.body.scene).toMatchObject({
       status: "ACTIVE",
-      version: 2,
+      version: endedSecond.body.scene.version + 1,
       lineageId: endedSecond.body.scene.lineageId,
       photo: { id: secondPhotoId },
     });

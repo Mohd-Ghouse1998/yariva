@@ -132,17 +132,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const stateRef = useRef(state);
   stateRef.current = state;
   const mountedRef = useRef(true);
+  const sessionVersion = useRef(0);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
       mountedRef.current = false;
-    },
-    [],
-  );
+    };
+  }, []);
 
   const clearSession = useCallback(async () => {
+    sessionVersion.current += 1;
+    const next = unauthenticatedState();
+    stateRef.current = next;
+    if (mountedRef.current) setState(next);
     await tokenStorage.clear();
-    if (mountedRef.current) setState(unauthenticatedState());
   }, []);
 
   const markSessionRecoverable = useCallback((tokens: PersistedTokens, error: unknown) => {
@@ -152,11 +156,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const verifyPersistedSession = useCallback(
     async (persisted: PersistedTokens): Promise<void> => {
+      const version = sessionVersion.current;
       try {
         const me = await getMeWithTimeout();
-        if (!mountedRef.current) return;
+        if (!mountedRef.current || version !== sessionVersion.current) return;
         const latestTokens = await tokenStorage.load().catch(() => null);
-        if (!mountedRef.current) return;
+        if (!mountedRef.current || version !== sessionVersion.current) return;
         setState({
           status: "authenticated",
           tokens: latestTokens ?? stateRef.current.tokens ?? persisted,
@@ -165,7 +170,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           sessionRecoveryReason: null,
         });
       } catch (error) {
-        if (!mountedRef.current) return;
+        if (!mountedRef.current || version !== sessionVersion.current) return;
         if (isAuthoritativeSessionError(error)) {
           await clearSession();
           return;
@@ -180,16 +185,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     configureHttpClient({
       getAccessToken: async () => stateRef.current.tokens?.accessToken ?? null,
+      getSessionVersion: () => sessionVersion.current,
       refresh: async () => {
+        const version = sessionVersion.current;
         const current = stateRef.current.tokens;
         if (!current?.refreshToken) return null;
         try {
           const refreshed = await authApi.refresh({ refreshToken: current.refreshToken });
+          if (!mountedRef.current || version !== sessionVersion.current) return null;
           const next = tokensFromAuthResponse(refreshed);
           await tokenStorage.save(next);
+          if (!mountedRef.current || version !== sessionVersion.current) return null;
+          stateRef.current = { ...stateRef.current, tokens: next, user: refreshed.user };
           setState((prev) => ({ ...prev, tokens: next, user: refreshed.user }));
           return next.accessToken;
         } catch (error) {
+          if (!mountedRef.current || version !== sessionVersion.current) return null;
           if (isAuthoritativeSessionError(error)) {
             await clearSession();
             return null;
@@ -210,6 +221,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Boot: try to load tokens then fetch /users/me.
   useEffect(() => {
     let mounted = true;
+    const version = sessionVersion.current;
     void (async () => {
       let persisted: PersistedTokens | null = null;
       try {
@@ -217,7 +229,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch {
         persisted = null;
       }
-      if (!mounted) return;
+      if (!mounted || version !== sessionVersion.current) return;
       if (!persisted) {
         setState(unauthenticatedState());
         return;
@@ -236,7 +248,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [verifyPersistedSession]);
 
   const retrySession = useCallback<AuthActions["retrySession"]>(async () => {
+    const version = sessionVersion.current;
     const persisted = stateRef.current.tokens ?? (await tokenStorage.load().catch(() => null));
+    if (!mountedRef.current || version !== sessionVersion.current) return;
     if (!persisted) {
       await clearSession();
       return;
@@ -260,20 +274,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => clearTimeout(timer);
   }, [retrySession, state.sessionRecoveryReason, state.status]);
 
-  const applyAuthResponse = useCallback(async (r: AuthResponseDto) => {
+  const applyAuthResponse = useCallback(async (r: AuthResponseDto, version: number) => {
+    if (!mountedRef.current || version !== sessionVersion.current) return;
     const next = tokensFromAuthResponse(r);
     await tokenStorage.save(next);
-    setState({
+    if (!mountedRef.current || version !== sessionVersion.current) return;
+    const authenticated: AuthState = {
       status: "authenticated",
       tokens: next,
       user: r.user,
       profileCompletion: r.profileCompletion,
       sessionRecoveryReason: null,
-    });
+    };
+    stateRef.current = authenticated;
+    setState(authenticated);
   }, []);
 
   const signup = useCallback<AuthActions["signup"]>(
     async (params) => {
+      const version = ++sessionVersion.current;
       const device = await buildDeviceContext();
       const body: SignupRequest = {
         email: params.email ?? null,
@@ -282,13 +301,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         device,
       };
       const response = await authApi.signup(body);
-      await applyAuthResponse(response);
+      await applyAuthResponse(response, version);
     },
     [applyAuthResponse],
   );
 
   const login = useCallback<AuthActions["login"]>(
     async (params) => {
+      const version = ++sessionVersion.current;
       const device = await buildDeviceContext();
       const body: LoginRequest = {
         identifier: params.identifier,
@@ -296,31 +316,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         device,
       };
       const response = await authApi.login(body);
-      await applyAuthResponse(response);
+      await applyAuthResponse(response, version);
     },
     [applyAuthResponse],
   );
 
   const verifyOtp = useCallback<AuthActions["verifyOtp"]>(
     async (params) => {
+      const version = ++sessionVersion.current;
       const device = await buildDeviceContext();
       const response = await authApi.verifyOtp({ ...params, device });
-      await applyAuthResponse(response);
+      await applyAuthResponse(response, version);
     },
     [applyAuthResponse],
   );
 
   const logout = useCallback<AuthActions["logout"]>(async () => {
+    const version = ++sessionVersion.current;
     try {
       await authApi.logout();
     } catch {
       // Ignore — log out locally either way.
     }
-    await clearSession();
+    if (version === sessionVersion.current) await clearSession();
   }, [clearSession]);
 
   const refreshUser = useCallback<AuthActions["refreshUser"]>(async () => {
+    const version = sessionVersion.current;
     const me = await usersApi.me();
+    if (!mountedRef.current || version !== sessionVersion.current) return;
     setState((prev) => ({
       ...prev,
       user: me.user,

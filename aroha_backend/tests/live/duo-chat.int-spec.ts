@@ -8,7 +8,7 @@ import { PrismaService } from "../../src/database/prisma/prisma.service";
 import { ensureDuoConversation } from "../../src/modules/conversations/infrastructure/conversations.infrastructure";
 import { ObjectStorageService } from "../../src/integrations/object-storage/object-storage.service";
 import { DuoPlanService } from "../../src/modules/wingman/application/duo-plan.service";
-import { io, type Socket } from "../../../frontend-mobile/node_modules/socket.io-client";
+import { io, type Socket } from "socket.io-client";
 
 const describeLive = process.env.AROHA_RUN_LIVE_INTEGRATION === "1" ? describe : describe.skip;
 type Account = { id: string; token: string; sessionId: string; email: string };

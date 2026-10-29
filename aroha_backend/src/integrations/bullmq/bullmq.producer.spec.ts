@@ -25,4 +25,19 @@ describe("BullmqProducer", () => {
       "call.cleanup.stale__call-1__ring",
     );
   });
+
+  it.each(["completed", "failed"])("recovers a retained %s job only when requested", async state => {
+    const job = { getState: jest.fn().mockResolvedValue(state), retry: jest.fn() };
+    const queue = { add: jest.fn().mockResolvedValue(job) };
+    const producer = new BullmqProducer(queue as any);
+    await producer.enqueue("notification.dispatch", {}, { jobId: "notice", retryFinished: true });
+    expect(job.retry).toHaveBeenCalledWith(state);
+  });
+
+  it("does not restart an active job during reconciliation", async () => {
+    const job = { getState: jest.fn().mockResolvedValue("active"), retry: jest.fn() };
+    const producer = new BullmqProducer({ add: jest.fn().mockResolvedValue(job) } as any);
+    await producer.enqueue("notification.dispatch", {}, { jobId: "notice", retryFinished: true });
+    expect(job.retry).not.toHaveBeenCalled();
+  });
 });

@@ -13,7 +13,7 @@ import { CurrentSession } from "../../../common/decorators/current-session.decor
 import { CurrentUser } from "../../../common/decorators/current-user.decorator";
 import type { AuthContext } from "../../../common/types/auth-context.type";
 import { VibeModerationService } from "../../vibes/application/vibe-moderation.service";
-import { AdminReviewVibeDto } from "../dto/admin.dto";
+import { AdminReviewContentDto } from "../dto/admin.dto";
 import { AdminRoleGuard } from "../policies/admin-role.guard";
 
 @UseGuards(AdminRoleGuard)
@@ -27,7 +27,7 @@ export class AdminVibeModerationController {
     @CurrentUser() user: AuthContext["user"],
     @CurrentSession() session: AuthContext["session"],
     @Param("vibeId", new ParseUUIDPipe()) vibeId: string,
-    @Body() body: AdminReviewVibeDto,
+    @Body() body: AdminReviewContentDto,
     @Req() request: Request,
   ) {
     const applied = await this.vibeModerationService.review({

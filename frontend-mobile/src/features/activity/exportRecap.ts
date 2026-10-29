@@ -18,19 +18,38 @@ export const clearExpiredRecapExports = (now = Date.now()) => {
   }
 };
 
-export const shareRecapCard = async (card: Svg): Promise<void> => {
-  if (!(await Sharing.isAvailableAsync())) throw new Error("Sharing unavailable");
+export const shareRecapCard = async (card: Svg, signal?: AbortSignal): Promise<void> => {
+  if (signal?.aborted) return;
+  const available = await Sharing.isAvailableAsync();
+  if (signal?.aborted) return;
+  if (!available) throw new Error("Sharing unavailable");
   clearExpiredRecapExports();
-  const base64 = await new Promise<string>((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error("Card render timed out")), 15_000);
-    card.toDataURL(
-      (value) => {
-        clearTimeout(timeout);
-        value ? resolve(value) : reject(new Error("Empty card render"));
-      },
-      { width: RECAP_EXPORT.width, height: RECAP_EXPORT.height },
-    );
+  const base64 = await new Promise<string | null>((resolve, reject) => {
+    const cleanup = () => {
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", cancel);
+    };
+    const cancel = () => { cleanup(); resolve(null); };
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error("Card render timed out"));
+    }, 15_000);
+    signal?.addEventListener("abort", cancel, { once: true });
+    try {
+      card.toDataURL(
+        (value) => {
+          cleanup();
+          value ? resolve(value) : reject(new Error("Empty card render"));
+        },
+        { width: RECAP_EXPORT.width, height: RECAP_EXPORT.height },
+      );
+    } catch (error) {
+      cleanup();
+      reject(error);
+    }
   });
+  // Native rendering can finish after navigation, account changes or backgrounding.
+  if (signal?.aborted || base64 === null) return;
   const actual = recapPngSize(base64);
   if (actual.width !== RECAP_EXPORT.width || actual.height !== RECAP_EXPORT.height)
     throw new Error("Unexpected export dimensions");

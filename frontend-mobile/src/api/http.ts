@@ -24,6 +24,7 @@ interface HttpClientConfig {
   getAccessToken: AccessTokenProvider;
   refresh: RefreshHandler;
   onUnauthenticated: UnauthenticatedHandler;
+  getSessionVersion: () => number;
 }
 
 let config: HttpClientConfig = {
@@ -31,6 +32,7 @@ let config: HttpClientConfig = {
   getAccessToken: async () => null,
   refresh: async () => null,
   onUnauthenticated: () => undefined,
+  getSessionVersion: () => 0,
 };
 
 export function configureHttpClient(next: Partial<HttpClientConfig>): void {
@@ -55,13 +57,20 @@ async function parseError(response: Response): Promise<ApiError> {
   return new ApiError(response.status, body);
 }
 
-let refreshing: Promise<string | null> | null = null;
+let refreshing: { version: number; promise: Promise<string | null> } | null = null;
 
 async function doRequest<T>(
   path: string,
   options: RequestOptions,
   attempt: number,
+  refreshedToken?: string,
+  sessionVersion = config.getSessionVersion(),
 ): Promise<T> {
+  const assertSession = () => {
+    if (sessionVersion !== config.getSessionVersion()) {
+      throw new ApiError(409, { code: "SESSION_CHANGED", message: "The account changed. Please try again.", requestId: "client-session" });
+    }
+  };
   if (isFixturesEnabled()) {
     return handleFixture<T>({
       method: options.method ?? "GET",
@@ -77,7 +86,8 @@ async function doRequest<T>(
   };
 
   if (!options.skipAuth) {
-    const token = await config.getAccessToken();
+    const token = refreshedToken ?? (await config.getAccessToken());
+    assertSession();
     if (token) headers.Authorization = `Bearer ${token}`;
   }
 
@@ -93,6 +103,7 @@ async function doRequest<T>(
     body,
     signal: options.signal,
   });
+  assertSession();
 
   if (response.status === 204) {
     return undefined as unknown as T;
@@ -100,20 +111,26 @@ async function doRequest<T>(
 
   if (response.ok) {
     const text = await response.text();
+    assertSession();
     if (!text) return undefined as unknown as T;
     return JSON.parse(text) as T;
   }
 
   const err = await parseError(response);
+  assertSession();
   if (err.isAuthInvalid() && attempt === 0 && !options.skipAuth) {
-    if (!refreshing) {
-      refreshing = config.refresh().finally(() => {
-        refreshing = null;
-      });
+    if (!refreshing || refreshing.version !== sessionVersion) {
+      const pending = { version: sessionVersion, promise: config.refresh() };
+      refreshing = pending;
+      void pending.promise.finally(() => {
+        if (refreshing === pending) refreshing = null;
+      }).catch(() => undefined);
     }
-    const newToken = await refreshing;
+    const newToken = await refreshing.promise;
+    assertSession();
     if (newToken) {
-      return doRequest<T>(path, options, attempt + 1);
+      // React may not have committed the auth state update yet.
+      return doRequest<T>(path, options, attempt + 1, newToken, sessionVersion);
     }
     config.onUnauthenticated();
   }

@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
   Param,
@@ -28,6 +29,7 @@ export class NotificationsController {
   ) {}
 
   @Get()
+  @Header("Cache-Control", "private, no-store")
   async list(
     @CurrentUser() user: AuthContext["user"],
     @Query() query: CursorPageQueryDto,
@@ -40,6 +42,7 @@ export class NotificationsController {
   }
 
   @Post(":notificationId/read")
+  @Header("Cache-Control", "private, no-store")
   @HttpCode(HttpStatus.OK)
   async markRead(
     @CurrentUser() user: AuthContext["user"],

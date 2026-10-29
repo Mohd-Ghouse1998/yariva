@@ -39,8 +39,23 @@ export interface PersistedTokens {
   accessExpiresAt: string;
 }
 
+// Save and logout can overlap while SecureStore writes individual keys.
+// Preserve operation order so a late save cannot restore a cleared session.
+let pendingWrite = Promise.resolve();
+function writeInOrder(operation: () => Promise<unknown>[]): Promise<void> {
+  const result = pendingWrite.then(async () => {
+    // A rejected key must not release the queue while sibling writes continue.
+    const results = await Promise.allSettled(operation());
+    const failure = results.find((result) => result.status === "rejected");
+    if (failure?.status === "rejected") throw failure.reason;
+  });
+  pendingWrite = result.catch(() => undefined);
+  return result;
+}
+
 export const tokenStorage = {
   async load(): Promise<PersistedTokens | null> {
+    await pendingWrite;
     const [a, r, s, e] = await Promise.all([
       getItem(KEYS.accessToken),
       getItem(KEYS.refreshToken),
@@ -52,7 +67,7 @@ export const tokenStorage = {
   },
 
   async save(t: PersistedTokens): Promise<void> {
-    await Promise.all([
+    await writeInOrder(() => [
       setItem(KEYS.accessToken, t.accessToken),
       setItem(KEYS.refreshToken, t.refreshToken),
       setItem(KEYS.sessionId, t.sessionId),
@@ -61,7 +76,7 @@ export const tokenStorage = {
   },
 
   async clear(): Promise<void> {
-    await Promise.all([
+    await writeInOrder(() => [
       removeItem(KEYS.accessToken),
       removeItem(KEYS.refreshToken),
       removeItem(KEYS.sessionId),

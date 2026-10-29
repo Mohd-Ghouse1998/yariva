@@ -7,6 +7,7 @@ import type {
   InitiateProfilePhotoUploadResponse,
   LifestyleDto,
   MyProfileDto,
+  OccupationCategoryOption,
   ProfilePhotoListResponse,
   ProfilePhotoResponse,
   PublicProfileDto,
@@ -21,6 +22,7 @@ import type {
 import { http } from "../http";
 
 export const profilesApi = {
+  workCategories: () => http.get<{ items: OccupationCategoryOption[] }>("profiles/work-categories").then((response) => response.items),
   me: () => http.get<{ profile: MyProfileDto }>("profiles/me").then((response) => response.profile),
   publicById: (userId: string) =>
     http

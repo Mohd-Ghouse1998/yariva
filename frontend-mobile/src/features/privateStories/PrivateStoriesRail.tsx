@@ -1,7 +1,7 @@
 import { useFocusEffect } from "expo-router";
 import { Image } from "expo-image";
 import React, { Fragment, useCallback, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { AppState, Pressable, StyleSheet, View } from "react-native";
 import { privateStoriesApi, type Story } from "../../api/endpoints/privateStories";
 import { Icon } from "../../components/ui/Icon";
 import { Text } from "../../components/ui/Text";
@@ -27,21 +27,38 @@ export const usePrivateStoryRail = (enabled: boolean) => {
         return;
       }
       let active = true;
-      setItems([]);
-      setMine([]);
-      setLoadError(false);
-      setLoading(true);
-      void Promise.allSettled([privateStoriesApi.feed(), privateStoriesApi.mine()]).then(
+      let version = 0;
+      const clear = () => {
+        version++;
+        setItems([]);
+        setMine([]);
+        setLoading(false);
+      };
+      const load = () => {
+        clear();
+        if (AppState.currentState !== "active") return;
+        const request = version;
+        setLoadError(false);
+        setLoading(true);
+        void Promise.allSettled([privateStoriesApi.feed(), privateStoriesApi.mine()]).then(
         ([feed, own]) => {
-          if (!active) return;
+          if (!active || request !== version) return;
           if (feed.status === "fulfilled") setItems(feed.value.items);
           if (own.status === "fulfilled") setMine(own.value.items);
           setLoadError(feed.status === "rejected" || own.status === "rejected");
           setLoading(false);
         },
-      );
+        );
+      };
+      load();
+      const listener = AppState.addEventListener("change", state => {
+        if (state === "active") load();
+        else clear();
+      });
       return () => {
         active = false;
+        listener.remove();
+        clear();
       };
     }, [enabled, retry]),
   );

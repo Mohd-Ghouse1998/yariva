@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { BackHandler, View } from "react-native";
 import { useFocusEffect } from "expo-router";
+import { WorkCategoryPicker } from "./WorkCategoryPicker";
 import { profilesApi } from "../../api/endpoints/profiles";
 import { Header } from "../../components/layout/Header";
 import { Screen } from "../../components/layout/Screen";
 import { Button } from "../../components/ui/Button";
 import { CenterDialog } from "../../components/ui/CenterDialog";
 import { Chip } from "../../components/ui/Chip";
+import { ToggleRow } from "../../components/ui/ToggleRow";
 import { Input } from "../../components/ui/Input";
 import { NavigationListRow, NavigationListSection } from "../../components/ui/NavigationList";
 import { Text } from "../../components/ui/Text";
@@ -103,7 +105,7 @@ export function ProfileExtrasScreen({ prompts = false }: { prompts?: boolean }) 
     >
       <View style={{ marginHorizontal: -layout.screenPadding }}>
         <Header
-          title={prompts ? "Conversation starters" : "Languages & values"}
+          title={prompts ? "Conversation starters" : "Work, languages & values"}
           showBack
           onLeftPress={requestBack}
         />
@@ -212,6 +214,25 @@ export function ProfileExtrasScreen({ prompts = false }: { prompts?: boolean }) 
         </>
       ) : (
         <>
+          <Input
+            label="Work or study (optional)"
+            value={form.occupation}
+            maxLength={80}
+            onChangeText={(v) => update("occupation", v)}
+            placeholder="Software engineer, designer, student…"
+          />
+          <WorkCategoryPicker
+            selected={form.occupationCategory ? [form.occupationCategory] : []}
+            onChange={(values) => update("occupationCategory", values[0] ?? null)}
+            disabled={saving}
+          />
+          <ToggleRow
+            label="Show work on my profile"
+            sub="Also allows people to find you by work or study."
+            value={form.shareWorkDetails}
+            disabled={saving}
+            onValueChange={(v) => update("shareWorkDetails", v)}
+          />
           <Input
             label="Languages"
             value={form.languages}

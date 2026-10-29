@@ -407,6 +407,15 @@ export const DatePlanDetailScreen: React.FC = () => {
           </Pressable>
         </Card>
 
+        {plan.eventChanged || plan.eventUnavailable ? (
+          <Card>
+            <Text variant="bodyStrong">{plan.eventUnavailable ? "Event unavailable" : "Event details changed"}</Text>
+            <Text variant="body" color="textSubdued">
+              This plan keeps the details you originally reviewed. Check the event source and discuss changes in chat before meeting.
+            </Text>
+          </Card>
+        ) : null}
+
         {actionable ? (
           <View style={styles.actions}>
             {!myAccepted ? (
@@ -414,6 +423,7 @@ export const DatePlanDetailScreen: React.FC = () => {
                 label="Accept meetup"
                 fullWidth
                 loading={busy}
+                disabled={busy || plan.eventChanged || plan.eventUnavailable}
                 onPress={() => void mutate(() => datePlansApi.accept(plan.id), "Meetup accepted.")}
               />
             ) : (
@@ -424,12 +434,12 @@ export const DatePlanDetailScreen: React.FC = () => {
             )}
 
             <ButtonRow>
-              <Button
+              {!plan.eventId ? <Button
                 label={myAccepted ? "Change" : "Suggest change"}
                 variant="secondary"
                 disabled={busy}
                 onPress={openTimeEditor}
-              />
+              /> : null}
               <Button
                 label={isCreator ? "Withdraw" : myAccepted ? "Withdraw" : "Decline"}
                 variant="ghost"

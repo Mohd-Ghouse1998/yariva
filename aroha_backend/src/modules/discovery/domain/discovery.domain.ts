@@ -32,7 +32,9 @@ export interface ScoredDiscoveryCandidate {
 
 @Injectable()
 export class DiscoveryAccessPolicy {
-  assertViewerCanAccess(viewer: ViewerDiscoveryContext | null): asserts viewer is ViewerDiscoveryContext {
+  assertViewerCanAccess(
+    viewer: ViewerDiscoveryContext | null,
+  ): asserts viewer is ViewerDiscoveryContext {
     if (!viewer || viewer.deletedAt) {
       throw new AppException(
         403,
@@ -81,21 +83,46 @@ export class CandidateEligibilityService {
     },
   ): CandidateEligibilityResult {
     if (input.excludedUserIds.has(candidate.id)) {
-      return { eligible: false, distanceKm: Number.POSITIVE_INFINITY, primaryIntentBucket: "NONE" };
+      return {
+        eligible: false,
+        distanceKm: Number.POSITIVE_INFINITY,
+        primaryIntentBucket: "NONE",
+      };
     }
 
     if (
       !viewer.profile?.dateOfBirth ||
-      !viewer.profile.locationLat ||
-      !viewer.profile.locationLng ||
+      viewer.profile.locationLat === null ||
+      viewer.profile.locationLng === null ||
       !candidate.profile?.dateOfBirth ||
       candidate.profile.locationLat === null ||
       candidate.profile.locationLng === null
     ) {
-      return { eligible: false, distanceKm: Number.POSITIVE_INFINITY, primaryIntentBucket: "NONE" };
+      return {
+        eligible: false,
+        distanceKm: Number.POSITIVE_INFINITY,
+        primaryIntentBucket: "NONE",
+      };
     }
 
     const candidateAge = calculateAge(candidate.profile.dateOfBirth);
+    const viewerAge = calculateAge(viewer.profile.dateOfBirth);
+    const preference = candidate.discoveryPreference;
+    if (
+      candidateAge < 18 ||
+      viewerAge < 18 ||
+      (preference?.minAge != null && viewerAge < preference.minAge) ||
+      (preference?.maxAge != null && viewerAge > preference.maxAge) ||
+      (preference?.preferredGenders.length &&
+        (!viewer.profile.gender ||
+          !preference.preferredGenders.includes(viewer.profile.gender)))
+    ) {
+      return {
+        eligible: false,
+        distanceKm: Number.POSITIVE_INFINITY,
+        primaryIntentBucket: "NONE",
+      };
+    }
     const distanceKm = haversineDistanceKm(
       Number(viewer.profile.locationLat.toString()),
       Number(viewer.profile.locationLng.toString()),
@@ -131,9 +158,58 @@ export class CandidateEligibilityService {
       return { eligible: false, distanceKm, primaryIntentBucket: "NONE" };
     }
 
-    const candidateIntentSet = new Set(candidate.intents.map((intent) => intent.intent));
+    const filters = viewer.discoveryPreference;
+    const normalize = (value: string) => value.trim().toLocaleLowerCase();
+    // Rechecked for freshly loaded cached candidates as well as new recommendations.
+    // Never search private occupation data: matching itself could disclose it.
+    const interests = filters?.interestTagIds ?? [];
+    const languages = (filters?.languageFilter ?? [])
+      .map(normalize)
+      .filter(Boolean);
+    const workCategories = filters?.occupationCategoryFilter ?? [];
+    const occupation = normalize(filters?.occupationFilter ?? "");
+    if (
+      (interests.length > 0 &&
+        !candidate.interests.some((item) =>
+          interests.includes(item.interestTagId),
+        )) ||
+      (languages.length > 0 &&
+        !candidate.profile.languages.some((value) =>
+          languages.includes(normalize(value)),
+        )) ||
+      (workCategories.length > 0 &&
+        (!candidate.profile.shareWorkDetails ||
+          !candidate.profile.occupationCategory ||
+          !workCategories.includes(candidate.profile.occupationCategory))) ||
+      (occupation &&
+        (!candidate.profile.shareWorkDetails ||
+          !normalize(candidate.profile.occupation ?? "").includes(
+            occupation,
+          ))) ||
+      ((filters?.smokingFilter?.length ?? 0) > 0 &&
+        (!candidate.lifestyle?.smoking ||
+          !filters!.smokingFilter.includes(candidate.lifestyle.smoking))) ||
+      ((filters?.drinkingFilter?.length ?? 0) > 0 &&
+        (!candidate.lifestyle?.drinking ||
+          !filters!.drinkingFilter.includes(candidate.lifestyle.drinking))) ||
+      ((filters?.exerciseFilter?.length ?? 0) > 0 &&
+        (!candidate.lifestyle?.exercise ||
+          !filters!.exerciseFilter.includes(candidate.lifestyle.exercise))) ||
+      (filters?.includeRecentlyActiveOnly &&
+        (!candidate.lastActiveAt ||
+          candidate.lastActiveAt.getTime() <
+            Date.now() - 7 * 24 * 60 * 60 * 1000))
+    ) {
+      return { eligible: false, distanceKm, primaryIntentBucket: "NONE" };
+    }
+
+    const candidateIntentSet = new Set<string>(
+      preference?.intentFilter?.length
+        ? preference.intentFilter
+        : candidate.intents.map((intent) => intent.intent),
+    );
     const overlappingIntents = input.selectedIntents.filter((intent) =>
-      candidateIntentSet.has(intent as any),
+      candidateIntentSet.has(intent),
     );
 
     if (overlappingIntents.length === 0) {
@@ -161,12 +237,7 @@ export class DiscoveryRankingService {
   ): ScoredDiscoveryCandidate {
     const selectedIntents = resolveSelectedIntents(viewer);
     const candidateIntents = candidate.intents.map((intent) => intent.intent);
-    const intentScore =
-      30 *
-      overlapRatio(
-        selectedIntents,
-        candidateIntents,
-      );
+    const intentScore = 30 * overlapRatio(selectedIntents, candidateIntents);
     const interestScore =
       20 *
       jaccardIndex(
@@ -175,10 +246,7 @@ export class DiscoveryRankingService {
       );
     const lifestyleScore =
       15 *
-      normalizedLifestyleCompatibility(
-        viewer.lifestyle,
-        candidate.lifestyle,
-      );
+      normalizedLifestyleCompatibility(viewer.lifestyle, candidate.lifestyle);
     const scheduleScore =
       10 *
       normalizedScheduleOverlap(
@@ -213,7 +281,11 @@ export class DiscoveryRankingService {
       lastActiveAtMs: candidate.lastActiveAt?.getTime() ?? 0,
       primaryIntentBucket: input.primaryIntentBucket,
       cityBucket:
-        [candidate.profile?.city, candidate.profile?.region, candidate.profile?.countryCode]
+        [
+          candidate.profile?.city,
+          candidate.profile?.region,
+          candidate.profile?.countryCode,
+        ]
           .filter(Boolean)
           .join("|") || "UNKNOWN",
       recentlyServed: input.recentlyServed,
@@ -223,7 +295,9 @@ export class DiscoveryRankingService {
 
 @Injectable()
 export class DiscoveryDiversityService {
-  orderCandidates(input: ScoredDiscoveryCandidate[]): ScoredDiscoveryCandidate[] {
+  orderCandidates(
+    input: ScoredDiscoveryCandidate[],
+  ): ScoredDiscoveryCandidate[] {
     const remaining = [...input];
     const ordered: ScoredDiscoveryCandidate[] = [];
 
@@ -257,10 +331,10 @@ export class DiscoveryPayloadMapperService {
 }
 
 function stablePreferenceHash(value: Record<string, unknown>): string {
-  return hashWithPepper(JSON.stringify(value), "discovery-preference-hash").slice(
-    0,
-    32,
-  );
+  return hashWithPepper(
+    JSON.stringify(value),
+    "discovery-preference-hash",
+  ).slice(0, 32);
 }
 
 function resolveSelectedIntents(viewer: ViewerDiscoveryContext): string[] {
@@ -315,7 +389,9 @@ function normalizedLifestyleCompatibility(
     [left?.socialEnergy ?? null, right?.socialEnergy ?? null],
   ];
 
-  const comparable = pairs.filter(([leftValue, rightValue]) => leftValue && rightValue);
+  const comparable = pairs.filter(
+    ([leftValue, rightValue]) => leftValue && rightValue,
+  );
   if (comparable.length === 0) {
     return 0;
   }
@@ -345,7 +421,7 @@ function normalizedScheduleOverlap(
   return (
     weekdayOverlap * 0.4 +
     timeBlockOverlap * 0.4 +
-    ((preferenceMatches[0] ?? 0) + (preferenceMatches[1] ?? 0)) / 2 * 0.2
+    (((preferenceMatches[0] ?? 0) + (preferenceMatches[1] ?? 0)) / 2) * 0.2
   );
 }
 

@@ -114,9 +114,7 @@ export const ProfileFeed: React.FC<{
           progressBackgroundColor={palette.surface}
         />
       }
-      contentContainerStyle={
-        profiles.length === 0 ? { flexGrow: 1, justifyContent: "center" } : undefined
-      }
+      contentContainerStyle={profiles.length === 0 ? { flexGrow: 1 } : undefined}
       renderItem={({ item, index }) => (
         <View
           style={{
@@ -145,7 +143,9 @@ export const ProfileFeed: React.FC<{
       windowSize={5}
       onViewableItemsChanged={onViewed}
       viewabilityConfig={viewabilityConfig}
-      ListEmptyComponent={empty}
+      ListEmptyComponent={
+        <View style={{ flexGrow: 1, justifyContent: "center" }}>{empty}</View>
+      }
     />
   );
 };

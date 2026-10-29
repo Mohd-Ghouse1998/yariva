@@ -84,6 +84,12 @@ export interface VenueSuggestionsResponseDto {
 }
 
 export class CreateDatePlanDto {
+  @IsOptional() @IsUUID()
+  readonly eventId?: string;
+
+  @IsOptional() @IsInt() @Min(1)
+  readonly eventVersion?: number;
+
   @IsOptional()
   @IsUUID()
   readonly reviewedVenueId?: string | null;
@@ -106,6 +112,9 @@ export class CreateDatePlanDto {
   @IsISO8601({ strict: true, strictSeparator: true })
   readonly proposedStartAt!: string;
 
+  // Event invitations use the server's canonical duration, including festivals
+  // longer than a normal one-to-one meetup. Never trust this client value.
+  @ValidateIf((input: CreateDatePlanDto) => !input.eventId)
   @IsInt()
   @Min(45)
   @Max(360)
@@ -226,6 +235,11 @@ export interface DatePlanResponseSummaryDto {
 }
 
 export interface DatePlanDto {
+  eventId?: string | null;
+  eventVersion?: number | null;
+  eventChanged?: boolean;
+  eventUnavailable?: boolean;
+
   id: string;
   matchId: string;
   createdByUserId: string;

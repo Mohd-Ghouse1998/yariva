@@ -1,8 +1,10 @@
 import { Type } from "class-transformer";
 import {
+  IsDefined,
   IsEmail,
   IsIn,
   IsNotEmpty,
+  IsObject,
   IsOptional,
   IsString,
   Matches,
@@ -53,6 +55,8 @@ export class SignupDto {
   @IsString()
   readonly password!: string;
 
+  @IsDefined()
+  @IsObject()
   @ValidateNested()
   @Type(() => DeviceContextDto)
   readonly device!: DeviceContextDto;
@@ -66,6 +70,8 @@ export class LoginDto {
   @IsString()
   readonly password!: string;
 
+  @IsDefined()
+  @IsObject()
   @ValidateNested()
   @Type(() => DeviceContextDto)
   readonly device!: DeviceContextDto;
@@ -96,6 +102,8 @@ export class VerifyOtpDto extends RequestOtpDto {
   @Matches(/^\d{4,10}$/)
   readonly code!: string;
 
+  @IsDefined()
+  @IsObject()
   @ValidateNested()
   @Type(() => DeviceContextDto)
   readonly device!: DeviceContextDto;

@@ -10,7 +10,10 @@ import type {
   PrivatePhotoDto,
   SchedulePreferenceDto,
 } from "../dto/profiles.dto";
-import { PROFILE_PROMPT_IDS, type ProfilePromptId } from "../domain/profile-prompts";
+import {
+  PROFILE_PROMPT_IDS,
+  type ProfilePromptId,
+} from "../domain/profile-prompts";
 import type { ProfileAggregateRecord } from "../infrastructure/profiles.infrastructure";
 import type { ObjectStorageService } from "../../../integrations/object-storage/object-storage.service";
 
@@ -60,22 +63,25 @@ export function mapProfileCompletion(
   };
 }
 
-export async function mapPrivatePhotoDto(photo: {
-  id: string;
-  objectKey: string;
-  bucket: string;
-  mimeType: string;
-  sizeBytes: number;
-  width: number | null;
-  height: number | null;
-  position: number;
-  isPrimary: boolean;
-  purpose: "PROFILE" | "SCENE";
-  moderationStatus: "PENDING" | "APPROVED" | "REJECTED";
-  moderationReason: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}, objectStorageService: ObjectStorageService): Promise<PrivatePhotoDto> {
+export async function mapPrivatePhotoDto(
+  photo: {
+    id: string;
+    objectKey: string;
+    bucket: string;
+    mimeType: string;
+    sizeBytes: number;
+    width: number | null;
+    height: number | null;
+    position: number;
+    isPrimary: boolean;
+    purpose: "PROFILE" | "SCENE";
+    moderationStatus: "PENDING" | "APPROVED" | "REJECTED";
+    moderationReason: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  },
+  objectStorageService: ObjectStorageService,
+): Promise<PrivatePhotoDto> {
   return {
     id: photo.id,
     objectKey: photo.objectKey,
@@ -98,7 +104,9 @@ export async function mapPrivatePhotoDto(photo: {
   };
 }
 
-export function mapLifestyleDto(aggregate: ProfileAggregateRecord): LifestyleDto {
+export function mapLifestyleDto(
+  aggregate: ProfileAggregateRecord,
+): LifestyleDto {
   return {
     smoking: aggregate.lifestyle?.smoking ?? null,
     drinking: aggregate.lifestyle?.drinking ?? null,
@@ -129,6 +137,13 @@ export function mapDiscoveryPreferenceDto(
   aggregate: ProfileAggregateRecord,
 ): DiscoveryPreferenceDto {
   return {
+    interestTagIds: aggregate.discoveryPreference?.interestTagIds ?? [],
+    languageFilter: aggregate.discoveryPreference?.languageFilter ?? [],
+    occupationFilter: aggregate.discoveryPreference?.occupationFilter ?? null,
+    occupationCategoryFilter: aggregate.discoveryPreference?.occupationCategoryFilter ?? [],
+    smokingFilter: aggregate.discoveryPreference?.smokingFilter ?? [],
+    drinkingFilter: aggregate.discoveryPreference?.drinkingFilter ?? [],
+    exerciseFilter: aggregate.discoveryPreference?.exerciseFilter ?? [],
     minAge: aggregate.discoveryPreference?.minAge ?? null,
     maxAge: aggregate.discoveryPreference?.maxAge ?? null,
     maxDistanceKm: aggregate.discoveryPreference?.maxDistanceKm ?? null,
@@ -157,7 +172,9 @@ export function mapCommunicationPreferenceDto(
   };
 }
 
-export function mapInterestTagDto(aggregate: ProfileAggregateRecord): InterestTagDto[] {
+export function mapInterestTagDto(
+  aggregate: ProfileAggregateRecord,
+): InterestTagDto[] {
   return aggregate.interests.map((userInterest) => ({
     id: userInterest.interestTag.id,
     slug: userInterest.interestTag.slug,
@@ -203,6 +220,9 @@ export async function mapMyProfileDto(
     verificationStatus: aggregate.profile?.verificationStatus ?? "UNVERIFIED",
     preferredRelationshipPace:
       aggregate.profile?.preferredRelationshipPace ?? null,
+    occupation: aggregate.profile?.occupation ?? null,
+    occupationCategory: aggregate.profile?.occupationCategory ?? null,
+    shareWorkDetails: aggregate.profile?.shareWorkDetails ?? false,
     languages: aggregate.profile?.languages ?? [],
     foodPreferences: aggregate.profile?.foodPreferences ?? [],
     relocationOpenness: aggregate.profile?.relocationOpenness ?? null,
@@ -220,7 +240,9 @@ export async function mapMyProfileDto(
     isComplete: completion.isComplete,
     completedAt: completion.completedAt?.toISOString() ?? null,
     photos,
-    intents: aggregate.intents.map((intent) => intent.intent as ConnectionIntentValue),
+    intents: aggregate.intents.map(
+      (intent) => intent.intent as ConnectionIntentValue,
+    ),
     interests: mapInterestTagDto(aggregate),
     lifestyle: mapLifestyleDto(aggregate),
     schedulePreference: mapSchedulePreferenceDto(aggregate),

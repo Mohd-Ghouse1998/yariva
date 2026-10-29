@@ -14,16 +14,10 @@ import { Text } from "../../components/ui/Text";
 import { useLocalization } from "../../localization/LocalizationContext";
 import { controlSize, radius, spacing } from "../../theme/spacing";
 import { createThemeStyleHook, useTheme } from "../../theme/ThemeContext";
-import type {
-  SceneCandidateDto,
-  SceneCapabilitiesDto,
-  SceneDto,
-  SceneInput,
-} from "../../types/scenes";
+import type { SceneCandidateDto, SceneCapabilitiesDto, SceneDto } from "../../types/scenes";
 import type { PrivatePhotoDto } from "../../types/profile";
 import { PrivateStoryTiles, usePrivateStoryRail } from "../privateStories/PrivateStoriesRail";
 import { PrivateStoryViewer } from "../privateStories/PrivateStoryViewer";
-import { SceneComposerSheet } from "./SceneComposerSheet";
 import { SceneViewer } from "./SceneViewer";
 import { sceneMineAction, sceneRemainingLabel } from "./sceneTime";
 
@@ -44,14 +38,11 @@ export const ScenesPanel: React.FC<{
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [locationRequired, setLocationRequired] = useState(false);
-  const [composerOpen, setComposerOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
   const [ownerChoicesOpen, setOwnerChoicesOpen] = useState(false);
   const [openStoryId, setOpenStoryId] = useState<string | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [renewReviewOpen, setRenewReviewOpen] = useState(false);
   const [renewError, setRenewError] = useState<string | null>(null);
-  const [composerError, setComposerError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const now = useCurrentTime();
   const privateRail = usePrivateStoryRail(storyAvailability === "enabled");
@@ -114,34 +105,6 @@ export const ScenesPanel: React.FC<{
     }, [load]),
   );
 
-  const submit = async (input: SceneInput) => {
-    if (saving) return;
-    setSaving(true);
-    setComposerError(null);
-    try {
-      const response =
-        scene?.status === "ACTIVE" && Date.parse(scene.expiresAt) > Date.now()
-          ? await scenesApi.update(scene.id, input)
-          : await scenesApi.create(input);
-      setScene(response.scene);
-      setComposerOpen(false);
-      await load();
-    } catch (error) {
-      if (error instanceof ApiError && error.code === "SCENE_LOCATION_REQUIRED") {
-        setComposerOpen(false);
-        setLocationRequired(true);
-      } else if (error instanceof ApiError && error.code === "SCENE_INVALID_WINDOW") {
-        setComposerError(error.message);
-      } else if (error instanceof ApiError && error.code === "SCENE_INVALID_PHOTO") {
-        setComposerError(t("scene.photo.invalid"));
-      } else {
-        setComposerError(t("scene.saveError"));
-      }
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const end = async (): Promise<boolean> => {
     if (!scene || saving) return false;
     setSaving(true);
@@ -190,24 +153,18 @@ export const ScenesPanel: React.FC<{
     }
   };
 
-  const openPlanComposer = () => {
-    if (!capabilities?.enabled || loadError || locationRequired || saving) return;
-    setCreateOpen(false);
-    setComposerError(null);
-    setComposerOpen(true);
-  };
-
-  const openPrivateStoryComposer = () => {
-    if (storyAvailability !== "enabled") return;
-    setCreateOpen(false);
-    router.push("/(app)/private-stories?compose=1");
+  const openComposer = (
+    mode: "story" | "scene" = storyAvailability === "enabled" ? "story" : "scene",
+  ) => {
+    if (saving) return;
+    router.push({ pathname: "/(app)/private-stories", params: { compose: "1", mode } });
   };
 
   const openOwner = () => {
     if (ownerScene && ownStory) setOwnerChoicesOpen(true);
     else if (ownerScene) openMine();
     else if (ownStory) setOpenStoryId(ownStory.id);
-    else setCreateOpen(true);
+    else openComposer();
   };
 
   const openOwnStory = () => {
@@ -291,7 +248,7 @@ export const ScenesPanel: React.FC<{
           busy={saving}
           photoUrl={ownerPhoto?.url}
           onOpen={openOwner}
-          onCreate={() => setCreateOpen(true)}
+          onCreate={() => openComposer()}
         />
         {storyAvailability === "enabled" ? (
           <PrivateStoryTiles
@@ -336,45 +293,6 @@ export const ScenesPanel: React.FC<{
           <Button label={t("common.retry")} variant="ghost" size="sm" onPress={() => void load()} />
         </View>
       ) : null}
-
-      <CenterDialog
-        visible={createOpen}
-        onClose={() => setCreateOpen(false)}
-        accessibilityLabel={t("create.title")}
-      >
-        <View style={styles.createChoices}>
-          <Text variant="titleSm">{t("create.title")}</Text>
-          <CreateChoice
-            icon="location"
-            label={t("create.plan")}
-            description={
-              !capabilities?.enabled
-                ? t("create.unavailable")
-                : locationRequired
-                  ? t("create.locationRequired")
-                  : loadError
-                    ? t("create.unavailable")
-                    : t("create.planHint")
-            }
-            disabled={!capabilities?.enabled || !!loadError || locationRequired || saving}
-            onPress={openPlanComposer}
-          />
-          <CreateChoice
-            icon="lock"
-            label={t("create.private")}
-            description={
-              storyAvailability === "enabled"
-                ? t("create.privateHint")
-                : storyAvailability === "disabled"
-                  ? t("create.comingSoon")
-                  : t("create.unavailable")
-            }
-            disabled={storyAvailability !== "enabled"}
-            onPress={openPrivateStoryComposer}
-          />
-          <Button label={t("common.cancel")} variant="ghost" onPress={() => setCreateOpen(false)} />
-        </View>
-      </CenterDialog>
 
       <CenterDialog
         visible={ownerChoicesOpen}
@@ -434,7 +352,7 @@ export const ScenesPanel: React.FC<{
             onClose={() => setViewerOpen(false)}
             onEdit={() => {
               setViewerOpen(false);
-              setComposerOpen(true);
+              openComposer("scene");
             }}
             onEnd={() => {
               void end().then((ended) => {
@@ -481,24 +399,11 @@ export const ScenesPanel: React.FC<{
             disabled={saving}
             onPress={() => {
               setRenewReviewOpen(false);
-              setComposerOpen(true);
+              openComposer("scene");
             }}
           />
         </View>
       </CenterDialog>
-
-      <SceneComposerSheet
-        visible={composerOpen}
-        scene={active ? scene : null}
-        busy={saving}
-        error={composerError}
-        onClose={() => {
-          if (saving) return;
-          setComposerOpen(false);
-          setComposerError(null);
-        }}
-        onSubmit={(input) => void submit(input)}
-      />
     </View>
   );
 };

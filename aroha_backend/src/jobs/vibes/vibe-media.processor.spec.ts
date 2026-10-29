@@ -134,7 +134,8 @@ describe("Vibe media validation", () => {
     } finally {
       await rm(workspace, { recursive: true, force: true });
     }
-  });
+    // The real native decoder has a 30-second deadline, including cold startup.
+  }, 35_000);
 
   it("distinguishes a decoder timeout from permanently invalid media", async () => {
     await expect(

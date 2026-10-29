@@ -1,3 +1,4 @@
+import { WORK_CATEGORIES } from "../domain/work-categories";
 import {
   Body,
   Controller,
@@ -54,6 +55,11 @@ export class ProfilesController {
     @CurrentUser() user: AuthContext["user"],
   ): Promise<MyProfileResponseDto> {
     return this.getMyProfileService.execute(user.id);
+  }
+
+  @Get("work-categories")
+  getWorkCategories() {
+    return { items: WORK_CATEGORIES };
   }
 
   @Get(":userId")

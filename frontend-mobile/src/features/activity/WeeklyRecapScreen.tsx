@@ -74,6 +74,8 @@ export const WeeklyRecapScreen = () => {
   const [shareError, setShareError] = useState(false);
   const shareCard = useRef<Svg | null>(null);
   const requestSequence = useRef(0);
+  const active = useRef(false);
+  const shareRequest = useRef<AbortController | null>(null);
   const preferences = useSerializedSettings({
     load: loadPreferences,
     save: savePreferences,
@@ -107,10 +109,23 @@ export const WeeklyRecapScreen = () => {
       /* Cache cleanup never blocks a private recap. */
     }
   }, []);
-  const load = useCallback(async () => {
-    const request = ++requestSequence.current;
+  const clearPrivateRecap = useCallback(() => {
+    requestSequence.current += 1;
+    shareRequest.current?.abort();
+    shareRequest.current = null;
+    setRecap(null);
+    setPreviewOpen(false);
+    setAboutOpen(false);
+    setIncludeMetrics(false);
+    setSharing(false);
+    setShareError(false);
     setLoading(true);
     setError(false);
+  }, []);
+  const load = useCallback(async () => {
+    if (!active.current) return;
+    clearPrivateRecap();
+    const request = requestSequence.current;
     try {
       const next = (await activityApi.recap()).recap;
       if (request === requestSequence.current) setRecap(next);
@@ -122,22 +137,28 @@ export const WeeklyRecapScreen = () => {
     } finally {
       if (request === requestSequence.current) setLoading(false);
     }
-  }, []);
+  }, [clearPrivateRecap]);
   useFocusEffect(
     useCallback(() => {
+      active.current = AppState.currentState === "active";
       void load();
       const listener = AppState.addEventListener("change", (state) => {
-        if (state === "active") void load();
+        active.current = state === "active";
+        if (active.current) void load();
+        else clearPrivateRecap();
       });
       return () => {
-        requestSequence.current += 1;
+        active.current = false;
+        clearPrivateRecap();
         listener.remove();
       };
-    }, [load]),
+    }, [load, clearPrivateRecap]),
   );
 
   const share = async () => {
-    if (sharing || !shareCard.current) return;
+    if (!active.current || !previewOpen || shareRequest.current || !shareCard.current) return;
+    const request = new AbortController();
+    shareRequest.current = request;
     setSharing(true);
     setShareError(false);
     try {
@@ -145,12 +166,16 @@ export const WeeklyRecapScreen = () => {
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
       );
+      if (request.signal.aborted) return;
       if (!shareCard.current) throw new Error("Preview closed");
-      await shareRecapCard(shareCard.current);
+      await shareRecapCard(shareCard.current, request.signal);
     } catch {
-      setShareError(true);
+      if (!request.signal.aborted) setShareError(true);
     } finally {
-      setSharing(false);
+      if (shareRequest.current === request) {
+        shareRequest.current = null;
+        setSharing(false);
+      }
     }
   };
   const period = recap ? recapPeriod(recap) : null;

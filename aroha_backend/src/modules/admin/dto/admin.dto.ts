@@ -1,4 +1,5 @@
 import {
+  IsDateString,
   IsInt,
   IsIn,
   IsOptional,
@@ -44,7 +45,7 @@ export class AdminAssignModerationCaseDto {
 
 export class AdminApplyModerationActionDto extends ApplyModerationActionDto {}
 
-export class AdminReviewVibeDto {
+export class AdminReviewContentDto {
   @IsIn(["APPROVED", "REJECTED"])
   readonly decision!: "APPROVED" | "REJECTED";
 
@@ -53,6 +54,11 @@ export class AdminReviewVibeDto {
   @IsString()
   @MaxLength(500)
   readonly reason?: string | null;
+}
+
+export class AdminReviewPrivateStoryDto extends AdminReviewContentDto {
+  @IsDateString({ strict: true })
+  readonly expectedUpdatedAt!: string;
 }
 
 export const ADMIN_USER_ACTION_VALUES = [

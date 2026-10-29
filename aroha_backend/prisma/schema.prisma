@@ -472,6 +472,7 @@ model User {
   updatedAt         DateTime   @updatedAt
 
   sessions                   UserSession[]
+  savedEvents                SavedEvent[]
   pushTokens                 PushToken[]
   profile                    UserProfile?
   photos                     ProfilePhoto[]
@@ -582,6 +583,17 @@ model PushToken {
   @@index([sessionId])
 }
 
+enum OccupationCategory {
+  TECHNOLOGY
+  HEALTHCARE
+  EDUCATION
+  CREATIVE
+  BUSINESS
+  HOSPITALITY
+  STUDENT
+  OTHER
+}
+
 model UserProfile {
   id                          String                                 @id @default(uuid()) @db.Uuid
   userId                      String                                 @unique @db.Uuid
@@ -608,6 +620,9 @@ model UserProfile {
   isPaused                    Boolean                                @default(false)
   verificationStatus          ProfileVerificationStatus              @default(UNVERIFIED)
   preferredRelationshipPace   RelationshipPace?
+  occupation                  String?                                @db.VarChar(80)
+  occupationCategory          OccupationCategory?
+  shareWorkDetails            Boolean                                @default(false)
   languages                   String[]                               @default([])
   foodPreferences             String[]                               @default([])
   relocationOpenness          String?                                @db.VarChar(80)
@@ -663,9 +678,12 @@ model PrivateStory {
   mediaObjectKey String? @db.VarChar(512)
   mediaMimeType String? @db.VarChar(64)
   mediaSizeBytes Int?
+  moderationStatus ContentModerationStatus @default(PENDING)
+  moderatedAt DateTime?
   audienceRule String @db.VarChar(16)
   communityFilter String? @db.VarChar(32)
   expiresAt DateTime
+  savedAt DateTime?
   deletedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -674,6 +692,7 @@ model PrivateStory {
   reports Report[] @relation("ReportTargetPrivateStory")
   @@index([ownerId, createdAt(sort: Desc), id(sort: Desc)])
   @@index([expiresAt, deletedAt])
+  @@index([moderationStatus, createdAt(sort: Desc), id(sort: Desc)])
 }
 
 model PrivateStoryGrant {
@@ -1008,6 +1027,13 @@ model UserDiscoveryPreference {
   maxDistanceKm             Int?
   intentFilter              ConnectionIntent[] @default([])
   preferredGenders          ProfileGender[]    @default([])
+  interestTagIds            String[]           @default([]) @db.Uuid
+  languageFilter            String[]           @default([])
+  occupationCategoryFilter  OccupationCategory[] @default([])
+  occupationFilter          String?            @db.VarChar(80)
+  smokingFilter             SmokingHabit[]     @default([])
+  drinkingFilter            DrinkingHabit[]    @default([])
+  exerciseFilter            ExerciseHabit[]    @default([])
   includeRecentlyActiveOnly Boolean            @default(false)
   preferSameCity            Boolean            @default(false)
   createdAt                 DateTime           @default(now())
@@ -1099,6 +1125,9 @@ model DatePlan {
   matchId             String         @db.Uuid
   createdByUserId     String         @db.Uuid
   reviewedVenueId     String?        @db.Uuid
+  eventId             String?        @db.Uuid
+  eventVersion        Int?
+  eventSnapshot       Json?
   status              DatePlanStatus @default(DRAFT)
   proposalVersion     Int            @default(1)
   title               String         @db.VarChar(140)
@@ -1127,6 +1156,7 @@ model DatePlan {
   match         Match              @relation(fields: [matchId], references: [id], onDelete: Restrict)
   createdByUser User               @relation("DatePlanCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
   reviewedVenue ReviewedVenue?     @relation(fields: [reviewedVenueId], references: [id], onDelete: SetNull)
+  event         EventListing?      @relation(fields: [eventId], references: [id], onDelete: Restrict)
   responses     DatePlanResponse[]
   checkIns      PostDateCheckIn[]
 
@@ -1134,7 +1164,70 @@ model DatePlan {
   @@index([matchId, status, proposedStartAt])
   @@index([createdByUserId, createdAt])
   @@index([reviewedVenueId])
+  @@index([eventId])
   @@index([status, proposedStartAt])
+}
+
+enum EventListingStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  ARCHIVED
+}
+
+enum EventCategory {
+  CULTURE
+  MUSIC
+  FOOD
+  OUTDOORS
+  WORKSHOP
+  COMMUNITY
+}
+
+// Curated public listings; saving or inviting never publishes attendance.
+model EventListing {
+  id              String             @id @default(uuid()) @db.Uuid
+  version         Int                @default(1)
+  status          EventListingStatus @default(DRAFT)
+  title           String             @db.VarChar(140)
+  description     String             @db.VarChar(1000)
+  category        EventCategory
+  city            String             @db.VarChar(120)
+  locality        String             @db.VarChar(160)
+  venueName       String             @db.VarChar(200)
+  venueAddress    String             @db.VarChar(500)
+  startsAt        DateTime
+  endsAt          DateTime
+  timezone        String             @db.VarChar(64)
+  priceMinPaise   Int?
+  priceMaxPaise   Int?
+  currency        String             @default("INR") @db.Char(3)
+  sourceUrl       String             @db.VarChar(1024)
+  sourceName      String             @db.VarChar(120)
+  bookingUrl      String?            @db.VarChar(1024)
+  imageUrl        String?            @db.VarChar(1024)
+  imageRights     String?            @db.VarChar(500)
+  verifiedAt      DateTime
+  dedupeKey       String             @unique @db.VarChar(64)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  saves           SavedEvent[]
+  datePlans       DatePlan[]
+
+  @@unique([sourceUrl, startsAt])
+  @@index([status, city, startsAt, id])
+  @@index([status, verifiedAt])
+}
+
+model SavedEvent {
+  userId    String       @db.Uuid
+  eventId   String       @db.Uuid
+  createdAt DateTime     @default(now())
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     EventListing @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@id([userId, eventId])
+  @@index([eventId])
 }
 
 model ReviewedVenue {

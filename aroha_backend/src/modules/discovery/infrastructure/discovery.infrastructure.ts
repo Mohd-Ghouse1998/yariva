@@ -26,10 +26,17 @@ export interface ViewerDiscoveryContext extends User {
 }
 
 export interface CandidateDiscoveryRecord extends User {
+  discoveryPreference: UserDiscoveryPreference | null;
   profile: UserProfile;
   photos: Pick<
     ProfilePhoto,
-    "id" | "objectKey" | "bucket" | "width" | "height" | "isPrimary" | "position"
+    | "id"
+    | "objectKey"
+    | "bucket"
+    | "width"
+    | "height"
+    | "isPrimary"
+    | "position"
   >[];
   intents: Pick<UserIntent, "intent">[];
   interests: (Pick<UserInterest, "interestTagId"> & {
@@ -60,7 +67,9 @@ export interface DiscoverySnapshot {
 export class DiscoveryQueryRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findViewerContext(userId: string): Promise<ViewerDiscoveryContext | null> {
+  async findViewerContext(
+    userId: string,
+  ): Promise<ViewerDiscoveryContext | null> {
     return this.prisma.user.findFirst({
       where: {
         id: userId,
@@ -80,6 +89,7 @@ export class DiscoveryQueryRepository {
         interests: {
           where: {
             deletedAt: null,
+            interestTag: { isActive: true },
           },
           select: {
             interestTagId: true,
@@ -141,12 +151,16 @@ export class DiscoveryQueryRepository {
 
     const blockedUserIds = new Set<string>();
     for (const block of blocks) {
-      blockedUserIds.add(block.blockerId === viewerId ? block.blockedId : block.blockerId);
+      blockedUserIds.add(
+        block.blockerId === viewerId ? block.blockedId : block.blockerId,
+      );
     }
 
     const matchedUserIds = new Set<string>();
     for (const match of matches) {
-      matchedUserIds.add(match.userLowId === viewerId ? match.userHighId : match.userLowId);
+      matchedUserIds.add(
+        match.userLowId === viewerId ? match.userHighId : match.userLowId,
+      );
     }
 
     return {
@@ -196,6 +210,7 @@ export class DiscoveryQueryRepository {
       },
       include: {
         profile: true,
+        discoveryPreference: true,
         photos: {
           where: {
             moderationStatus: "APPROVED",
@@ -224,6 +239,7 @@ export class DiscoveryQueryRepository {
         interests: {
           where: {
             deletedAt: null,
+            interestTag: { isActive: true },
           },
           select: {
             interestTagId: true,
@@ -244,7 +260,9 @@ export class DiscoveryQueryRepository {
     }) as Promise<CandidateDiscoveryRecord[]>;
   }
 
-  async findCandidatesByIds(candidateIds: string[]): Promise<CandidateDiscoveryRecord[]> {
+  async findCandidatesByIds(
+    candidateIds: string[],
+  ): Promise<CandidateDiscoveryRecord[]> {
     if (candidateIds.length === 0) {
       return [];
     }
@@ -277,6 +295,7 @@ export class DiscoveryQueryRepository {
       },
       include: {
         profile: true,
+        discoveryPreference: true,
         photos: {
           where: {
             moderationStatus: "APPROVED",
@@ -305,6 +324,7 @@ export class DiscoveryQueryRepository {
         interests: {
           where: {
             deletedAt: null,
+            interestTag: { isActive: true },
           },
           select: {
             interestTagId: true,
@@ -337,7 +357,9 @@ export class DiscoverySnapshotRepository {
     viewerId: string,
     preferenceHash: string,
   ): Promise<DiscoverySnapshot | null> {
-    const raw = await this.redis.get(this.snapshotKey(viewerId, preferenceHash));
+    const raw = await this.redis.get(
+      this.snapshotKey(viewerId, preferenceHash),
+    );
     if (!raw) {
       return null;
     }
@@ -345,10 +367,7 @@ export class DiscoverySnapshotRepository {
     return JSON.parse(raw) as DiscoverySnapshot;
   }
 
-  async set(
-    snapshot: DiscoverySnapshot,
-    ttlSeconds: number,
-  ): Promise<void> {
+  async set(snapshot: DiscoverySnapshot, ttlSeconds: number): Promise<void> {
     await this.redis.set(
       this.snapshotKey(snapshot.viewerId, snapshot.preferenceHash),
       JSON.stringify(snapshot),
@@ -361,7 +380,13 @@ export class DiscoverySnapshotRepository {
     const pattern = `${DiscoverySnapshotRepository.SNAPSHOT_KEY_PREFIX}${viewerId}:*`;
     let cursor = "0";
     do {
-      const [nextCursor, keys] = await this.redis.scan(cursor, "MATCH", pattern, "COUNT", 100);
+      const [nextCursor, keys] = await this.redis.scan(
+        cursor,
+        "MATCH",
+        pattern,
+        "COUNT",
+        100,
+      );
       cursor = nextCursor;
       if (keys.length > 0) {
         await this.redis.del(...keys);

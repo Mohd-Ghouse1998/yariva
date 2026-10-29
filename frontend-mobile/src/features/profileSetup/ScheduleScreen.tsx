@@ -1,6 +1,7 @@
 import * as Localization from "expo-localization";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,11 +16,11 @@ import { ScreenFooter } from "../../components/layout/ScreenFooter";
 import { useProfileFormLayout } from "../../components/profile/useProfileFormLayout";
 import { StepHeader } from "../../components/profile/StepHeader";
 import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
 import { Chip } from "../../components/ui/Chip";
 import { Input } from "../../components/ui/Input";
 import { Text } from "../../components/ui/Text";
 import { ToggleRow } from "../../components/ui/ToggleRow";
-import { NavigationListSection } from "../../components/ui/NavigationList";
 import { useToast } from "../../components/ui/Toast";
 import { useTheme } from "../../theme/ThemeContext";
 import { controlSize, radius, spacing } from "../../theme/spacing";
@@ -29,9 +30,6 @@ import { useProfileHydration } from "./useProfileHydration";
 import { useProfileSectionFlow } from "./useProfileSectionFlow";
 import { scheduleDayLayout } from "./scheduleLayout";
 
-// Mirrors aroha_ui_deisgn_files/profile-setup.jsx > ScreenSchedule.
-// Day pills (M T W T F S S, 40×44, square corners), time block chips,
-// toggles for weekends/remote, max-meetups input.
 const DAYS = [
   { short: "Mon", full: "Monday" },
   { short: "Tue", full: "Tuesday" },
@@ -65,9 +63,27 @@ export const ScheduleScreen: React.FC = () => {
   const hydration = useProfileHydration();
   const [value, setValue] = useState<SchedulePreferenceDto>(empty);
   const [submitting, setSubmitting] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const meetupLimitFocused = useRef(false);
   const { fontScale } = useWindowDimensions();
   const [dayRowWidth, setDayRowWidth] = useState(0);
   const dayLayout = scheduleDayLayout(dayRowWidth || 320, fontScale);
+
+  useEffect(() => {
+    let scrollTimer: ReturnType<typeof setTimeout> | undefined;
+    const subscription = Keyboard.addListener("keyboardDidShow", event => {
+      if (!meetupLimitFocused.current) return;
+      // Wait for KeyboardAvoidingView's resize animation before scrolling.
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => {
+        if (meetupLimitFocused.current) scrollRef.current?.scrollToEnd({ animated: true });
+      }, event.duration || 250);
+    });
+    return () => {
+      subscription.remove();
+      clearTimeout(scrollTimer);
+    };
+  }, []);
 
   useEffect(() => {
     if (!hydration.profile) return;
@@ -132,13 +148,14 @@ export const ScheduleScreen: React.FC = () => {
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
           <ScrollView
+            ref={scrollRef}
             style={{ flex: 1 }}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={formLayout.content}
           >
             <View>
-              <Text variant="captionStrong" color="textSubdued" style={styles.sectionLabel}>
-                DAYS
+              <Text variant="bodyStrong" style={styles.sectionLabel}>
+                Days
               </Text>
               <View style={styles.dayRow} onLayout={event => setDayRowWidth(event.nativeEvent.layout.width)}>
                 {DAYS.map((day, i) => {
@@ -155,24 +172,30 @@ export const ScheduleScreen: React.FC = () => {
                           weekdayMask: setBit(s.weekdayMask, i, !active),
                         }))
                       }
-                      style={[
-                        styles.dayPill,
+                      style={({ pressed }) => [
+                        styles.dayTarget,
                         { width: dayLayout.itemWidth },
-                        {
-                          backgroundColor: active ? palette.brandStrong : palette.surface,
-                          borderColor: active ? palette.brandStrong : palette.border,
-                        },
+                        pressed && styles.pressed,
                       ]}
                     >
-                      <Text
-                        variant="bodyStrong"
-                        style={{
-                          fontSize: 14,
-                          color: active ? palette.alwaysWhite : palette.textPrimary,
-                        }}
+                      <View
+                        style={[
+                          styles.dayVisual,
+                          {
+                            backgroundColor: active ? palette.brandSubdued : palette.surface,
+                            borderColor: active ? palette.brandBorder : palette.border,
+                          },
+                        ]}
                       >
-                        {day.short}
-                      </Text>
+                        <Text
+                          variant="captionStrong"
+                          weight="500"
+                          color={active ? "textBrand" : "textPrimary"}
+                          style={styles.dayLabel}
+                        >
+                          {day.short}
+                        </Text>
+                      </View>
                     </Pressable>
                   );
                 })}
@@ -180,14 +203,15 @@ export const ScheduleScreen: React.FC = () => {
             </View>
 
             <View>
-              <Text variant="captionStrong" color="textSubdued" style={styles.sectionLabel}>
-                TIME OF DAY
+              <Text variant="bodyStrong" style={styles.sectionLabel}>
+                Time of day
               </Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              <View style={styles.timeOptions}>
                 {TIME_BLOCKS.map((b, i) => (
                   <Chip
                     key={b}
                     label={b}
+                    size="sm"
                     selected={hasBit(value.timeBlockMask, i)}
                     onPress={() =>
                       setValue((s) => ({
@@ -200,34 +224,48 @@ export const ScheduleScreen: React.FC = () => {
               </View>
             </View>
 
-            <NavigationListSection>
+            <Card padded={false} style={styles.preferences}>
               <ToggleRow
                 grouped
                 first
                 label="Prefer weekends"
+                style={styles.preferenceRow}
                 value={value.prefersWeekends}
                 onValueChange={(v) => setValue((s) => ({ ...s, prefersWeekends: v }))}
               />
               <ToggleRow
                 grouped
                 label="Open to online meets"
+                style={styles.preferenceRow}
                 value={value.remoteFriendly}
                 onValueChange={(v) => setValue((s) => ({ ...s, remoteFriendly: v }))}
               />
-            </NavigationListSection>
-
-            <Input
-              label="Max meetups per week"
-              keyboardType="number-pad"
-              value={value.maxMeetupsPerWeek != null ? String(value.maxMeetupsPerWeek) : ""}
-              onChangeText={(t) => {
-                const n = /^\d+$/.test(t) ? Number(t) : null;
-                setValue((s) => ({
-                  ...s,
-                  maxMeetupsPerWeek: n !== null && Number.isSafeInteger(n) ? n : null,
-                }));
-              }}
-            />
+              <View style={[styles.meetupLimitRow, { borderTopColor: palette.divider }]}>
+                <Text variant="bodyStrong" style={styles.meetupLimitLabel}>
+                  Max meetups per week
+                </Text>
+                <Input
+                  accessibilityLabel="Max meetups per week"
+                  keyboardType="number-pad"
+                  onFocus={() => {
+                    meetupLimitFocused.current = true;
+                    scrollRef.current?.scrollToEnd({ animated: true });
+                  }}
+                  onBlur={() => { meetupLimitFocused.current = false; }}
+                  containerStyle={styles.meetupLimitInput}
+                  controlStyle={styles.meetupLimitControl}
+                  style={styles.meetupLimitValue}
+                  value={value.maxMeetupsPerWeek != null ? String(value.maxMeetupsPerWeek) : ""}
+                  onChangeText={(t) => {
+                    const n = /^\d+$/.test(t) ? Number(t) : null;
+                    setValue((s) => ({
+                      ...s,
+                      maxMeetupsPerWeek: n !== null && Number.isSafeInteger(n) ? n : null,
+                    }));
+                  }}
+                />
+              </View>
+            </Card>
           </ScrollView>
           <ScreenFooter safeAreaHandled>
             <Button
@@ -246,22 +284,71 @@ export const ScheduleScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   sectionLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.6,
-    marginBottom: 10,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: spacing.xs,
   },
   dayRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.sm,
+    columnGap: spacing.sm,
+    rowGap: 0,
   },
-  dayPill: {
+  dayTarget: {
     minWidth: controlSize.minimumTouchTarget,
     minHeight: controlSize.minimumTouchTarget,
-    borderRadius: radius.control,
+    justifyContent: "center",
+  },
+  dayVisual: {
+    minHeight: controlSize.buttonSmall,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
+  },
+  dayLabel: {
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  pressed: {
+    opacity: 0.76,
+  },
+  timeOptions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    columnGap: spacing.sm,
+    rowGap: 0,
+  },
+  preferenceRow: {
+    minHeight: 52,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  preferences: {
+    overflow: "hidden",
+  },
+  meetupLimitRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth * 2,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  meetupLimitLabel: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  meetupLimitInput: {
+    width: 72,
+  },
+  meetupLimitControl: {
+    minHeight: controlSize.minimumTouchTarget,
+  },
+  meetupLimitValue: {
+    textAlign: "center",
+    fontSize: 14,
   },
 });

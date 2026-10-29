@@ -1,4 +1,4 @@
-import { ArrayMaxSize, Equals, IsArray, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength, ValidateNested } from "class-validator";
+import { ArrayMaxSize, IsBoolean, Equals, IsArray, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 
 export const COMMUNITY_LABELS = ["STRAIGHT", "GAY", "LESBIAN", "BISEXUAL", "PANSEXUAL", "QUEER", "ASEXUAL", "QUESTIONING", "SELF_DESCRIBE", "PREFER_NOT_TO_SAY"] as const;
@@ -52,4 +52,9 @@ export class PrivateCommunityDto {
   optedInCommunities!: CommunityLabel[];
   @IsOptional() @IsString() @MaxLength(120)
   selfDescription?: string;
+}
+
+export class SavePrivateStoryDto {
+  @IsBoolean()
+  saved!: boolean;
 }

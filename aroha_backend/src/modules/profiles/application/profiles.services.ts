@@ -170,10 +170,18 @@ export class GetPublicProfileService {
     ]);
 
     if (!viewer) {
-      throw new AppException(404, ERROR_CODES.PROFILE_NOT_FOUND, "Profile not found");
+      throw new AppException(
+        404,
+        ERROR_CODES.PROFILE_NOT_FOUND,
+        "Profile not found",
+      );
     }
     if (!target) {
-      throw new AppException(404, ERROR_CODES.PROFILE_NOT_FOUND, "Profile not found");
+      throw new AppException(
+        404,
+        ERROR_CODES.PROFILE_NOT_FOUND,
+        "Profile not found",
+      );
     }
 
     this.profileVisibilityPolicyService.assertProfileExists(target.profile);
@@ -182,7 +190,11 @@ export class GetPublicProfileService {
       target.isShadowBanned ||
       target.isDiscoveryFrozen
     ) {
-      throw new AppException(404, ERROR_CODES.PROFILE_NOT_FOUND, "Profile not available");
+      throw new AppException(
+        404,
+        ERROR_CODES.PROFILE_NOT_FOUND,
+        "Profile not available",
+      );
     }
 
     const pair = canonicalUserPair(input.viewerId, input.targetUserId);
@@ -218,7 +230,11 @@ export class GetPublicProfileService {
 
     if (activeBlock) {
       // Do not reveal which side initiated a block.
-      throw new AppException(403, ERROR_CODES.FORBIDDEN, "Profile is not accessible");
+      throw new AppException(
+        403,
+        ERROR_CODES.FORBIDDEN,
+        "Profile is not accessible",
+      );
     }
 
     const approvedPhotos = target.photos.filter(
@@ -236,7 +252,11 @@ export class GetPublicProfileService {
     if (!hasRelationshipAccess && !isPubliclyViewable) {
       // Treat privacy and availability failures as not-found to avoid exposing
       // whether a private account exists to arbitrary authenticated callers.
-      throw new AppException(404, ERROR_CODES.PROFILE_NOT_FOUND, "Profile not available");
+      throw new AppException(
+        404,
+        ERROR_CODES.PROFILE_NOT_FOUND,
+        "Profile not available",
+      );
     }
 
     return {
@@ -270,7 +290,9 @@ export class UpdateProfileService {
   }): Promise<MyProfileResponseDto> {
     await this.userReaderService.getRequiredById(input.userId);
     if (input.payload.promptResponses) {
-      const promptIds = input.payload.promptResponses.map((prompt) => prompt.promptId);
+      const promptIds = input.payload.promptResponses.map(
+        (prompt) => prompt.promptId,
+      );
       if (new Set(promptIds).size !== promptIds.length) {
         throw new AppException(
           400,
@@ -347,34 +369,75 @@ export class UpdateProfileService {
           ? { isPaused: input.payload.isPaused }
           : {}),
         ...(input.payload.preferredRelationshipPace !== undefined
-          ? { preferredRelationshipPace: input.payload.preferredRelationshipPace }
+          ? {
+              preferredRelationshipPace:
+                input.payload.preferredRelationshipPace,
+            }
           : {}),
         ...(input.payload.languages !== undefined
           ? { languages: normalizeStringList(input.payload.languages) }
           : {}),
         ...(input.payload.foodPreferences !== undefined
-          ? { foodPreferences: normalizeStringList(input.payload.foodPreferences) }
+          ? {
+              foodPreferences: normalizeStringList(
+                input.payload.foodPreferences,
+              ),
+            }
           : {}),
         ...(input.payload.relocationOpenness !== undefined
-          ? { relocationOpenness: cleanOptionalString(input.payload.relocationOpenness) }
+          ? {
+              relocationOpenness: cleanOptionalString(
+                input.payload.relocationOpenness,
+              ),
+            }
+          : {}),
+        ...(input.payload.occupationCategory !== undefined
+          ? { occupationCategory: input.payload.occupationCategory }
+          : {}),
+        ...(input.payload.occupation !== undefined
+          ? { occupation: cleanOptionalString(input.payload.occupation) }
+          : {}),
+        ...(input.payload.shareWorkDetails !== undefined
+          ? { shareWorkDetails: input.payload.shareWorkDetails }
           : {}),
         ...(input.payload.careerPriority !== undefined
-          ? { careerPriority: cleanOptionalString(input.payload.careerPriority) }
+          ? {
+              careerPriority: cleanOptionalString(input.payload.careerPriority),
+            }
           : {}),
         ...(input.payload.familyInvolvementComfort !== undefined
-          ? { familyInvolvementComfort: cleanOptionalString(input.payload.familyInvolvementComfort) }
+          ? {
+              familyInvolvementComfort: cleanOptionalString(
+                input.payload.familyInvolvementComfort,
+              ),
+            }
           : {}),
         ...(input.payload.marriageTimeline !== undefined
-          ? { marriageTimeline: cleanOptionalString(input.payload.marriageTimeline) }
+          ? {
+              marriageTimeline: cleanOptionalString(
+                input.payload.marriageTimeline,
+              ),
+            }
           : {}),
         ...(input.payload.childrenPreference !== undefined
-          ? { childrenPreference: cleanOptionalString(input.payload.childrenPreference) }
+          ? {
+              childrenPreference: cleanOptionalString(
+                input.payload.childrenPreference,
+              ),
+            }
           : {}),
         ...(input.payload.religionSpirituality !== undefined
-          ? { religionSpirituality: cleanOptionalString(input.payload.religionSpirituality) }
+          ? {
+              religionSpirituality: cleanOptionalString(
+                input.payload.religionSpirituality,
+              ),
+            }
           : {}),
         ...(input.payload.shareSensitiveCompatibility !== undefined
-          ? { shareSensitiveCompatibility: input.payload.shareSensitiveCompatibility }
+          ? {
+              shareSensitiveCompatibility:
+                input.payload.shareSensitiveCompatibility,
+            }
           : {}),
         ...(input.payload.promptResponses !== undefined
           ? {
@@ -386,11 +449,7 @@ export class UpdateProfileService {
           : {}),
       });
 
-      await this.userRepository.touchLastActiveAt(
-        input.userId,
-        new Date(),
-        tx,
-      );
+      await this.userRepository.touchLastActiveAt(input.userId, new Date(), tx);
 
       const synced = await this.profileCompletionSyncService.recomputeAndPersist(
         input.userId,
@@ -426,7 +485,9 @@ export class UpdateProfileService {
 
 function normalizeStringList(values: string[]): string[] {
   return Array.from(
-    new Set(values.map((value) => value.trim()).filter((value) => value.length > 0)),
+    new Set(
+      values.map((value) => value.trim()).filter((value) => value.length > 0),
+    ),
   );
 }
 
@@ -583,6 +644,18 @@ export class UpdateDiscoveryPreferenceService {
     this.discoveryPreferencePolicyService.assertValid(input.payload);
 
     const result = await this.prisma.$transaction(async (tx) => {
+      if (input.payload.interestTagIds?.length) {
+        const activeCount = await tx.interestTag.count({
+          where: { id: { in: input.payload.interestTagIds }, isActive: true },
+        });
+        if (activeCount !== input.payload.interestTagIds.length) {
+          throw new AppException(
+            400,
+            ERROR_CODES.VALIDATION_FAILED,
+            "Choose interests from the active catalog",
+          );
+        }
+      }
       await this.userDiscoveryPreferenceRepository.upsert(tx, input.userId, {
         userId: input.userId,
         minAge: input.payload.minAge,
@@ -592,6 +665,34 @@ export class UpdateDiscoveryPreferenceService {
         preferredGenders: input.payload.preferredGenders,
         includeRecentlyActiveOnly: input.payload.includeRecentlyActiveOnly,
         preferSameCity: input.payload.preferSameCity,
+        // Omitted fields from older clients must not clear saved filters.
+        ...(input.payload.interestTagIds !== undefined
+          ? { interestTagIds: input.payload.interestTagIds }
+          : {}),
+        ...(input.payload.languageFilter !== undefined
+          ? {
+              languageFilter: normalizeStringList(input.payload.languageFilter),
+            }
+          : {}),
+        ...(input.payload.occupationCategoryFilter !== undefined
+          ? { occupationCategoryFilter: input.payload.occupationCategoryFilter }
+          : {}),
+        ...(input.payload.occupationFilter !== undefined
+          ? {
+              occupationFilter: cleanOptionalString(
+                input.payload.occupationFilter,
+              ),
+            }
+          : {}),
+        ...(input.payload.smokingFilter !== undefined
+          ? { smokingFilter: input.payload.smokingFilter }
+          : {}),
+        ...(input.payload.drinkingFilter !== undefined
+          ? { drinkingFilter: input.payload.drinkingFilter }
+          : {}),
+        ...(input.payload.exerciseFilter !== undefined
+          ? { exerciseFilter: input.payload.exerciseFilter }
+          : {}),
       });
 
       const synced = await this.profileCompletionSyncService.recomputeAndPersist(
@@ -640,15 +741,19 @@ export class UpdateCommunicationPreferenceService {
     await this.userReaderService.getRequiredById(input.userId);
 
     const result = await this.prisma.$transaction(async (tx) => {
-      await this.userCommunicationPreferenceRepository.upsert(tx, input.userId, {
-        userId: input.userId,
-        allowVoiceCalls: input.payload.allowVoiceCalls,
-        allowVideoCalls: input.payload.allowVideoCalls,
-        allowPushMatches: input.payload.allowPushMatches,
-        allowPushMessages: input.payload.allowPushMessages,
-        allowPushCalls: input.payload.allowPushCalls,
-        allowReadReceipts: input.payload.allowReadReceipts,
-      });
+      await this.userCommunicationPreferenceRepository.upsert(
+        tx,
+        input.userId,
+        {
+          userId: input.userId,
+          allowVoiceCalls: input.payload.allowVoiceCalls,
+          allowVideoCalls: input.payload.allowVideoCalls,
+          allowPushMatches: input.payload.allowPushMatches,
+          allowPushMessages: input.payload.allowPushMessages,
+          allowPushCalls: input.payload.allowPushCalls,
+          allowReadReceipts: input.payload.allowReadReceipts,
+        },
+      );
 
       const synced = await this.profileCompletionSyncService.recomputeAndPersist(
         input.userId,
@@ -686,7 +791,11 @@ async function mapAuthorizedPublicProfile(
 ): Promise<PublicProfileDto> {
   const profile = target.profile;
   if (!profile) {
-    throw new AppException(404, ERROR_CODES.PROFILE_NOT_FOUND, "Profile not found");
+    throw new AppException(
+      404,
+      ERROR_CODES.PROFILE_NOT_FOUND,
+      "Profile not found",
+    );
   }
 
   const location = resolvePublicLocation(viewer, target);

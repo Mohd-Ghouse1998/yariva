@@ -1,3 +1,6 @@
+import { mediaPairKey } from "../../../integrations/object-storage/media-disclosure.service";
+import { EventsService } from "../../events/events.service";
+import { eventUnavailable } from "../../events/events.policy";
 import { Inject, Injectable } from "@nestjs/common";
 import type { ConfigType } from "@nestjs/config";
 import { ERROR_CODES } from "../../../common/constants/error-codes";
@@ -47,6 +50,7 @@ export class DatePlansService {
     private readonly logger: AppLogger,
     @Inject(planningConfig.KEY)
     private readonly planning: ConfigType<typeof planningConfig>,
+    private readonly events: EventsService,
   ) {}
 
   async venueSuggestions(
@@ -170,6 +174,19 @@ export class DatePlansService {
   }): Promise<DatePlanResponseDto> {
     const match = await this.repository.findMatchContext(input.matchId);
     this.policy.assertActiveMatch(input.actor.user.id, match);
+    if (Boolean(input.payload.eventId) !== Boolean(input.payload.eventVersion)) {
+      throw new AppException(400, ERROR_CODES.VALIDATION_FAILED, "Event id and version are required together");
+    }
+    const event = input.payload.eventId
+      ? await this.events.proposal(input.payload.eventId, input.payload.eventVersion!, input.actor.user.id)
+      : null;
+    if (event) {
+      input = { ...input, payload: { ...input.payload, reviewedVenueId: null,
+        title: event.title, description: event.description, activityType: "EVENT",
+        proposedStartAt: event.startsAt.toISOString(), durationMinutes: Math.ceil((event.endsAt.getTime() - event.startsAt.getTime()) / 60000),
+        timezone: event.timezone, publicLocality: event.locality, venueName: event.venueName, venueAddress: event.venueAddress,
+      } };
+    }
     assertSafePlan(input.payload);
     assertFutureDate(input.payload.proposedStartAt);
     const reviewedVenue = input.payload.reviewedVenueId
@@ -193,9 +210,21 @@ export class DatePlansService {
     let plan: DatePlanRecord;
     try {
       plan = await this.prisma.$transaction(async (tx) => {
+        // Lock event before the relationship locks, matching admin updates and acceptance.
+        if (event) {
+          await this.events.lockAvailable(event.id, event.version, tx);
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${mediaPairKey(match.userLowId, match.userHighId)}, 0))`;
+          await tx.$queryRaw`SELECT id FROM "Match" WHERE id = ${match.id}::uuid FOR UPDATE`;
+          await this.events.assertMatchEligible(match.id, input.actor.user.id, tx);
+        }
         const created = await tx.datePlan.create({
           data: {
             matchId: match.id,
+            ...(event ? { eventId: event.id, eventVersion: event.version, eventSnapshot: {
+              title: event.title, startsAt: event.startsAt.toISOString(), endsAt: event.endsAt.toISOString(),
+              venueName: event.venueName, venueAddress: event.venueAddress, sourceUrl: event.sourceUrl,
+              priceMinPaise: event.priceMinPaise, priceMaxPaise: event.priceMaxPaise, currency: event.currency,
+            } } : {}),
             createdByUserId: input.actor.user.id,
             reviewedVenueId: reviewedVenue?.id ?? null,
             status: "PROPOSED",
@@ -304,8 +333,18 @@ export class DatePlansService {
 
   async accept(input: { actor: AuthContext; datePlanId: string }): Promise<DatePlanResponseDto> {
     const updated = await this.prisma.$transaction(async (tx) => {
-      const plan = await this.repository.findById(input.datePlanId, tx);
+      let plan = await this.repository.findById(input.datePlanId, tx);
       this.policy.assertPlanParticipant(input.actor.user.id, plan);
+      if (plan.eventId) {
+        await this.events.assertEnabled(input.actor.user.id);
+        await this.events.lockAvailable(plan.eventId, plan.eventVersion!, tx);
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${mediaPairKey(plan.match.userLowId, plan.match.userHighId)}, 0))`;
+        await tx.$queryRaw`SELECT id FROM "Match" WHERE id = ${plan.matchId}::uuid FOR UPDATE`;
+        await tx.$queryRaw`SELECT id FROM "DatePlan" WHERE id = ${plan.id}::uuid FOR UPDATE`;
+        await this.events.assertMatchEligible(plan.matchId, input.actor.user.id, tx);
+        plan = await this.repository.findById(input.datePlanId, tx);
+        this.policy.assertPlanParticipant(input.actor.user.id, plan);
+      }
       this.policy.assertPlanMatchActive(plan);
       this.policy.assertCanRespond(plan, ["PROPOSED", "COUNTERED"]);
 
@@ -387,6 +426,7 @@ export class DatePlansService {
     const updated = await this.prisma.$transaction(async (tx) => {
       const plan = await this.repository.findById(input.datePlanId, tx);
       this.policy.assertPlanParticipant(input.actor.user.id, plan);
+      if (plan.eventId) throw new AppException(409, ERROR_CODES.CONFLICT, "Choose an updated event and send a new invitation instead of changing event details");
       this.policy.assertPlanMatchActive(plan);
       this.policy.assertCanRespond(plan, ["PROPOSED", "COUNTERED"]);
       const nextVersion = plan.proposalVersion + 1;
@@ -532,9 +572,16 @@ export class DatePlansService {
     datePlanId: string;
     payload: PostDateResponseDto;
   }): Promise<DatePlanResponseDto> {
-    const plan = await this.prisma.$transaction(async (tx) => {
+    const { plan, notices } = await this.prisma.$transaction(async (tx) => {
+      const initial = await this.repository.findById(input.datePlanId, tx);
+      this.policy.assertPlanParticipant(input.actor.user.id, initial);
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${mediaPairKey(initial.match.userLowId, initial.match.userHighId)}, 0))`;
+      // Serialize both answers and match revocation before reading their outcome.
+      await tx.$queryRaw`SELECT id FROM "Match" WHERE id = ${initial.matchId}::uuid FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM "DatePlan" WHERE id = ${input.datePlanId}::uuid FOR UPDATE`;
       const current = await this.repository.findById(input.datePlanId, tx);
       this.policy.assertPlanParticipant(input.actor.user.id, current);
+      this.policy.assertPlanMatchActive(current);
       this.policy.assertCanRespond(current, ["COMPLETED"]);
       const now = new Date();
       await tx.postDateCheckIn.upsert({
@@ -565,7 +612,19 @@ export class DatePlansService {
       );
       const result = await this.repository.findById(current.id, tx);
       if (!result) throw new Error("Date plan disappeared after post-date response");
-      return result;
+      const notices = [];
+      if (resolveMeetAgainOutcome(result) === "MUTUAL") {
+        for (const userId of [result.match.userLowId, result.match.userHighId]) {
+          notices.push(await this.notifications.persist(tx, {
+            userId, type: "MUTUAL_MEET_AGAIN",
+            title: "You both want to meet again",
+            body: "The feeling is mutual. Take your time and plan what comes next together.",
+            data: { matchId: result.matchId, datePlanId: result.id },
+            dedupeKey: `MUTUAL_MEET_AGAIN:${result.id}:${userId}`,
+          }));
+        }
+      }
+      return { plan: result, notices };
     });
 
     await this.writeAnalytics(input.actor.user.id, "post_date_response_submitted", {
@@ -573,17 +632,7 @@ export class DatePlansService {
       datePlanId: plan.id,
     });
     if (resolveMeetAgainOutcome(plan) === "MUTUAL") {
-      for (const userId of [plan.match.userLowId, plan.match.userHighId]) {
-        await this.notifySafely({
-          userId,
-          actorUserId: null,
-          type: "MUTUAL_MEET_AGAIN",
-          title: "You both want to meet again",
-          body: "The feeling is mutual. Take your time and plan what comes next together.",
-          data: { matchId: plan.matchId, datePlanId: plan.id },
-          dedupeKey: `MUTUAL_MEET_AGAIN:${plan.id}:${userId}`,
-        });
-      }
+      for (const notice of notices) await this.notifications.dispatchPersisted(notice);
       await this.writeAnalytics(input.actor.user.id, "mutual_meet_again", {
         matchId: plan.matchId,
         datePlanId: plan.id,
@@ -739,6 +788,10 @@ function mapDatePlan(plan: DatePlanRecord, viewerId: string): DatePlanDto {
   const myCheckIn = plan.checkIns.find((checkIn) => checkIn.userId === viewerId);
   return {
     id: plan.id,
+    eventId: plan.eventId,
+    eventVersion: plan.eventVersion,
+    eventChanged: Boolean(plan.event && plan.event.version !== plan.eventVersion),
+    eventUnavailable: Boolean(plan.event && eventUnavailable(plan.event)),
     matchId: plan.matchId,
     createdByUserId: plan.createdByUserId,
     status: plan.status,
@@ -861,6 +914,8 @@ function assertSafePlan(payload: Pick<CreateDatePlanDto, "title" | "description"
 
 function isSameProposal(plan: DatePlanRecord, payload: CreateDatePlanDto): boolean {
   const sameCoreProposal =
+    (plan.eventId ?? null) === (payload.eventId ?? null) &&
+    (plan.eventVersion ?? null) === (payload.eventVersion ?? null) &&
     plan.title === payload.title.trim() &&
     plan.description === payload.description.trim() &&
     plan.activityType === payload.activityType.trim() &&

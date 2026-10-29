@@ -113,3 +113,127 @@ describe("Discovery domain services", () => {
     expect(first.cityBucket).toBe(second.cityBucket);
   });
 });
+
+describe("Discovery people filters", () => {
+  const service = new CandidateEligibilityService();
+  const viewer = {
+    id: "viewer",
+    profile: {
+      dateOfBirth: new Date("1994-01-01"),
+      locationLat: 17.4,
+      locationLng: 78.4,
+      gender: "MAN",
+    },
+  };
+  const candidate = {
+    id: "candidate",
+    profile: {
+      dateOfBirth: new Date("1994-01-01"),
+      locationLat: 17.4,
+      locationLng: 78.4,
+      gender: "WOMAN",
+      languages: ["English", "Telugu"],
+      occupation: "Software Engineer",
+      occupationCategory: "TECHNOLOGY",
+      shareWorkDetails: true,
+    },
+    interests: [{ interestTagId: "coffee" }],
+    intents: [{ intent: "FRIENDSHIP" }],
+    lifestyle: { smoking: "NEVER", drinking: "SOCIAL", exercise: "WEEKLY" },
+    lastActiveAt: new Date(),
+  };
+  const eligible = (
+    filters: Record<string, unknown>,
+    person: unknown = candidate,
+  ) =>
+    service.isEligible(
+      { ...viewer, discoveryPreference: filters } as any,
+      person as any,
+      {
+        maxDistanceKm: 15,
+        selectedIntents: ["FRIENDSHIP"],
+        preferredGenders: [],
+        excludedUserIds: new Set(),
+      },
+    ).eligible;
+
+  it("preserves discovery when optional filters are empty", () => {
+    expect(eligible({})).toBe(true);
+    expect(
+      eligible({
+        interestTagIds: [],
+        languageFilter: [],
+        occupationFilter: null,
+      }),
+    ).toBe(true);
+  });
+
+  it("matches any selection within a category but requires every selected category", () => {
+    expect(
+      eligible({
+        interestTagIds: ["music", "coffee"],
+        languageFilter: [" telugu ", "Hindi"],
+        occupationFilter: "ENGINEER",
+        smokingFilter: ["NEVER"],
+        drinkingFilter: ["SOCIAL"],
+        exerciseFilter: ["WEEKLY"],
+      }),
+    ).toBe(true);
+    expect(
+      eligible({ interestTagIds: ["music"], languageFilter: ["English"] }),
+    ).toBe(false);
+    expect(
+      eligible({ interestTagIds: ["coffee"], languageFilter: ["Hindi"] }),
+    ).toBe(false);
+    expect(eligible({ exerciseFilter: ["DAILY"] })).toBe(false);
+  });
+
+  it("cannot infer private work details through search", () => {
+    const privateCandidate = {
+      ...candidate,
+      profile: { ...candidate.profile, shareWorkDetails: false },
+    };
+    expect(eligible({ occupationFilter: "Engineer" }, privateCandidate)).toBe(
+      false,
+    );
+    expect(eligible({}, privateCandidate)).toBe(true);
+    expect(
+      eligible(
+        { occupationFilter: "Engineer" },
+        { ...candidate, profile: { ...candidate.profile, occupation: null } },
+      ),
+    ).toBe(false);
+  });
+
+  it("uses explicit work categories with OR within and AND across filters", () => {
+    expect(eligible({ occupationCategoryFilter: ["HEALTHCARE", "TECHNOLOGY"] })).toBe(true);
+    expect(eligible({ occupationCategoryFilter: ["HEALTHCARE"] })).toBe(false);
+    expect(eligible({ occupationCategoryFilter: ["TECHNOLOGY"], interestTagIds: ["music"] })).toBe(false);
+    expect(eligible({ occupationCategoryFilter: ["TECHNOLOGY"], occupationFilter: "doctor" })).toBe(false);
+    const missing = { ...candidate, profile: { ...candidate.profile, occupationCategory: null } };
+    expect(eligible({ occupationCategoryFilter: ["TECHNOLOGY"] }, missing)).toBe(false);
+    expect(eligible({ occupationCategoryFilter: [] }, missing)).toBe(true);
+    expect(eligible({ occupationCategoryFilter: ["TECHNOLOGY"] }, {
+      ...candidate, profile: { ...candidate.profile, shareWorkDetails: false },
+    })).toBe(false);
+  });
+
+  it("does not treat missing lifestyle or activity as a match", () => {
+    expect(
+      eligible({ smokingFilter: ["NEVER"] }, { ...candidate, lifestyle: null }),
+    ).toBe(false);
+    expect(
+      eligible(
+        { includeRecentlyActiveOnly: true },
+        { ...candidate, lastActiveAt: null },
+      ),
+    ).toBe(false);
+    expect(
+      eligible(
+        { includeRecentlyActiveOnly: true },
+        { ...candidate, lastActiveAt: new Date(Date.now() - 8 * 86400000) },
+      ),
+    ).toBe(false);
+    expect(eligible({ includeRecentlyActiveOnly: true })).toBe(true);
+  });
+});

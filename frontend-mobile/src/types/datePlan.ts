@@ -12,6 +12,8 @@ export type VenueCategory = "CAFE" | "RESTAURANT" | "ACTIVITY";
 export type VenueLocationMode = "MIDPOINT" | "ME" | "AREA";
 
 export interface CreateDatePlanRequest {
+  eventId?: string;
+  eventVersion?: number;
   reviewedVenueId?: string | null;
   title: string;
   description: string;
@@ -26,7 +28,7 @@ export interface CreateDatePlanRequest {
 }
 
 export type CounterDatePlanRequest = Partial<
-  Omit<CreateDatePlanRequest, "idempotencyKey">
+  Omit<CreateDatePlanRequest, "idempotencyKey" | "eventId" | "eventVersion">
 >;
 
 export interface VenueSuggestion {
@@ -55,6 +57,10 @@ export interface VenueSuggestionsResponse {
 }
 
 export interface DatePlanDto {
+  eventId?: string | null;
+  eventVersion?: number | null;
+  eventChanged?: boolean;
+  eventUnavailable?: boolean;
   id: string;
   matchId: string;
   createdByUserId: string;

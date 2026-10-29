@@ -4,6 +4,7 @@ import type { PrismaTransactionalClient } from "../../../database/prisma/prisma.
 import { Prisma } from "../../../generated/prisma/client";
 
 export const DATE_PLAN_INCLUDE = {
+  event: { select: { id: true, version: true, status: true, startsAt: true, verifiedAt: true } },
   responses: { orderBy: { createdAt: "asc" as const } },
   checkIns: true,
   reviewedVenue: { select: { photoUrl: true } },

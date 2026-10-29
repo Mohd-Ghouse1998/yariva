@@ -3,6 +3,7 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Modal, Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { datePlansApi } from "../../api/endpoints/datePlans";
+import { eventsApi } from "../../api/endpoints/events";
 import { matchesApi } from "../../api/endpoints/matches";
 import { useAuth } from "../../auth/AuthContext";
 import { DatePlanCard } from "../../components/datePlans";
@@ -43,11 +44,17 @@ export const DatePlansScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [eventsEnabled, setEventsEnabled] = useState(false);
   const requestSequence = useRef(0);
 
   const load = useCallback(async (mode: "initial" | "refresh") => {
     const requestId = ++requestSequence.current;
     mode === "initial" ? setLoading(true) : setRefreshing(true);
+    void eventsApi.status().then((status) => {
+      if (requestId === requestSequence.current) setEventsEnabled(status.enabled);
+    }).catch(() => {
+      if (requestId === requestSequence.current) setEventsEnabled(false);
+    });
     try {
       const planPage = await datePlansApi.listMine({ limit: 30 });
       if (requestId !== requestSequence.current) return;
@@ -247,6 +254,17 @@ export const DatePlansScreen: React.FC = () => {
             />
           }
         >
+          {eventsEnabled ? <Pressable accessibilityRole="button" accessibilityLabel="Explore events nearby"
+            onPress={() => router.push("/(app)/events")}>
+            <Card style={styles.refreshError}>
+              <Icon name="calendar" size={22} color={palette.brandStrong} />
+              <View style={styles.errorCopy}>
+                <Text variant="bodyStrong">Events around you</Text>
+                <Text variant="caption" color="textSubdued">Find something to enjoy with a match</Text>
+              </View>
+              <Icon name="chevronRight" size={18} color={palette.textMuted} />
+            </Card>
+          </Pressable> : null}
           {error && plans.length > 0 ? (
             <Card style={styles.refreshError}>
               <View style={styles.errorCopy}>

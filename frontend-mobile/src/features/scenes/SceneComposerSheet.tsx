@@ -1,19 +1,19 @@
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
+import { File } from "expo-file-system";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, AppState, Pressable, ScrollView, View } from "react-native";
 import { profilesApi } from "../../api/endpoints/profiles";
 import { uploadToPresignedUrl } from "../../api/upload";
 import { SegmentedControl } from "../../components/dating";
 import { Button } from "../../components/ui/Button";
-import { CenterDialog } from "../../components/ui/CenterDialog";
 import { Icon, type IconName } from "../../components/ui/Icon";
 import { IconButton } from "../../components/ui/IconButton";
 import { Input } from "../../components/ui/Input";
 import { Text } from "../../components/ui/Text";
 import { useLocalization } from "../../localization/LocalizationContext";
 import { createThemeStyleHook, useTheme } from "../../theme/ThemeContext";
-import { radius, spacing } from "../../theme/spacing";
+import { controlSize, layout, radius, spacing } from "../../theme/spacing";
 import {
   isProfilePhotoMimeType,
   normalizeUploadFileName,
@@ -22,7 +22,7 @@ import {
 import type { PrivatePhotoDto } from "../../types/profile";
 import type { SceneDto, SceneInput, SceneIntent } from "../../types/scenes";
 
-type AvailabilityChoice = "FLEXIBLE" | "NEXT_TWO_HOURS" | "TONIGHT";
+import { sceneAvailability, type AvailabilityChoice } from "./sceneTime";
 type PhotoSource = "camera" | "gallery";
 type ScenePhoto = Pick<PrivatePhotoDto, "id" | "url">;
 
@@ -33,10 +33,23 @@ export const SceneComposerSheet: React.FC<{
   visible: boolean;
   scene: SceneDto | null;
   busy: boolean;
+  canPublish: boolean;
   error: string | null;
-  onClose: () => void;
+  lifetimeHours: number;
+  onDirtyChange: (dirty: boolean) => void;
+  onBusyChange: (busy: boolean) => void;
   onSubmit: (input: SceneInput) => void;
-}> = ({ visible, scene, busy, error, onClose, onSubmit }) => {
+}> = ({
+  visible,
+  scene,
+  busy,
+  canPublish,
+  error,
+  lifetimeHours,
+  onDirtyChange,
+  onBusyChange,
+  onSubmit,
+}) => {
   const { t } = useLocalization();
   const { palette } = useTheme();
   const styles = useStyles();
@@ -45,24 +58,47 @@ export const SceneComposerSheet: React.FC<{
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(scene?.photo?.id ?? null);
   const [uploadedPhoto, setUploadedPhoto] = useState<ScenePhoto | null>(null);
   const [availability, setAvailability] = useState<AvailabilityChoice>("FLEXIBLE");
+  const [timeOpen, setTimeOpen] = useState(false);
+  const [timeChanged, setTimeChanged] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const alive = useRef(true);
+  const picking = useRef(false);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!visible) return;
     setIntent(scene?.intent ?? "DATING");
     setActivity(scene?.activity ?? "");
     setSelectedPhotoId(scene?.photo?.id ?? null);
     setUploadedPhoto(null);
-    setAvailability(scene?.availableUntil ? "NEXT_TWO_HOURS" : "FLEXIBLE");
+    setAvailability("FLEXIBLE");
+    setTimeChanged(false);
+    setTimeOpen(false);
     setUploadError(null);
-  }, [scene, visible]);
+  }, [scene]);
 
   const currentPhoto =
-    uploadedPhoto ??
-    (scene?.photo && selectedPhotoId === scene.photo.id ? scene.photo : null);
+    uploadedPhoto ?? (scene?.photo && selectedPhotoId === scene.photo.id ? scene.photo : null);
   const formBusy = busy || uploading;
-  const canSubmit = activity.trim().length >= 2 && !formBusy;
+  const canSubmit = activity.trim().length >= 2 && canPublish && !formBusy;
+
+  const dirty =
+    activity !== (scene?.activity ?? "") ||
+    intent !== (scene?.intent ?? "DATING") ||
+    selectedPhotoId !== (scene?.photo?.id ?? null) ||
+    timeChanged;
+  useEffect(() => {
+    onDirtyChange(dirty);
+  }, [dirty, onDirtyChange]);
+  useEffect(() => {
+    onBusyChange(uploading);
+  }, [uploading, onBusyChange]);
 
   const intentOptions = useMemo(
     () => [
@@ -83,15 +119,22 @@ export const SceneComposerSheet: React.FC<{
 
   const pollUntilReviewed = async (photo: PrivatePhotoDto): Promise<PrivatePhotoDto> => {
     let latest = photo;
-    for (let attempt = 0; attempt < 30 && latest.moderationStatus === "PENDING"; attempt += 1) {
+    for (
+      let attempt = 0;
+      alive.current && attempt < 30 && latest.moderationStatus === "PENDING";
+      attempt += 1
+    ) {
       await wait(500);
+      if (!alive.current || AppState.currentState !== "active") break;
       latest = await profilesApi.photo(photo.id);
     }
     return latest;
   };
 
   const pickPhoto = async (source: PhotoSource) => {
-    if (formBusy) return;
+    if (formBusy || picking.current) return;
+    picking.current = true;
+    setProgress(0);
     setUploading(true);
     setUploadError(null);
     try {
@@ -114,7 +157,7 @@ export const SceneComposerSheet: React.FC<{
         source === "camera"
           ? await ImagePicker.launchCameraAsync(pickerOptions)
           : await ImagePicker.launchImageLibraryAsync(pickerOptions);
-      if (result.canceled) return;
+      if (result.canceled || !alive.current || AppState.currentState !== "active") return;
       const asset = result.assets[0];
       if (!asset) return;
 
@@ -123,24 +166,29 @@ export const SceneComposerSheet: React.FC<{
         setUploadError(t("scene.photo.typeError"));
         return;
       }
-      if (asset.fileSize && asset.fileSize > PROFILE_PHOTO_MAX_BYTES) {
+      const sizeBytes = new File(asset.uri).size || asset.fileSize || 0;
+      if (!sizeBytes || sizeBytes > PROFILE_PHOTO_MAX_BYTES) {
         setUploadError(t("scene.photo.sizeError"));
         return;
       }
 
-      const sizeBytes = asset.fileSize ?? 1;
       const initiated = await profilesApi.initiatePhotoUpload({
         fileName: normalizeUploadFileName(asset.fileName, `scene-${Date.now()}.jpg`),
         mimeType,
         sizeBytes,
         purpose: "SCENE",
       });
+      if (!alive.current || AppState.currentState !== "active") return;
       await uploadToPresignedUrl({
         uri: asset.uri,
         uploadUrl: initiated.uploadUrl,
         uploadHeaders: initiated.headers,
         mimeType,
+        onProgress: (value) => {
+          if (alive.current) setProgress(value);
+        },
       });
+      if (!alive.current || AppState.currentState !== "active") return;
       const finalized = await profilesApi.finalizePhoto({
         uploadToken: initiated.uploadToken,
         objectKey: initiated.objectKey,
@@ -152,6 +200,7 @@ export const SceneComposerSheet: React.FC<{
         position: 0,
       });
       const reviewed = await pollUntilReviewed(finalized.photo);
+      if (!alive.current || AppState.currentState !== "active") return;
       if (reviewed.moderationStatus === "REJECTED") {
         setUploadError(t("scene.photo.rejected"));
         return;
@@ -163,36 +212,21 @@ export const SceneComposerSheet: React.FC<{
       setUploadedPhoto(reviewed);
       setSelectedPhotoId(reviewed.id);
     } catch {
-      setUploadError(t("scene.photo.uploadError"));
+      if (alive.current) setUploadError(t("scene.photo.uploadError"));
     } finally {
-      setUploading(false);
+      picking.current = false;
+      if (alive.current) setUploading(false);
     }
   };
 
   const submit = () => {
-    const now = new Date();
-    const sceneExpiry = scene ? Date.parse(scene.expiresAt) : Number.POSITIVE_INFINITY;
-    let availableFrom: string | null = null;
-    let availableUntil: string | null = null;
-    if (availability !== "FLEXIBLE" && sceneExpiry > now.getTime() + 60_000) {
-      availableFrom = now.toISOString();
-      const twoHours = new Date(now.getTime() + 2 * 60 * 60_000);
-      if (availability === "NEXT_TWO_HOURS") {
-        availableUntil = new Date(Math.min(twoHours.getTime(), sceneExpiry - 1_000)).toISOString();
-      } else {
-        const endOfDay = new Date(now);
-        endOfDay.setHours(23, 30, 0, 0);
-        availableUntil = new Date(
-          Math.min(
-            sceneExpiry - 1_000,
-            Math.max(
-              now.getTime() + 30 * 60_000,
-              Math.min(endOfDay.getTime(), now.getTime() + 8 * 60 * 60_000),
-            ),
-          ),
-        ).toISOString();
-      }
-    }
+    if (!canSubmit) return;
+    const { availableFrom, availableUntil } = sceneAvailability(
+      scene,
+      timeChanged ? availability : null,
+      Date.now(),
+      lifetimeHours,
+    );
     onSubmit({
       intent,
       activity: activity.trim(),
@@ -204,26 +238,11 @@ export const SceneComposerSheet: React.FC<{
   };
 
   return (
-    <CenterDialog
-      visible={visible}
-      onClose={formBusy ? () => undefined : onClose}
-      accessibilityLabel={scene ? t("scene.edit") : t("scene.create")}
-      closeAccessibilityLabel={t("common.cancel")}
-      style={styles.dialog}
+    <View
+      style={[styles.root, !visible && styles.hidden]}
+      accessibilityElementsHidden={!visible}
+      importantForAccessibility={visible ? "auto" : "no-hide-descendants"}
     >
-      <View style={styles.header}>
-        <Text variant="titleSm">{scene ? t("scene.edit") : t("scene.create")}</Text>
-        <IconButton
-          size={32}
-          tone="ghost"
-          onPress={onClose}
-          disabled={formBusy}
-          accessibilityLabel={t("common.cancel")}
-        >
-          <Icon name="close" size={20} color={palette.textPrimary} />
-        </IconButton>
-      </View>
-
       <ScrollView
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -261,7 +280,7 @@ export const SceneComposerSheet: React.FC<{
               <View style={styles.uploadState} accessibilityLiveRegion="polite">
                 <ActivityIndicator size="small" color={palette.brand} />
                 <Text variant="micro" color="textSubdued">
-                  {t("scene.photo.uploading")}
+                  {`${t("scene.photo.uploading")} ${Math.round(progress * 100)}%`}
                 </Text>
               </View>
             ) : null}
@@ -280,12 +299,16 @@ export const SceneComposerSheet: React.FC<{
           value={activity}
           onChangeText={setActivity}
           maxLength={120}
+          multiline
+          style={styles.activityInput}
           editable={!formBusy}
-          error={activity.length > 0 && activity.trim().length < 2 ? t("scene.activity.error") : null}
+          error={
+            activity.length > 0 && activity.trim().length < 2 ? t("scene.activity.error") : null
+          }
         />
 
         <View style={styles.fieldGroup}>
-          <Text variant="captionStrong" color="textSubdued" style={styles.fieldLabel}>
+          <Text variant="captionStrong" color="textSubdued">
             {t("scene.intent.label")}
           </Text>
           <SegmentedControl
@@ -294,21 +317,45 @@ export const SceneComposerSheet: React.FC<{
             onChange={setIntent}
             disabled={formBusy}
             accessibilityLabel={t("scene.intent.label")}
+            variant="underline"
           />
         </View>
 
-        <View style={styles.fieldGroup}>
-          <Text variant="captionStrong" color="textSubdued" style={styles.fieldLabel}>
-            {t("scene.availability.label")}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t("composer.time")}
+          accessibilityState={{ expanded: timeOpen }}
+          disabled={formBusy}
+          onPress={() => setTimeOpen((value) => !value)}
+          style={styles.timeControl}
+        >
+          <Icon name="clock" size={18} color={palette.textSubdued} />
+          <Text variant="captionStrong" style={{ flex: 1 }}>
+            {t("composer.time")}
           </Text>
+          <Text variant="caption" color="textSubdued">
+            {!timeChanged && scene?.availableUntil
+              ? new Date(scene.availableUntil).toLocaleTimeString([], {
+                  hour: "numeric",
+                  minute: "2-digit",
+                })
+              : availabilityOptions.find((option) => option.value === availability)?.label}
+          </Text>
+          <Icon name="chevronDown" size={16} color={palette.textSubdued} />
+        </Pressable>
+        {timeOpen ? (
           <SegmentedControl
             value={availability}
             options={availabilityOptions}
-            onChange={setAvailability}
+            onChange={(value) => {
+              setAvailability(value);
+              setTimeChanged(true);
+            }}
             disabled={formBusy}
             accessibilityLabel={t("scene.availability.label")}
+            variant="underline"
           />
-        </View>
+        ) : null}
 
         {error ? (
           <Text variant="caption" color="error" accessibilityRole="alert">
@@ -318,16 +365,18 @@ export const SceneComposerSheet: React.FC<{
       </ScrollView>
 
       <View style={styles.footer}>
+        <Text variant="caption" color="textSubdued">
+          {t("composer.sceneVisibility", { hours: lifetimeHours })}
+        </Text>
         <Button
           label={scene ? t("common.save") : t("scene.create")}
-          size="sm"
           fullWidth
           onPress={submit}
           loading={busy}
           disabled={!canSubmit}
         />
       </View>
-    </CenterDialog>
+    </View>
   );
 };
 
@@ -340,88 +389,72 @@ const PhotoAction: React.FC<{
   const { palette } = useTheme();
   const styles = useStyles();
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled }}
-      style={({ pressed }) => [
-        styles.mediaAction,
-        disabled ? styles.disabled : null,
-        pressed ? styles.pressed : null,
-      ]}
-    >
-      <Icon name={icon} size={19} color={palette.textBrand} />
-      <Text variant="captionStrong" color="textBrand" numberOfLines={1}>
+    <View style={styles.mediaAction}>
+      <IconButton
+        onPress={onPress}
+        disabled={disabled}
+        accessibilityLabel={label}
+        size={40}
+        tone="neutral"
+      >
+        <Icon name={icon} size={22} color={palette.textPrimary} />
+      </IconButton>
+      <Text variant="micro" color="textSubdued">
         {label}
       </Text>
-    </Pressable>
+    </View>
   );
 };
 
 const useStyles = createThemeStyleHook((palette) => ({
-  dialog: {
-    maxHeight: "82%",
-    padding: 0,
-    overflow: "hidden",
-  },
-  header: {
-    minHeight: 52,
-    paddingLeft: spacing.lg,
-    paddingRight: spacing.sm,
+  root: { flex: 1 },
+  hidden: { display: "none" },
+  timeControl: {
+    minHeight: controlSize.minimumTouchTarget,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: 1,
-    borderBottomColor: palette.borderSubdued,
+    gap: spacing.sm,
   },
   content: {
+    width: "100%",
+    maxWidth: layout.formMaxWidth,
+    alignSelf: "center",
     gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingHorizontal: layout.compactScreenPadding,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
   },
   mediaCard: {
-    minHeight: 104,
-    flexDirection: "row",
     overflow: "hidden",
     borderRadius: radius.card,
     borderWidth: 1,
     borderColor: palette.border,
-    backgroundColor: palette.surfaceSubdued,
-  },
-  mediaPreview: { width: 78, alignSelf: "stretch" },
-  mediaControls: {
-    flex: 1,
-    justifyContent: "center",
-    gap: spacing.sm,
-    padding: spacing.md,
-  },
-  mediaActions: { flexDirection: "row", gap: spacing.sm },
-  mediaAction: {
-    flex: 1,
-    minHeight: 42,
-    paddingHorizontal: spacing.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: palette.borderStrong,
     backgroundColor: palette.surface,
   },
+  mediaPreview: { width: "100%", aspectRatio: 4 / 3, maxHeight: 280 },
+  activityInput: { minHeight: 56, maxHeight: 120 },
+  mediaControls: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  mediaActions: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  mediaAction: { alignItems: "center", gap: spacing.xs },
   uploadState: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   fieldGroup: { gap: spacing.xs },
-  fieldLabel: { textTransform: "uppercase", letterSpacing: 0.8 },
   footer: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
+    width: "100%",
+    maxWidth: layout.formMaxWidth,
+    alignSelf: "center",
+    paddingHorizontal: layout.compactScreenPadding,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+    gap: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: palette.borderSubdued,
   },
-  pressed: { opacity: 0.76 },
-  disabled: { opacity: 0.5 },
 }));

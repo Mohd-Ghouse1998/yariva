@@ -1,10 +1,13 @@
 import type { RelationshipPace } from "../../types/enums";
-import type { MyProfileDto, PrivatePhotoDto, UpdateMyProfileRequest } from "../../types/profile";
+import type { MyProfileDto, OccupationCategory, PrivatePhotoDto, UpdateMyProfileRequest } from "../../types/profile";
 import { PROFILE_PROMPTS } from "./profilePrompts";
 
 export interface ProfileEditFormValue {
   headline: string;
   bio: string;
+  occupation: string;
+  occupationCategory: OccupationCategory | null;
+  shareWorkDetails: boolean;
   languages: string;
   foodPreferences: string;
   relationshipPace: RelationshipPace | null;
@@ -18,7 +21,7 @@ export interface ProfileEditFormValue {
   promptResponses: Record<string, string>;
 }
 
-const splitUniqueList = (value: string): string[] => {
+export const splitUniqueList = (value: string): string[] => {
   const seen = new Set<string>();
   return value
     .split(",")
@@ -35,6 +38,9 @@ const splitUniqueList = (value: string): string[] => {
 export const profileToEditForm = (profile: MyProfileDto): ProfileEditFormValue => ({
   headline: profile.headline ?? "",
   bio: profile.bio ?? "",
+  occupation: profile.occupation ?? "",
+  occupationCategory: profile.occupationCategory ?? null,
+  shareWorkDetails: profile.shareWorkDetails ?? false,
   languages: profile.languages.join(", "),
   foodPreferences: profile.foodPreferences.join(", "),
   relationshipPace: profile.preferredRelationshipPace,
@@ -53,6 +59,9 @@ export const profileToEditForm = (profile: MyProfileDto): ProfileEditFormValue =
 export const editFormToProfileUpdate = (form: ProfileEditFormValue): UpdateMyProfileRequest => ({
   headline: form.headline.trim() || null,
   bio: form.bio.trim(),
+  occupation: form.occupation.trim() || null,
+  occupationCategory: form.occupationCategory,
+  shareWorkDetails: form.shareWorkDetails,
   languages: splitUniqueList(form.languages),
   foodPreferences: splitUniqueList(form.foodPreferences),
   preferredRelationshipPace: form.relationshipPace,
@@ -82,6 +91,9 @@ export const profileExtrasUpdate = (
   const all = editFormToProfileUpdate(form);
   if (prompts) return { promptResponses: all.promptResponses };
   return {
+    occupation: all.occupation,
+    occupationCategory: all.occupationCategory,
+    shareWorkDetails: all.shareWorkDetails,
     languages: all.languages,
     foodPreferences: all.foodPreferences,
     preferredRelationshipPace: all.preferredRelationshipPace,
@@ -119,6 +131,7 @@ export const validateProfileEditForm = (
     }
   }
   for (const [label, value, max] of [
+    ["work or study", form.occupation, 80],
     ["relocation openness", form.relocationOpenness, 80],
     ["career priority", form.careerPriority, 80],
     ["family involvement comfort", form.familyComfort, 120],

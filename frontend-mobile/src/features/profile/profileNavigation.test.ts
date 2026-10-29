@@ -37,7 +37,8 @@ describe("Profile navigation ownership", () => {
   it("keeps field editors inside Edit profile only", () => {
     const root = rows(rootSource),
       editor = rows(editorSource);
-    expect(rootSource).toContain('accessibilityLabel="Edit profile"');
+    expect(rootSource).toContain('accessibilityLabel={`Profile ${profile.completion.isComplete ? "complete" : "needs attention"}. Edit profile.`}');
+    expect(rootSource).toContain("onPress={openEditor}");
     expect(rootSource).toContain(
       'accessibilityLabel="My Vibe. Open your five-second introduction."',
     );
