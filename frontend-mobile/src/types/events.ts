@@ -25,6 +25,9 @@ export interface EventListingDto {
   verifiedAt: string;
   saved: boolean;
   unavailable: boolean;
+  availableUntil?: string;
+  serverNow?: string;
+  distanceKm?: number | null;
 }
 
 export interface EventQuery {
@@ -35,6 +38,8 @@ export interface EventQuery {
   until?: string;
   maxPricePaise?: number;
   saved?: "true" | "false";
+  latitude?: number;
+  longitude?: number;
   cursor?: string;
   limit?: number;
 }
@@ -42,4 +47,6 @@ export interface EventQuery {
 export interface EventPageDto {
   items: EventListingDto[];
   nextCursor: string | null;
+  places?: import("./datePlan").VenueSuggestion[];
+  placesStatus?: "MATCHES" | "EMPTY" | "UNSUPPORTED_FILTERS" | null;
 }

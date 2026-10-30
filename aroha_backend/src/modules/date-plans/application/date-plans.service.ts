@@ -1,3 +1,4 @@
+import { ReviewedVenuesService } from "./reviewed-venues.service";
 import { mediaPairKey } from "../../../integrations/object-storage/media-disclosure.service";
 import { EventsService } from "../../events/events.service";
 import { eventUnavailable } from "../../events/events.policy";
@@ -26,8 +27,6 @@ import type {
   DatePlanPageDto,
   DatePlanResponseDto,
   VenueSearchQueryDto,
-  VenueCategoryValue,
-  VenueSuggestionDto,
   VenueSuggestionsResponseDto,
   PostDateResponseDto,
 } from "../dto/date-plans.dto";
@@ -51,6 +50,7 @@ export class DatePlansService {
     @Inject(planningConfig.KEY)
     private readonly planning: ConfigType<typeof planningConfig>,
     private readonly events: EventsService,
+    private readonly venues: ReviewedVenuesService,
   ) {}
 
   async venueSuggestions(
@@ -67,7 +67,6 @@ export class DatePlansService {
     const low = match.userLow.profile;
     const high = match.userHigh.profile;
     const locationMode = query.locationMode ?? "MIDPOINT";
-    const areaSearch = locationMode === "AREA" ? query.area?.trim().toLocaleLowerCase() ?? "" : "";
     let searchPoint: { latitude: number; longitude: number } | null = null;
 
     if (locationMode === "ME") {
@@ -87,84 +86,9 @@ export class DatePlansService {
     return this.reviewedVenues(query, searchPoint);
   }
 
-  // Relationship authorization stays with the caller; coordinates never leave this service.
-  async reviewedVenues(query: VenueSearchQueryDto, searchPoint: { latitude: number; longitude: number } | null): Promise<VenueSuggestionsResponseDto> {
-    if (!this.planning.venueSuggestionsEnabled) return { items: [], manualFallbackAvailable: true };
-    const locationMode = query.locationMode ?? "MIDPOINT";
-    const areaSearch = locationMode === "AREA" ? query.area?.trim().toLocaleLowerCase() ?? "" : "";
-    if (locationMode !== "AREA" && !searchPoint) {
-      return { items: [], manualFallbackAvailable: true };
-    }
-    if (locationMode === "AREA" && !areaSearch) {
-      return { items: [], manualFallbackAvailable: true };
-    }
-
-    const searchText = query.query?.trim().toLocaleLowerCase() ?? "";
-    const category = query.category ?? null;
-    const centerLatitude = searchPoint?.latitude ?? null;
-    const centerLongitude = searchPoint?.longitude ?? null;
-    const rows = await this.prisma.$queryRaw<VenueQueryRow[]>(Prisma.sql`
-      SELECT
-        "id", "name", "photoUrl", "address", "publicLocality", "reviewSource", "reviewedAt",
-        "operationalStatus"::text AS "operationalStatus", "category"::text AS "category",
-        "priceMaxPerPerson", "rating", "ratingCount", "accessibilityFacts", "atmosphereTags", "isSynthetic",
-        CASE
-          WHEN ${centerLatitude}::double precision IS NULL THEN NULL
-          ELSE ROUND((ST_Distance(
-            "locationPoint",
-            ST_SetSRID(ST_MakePoint(${centerLongitude}, ${centerLatitude}), 4326)::geography
-          ) / 1000.0)::numeric, 1)::double precision
-        END AS "distanceKm"
-      FROM "ReviewedVenue"
-      WHERE "reviewStatus" = 'REVIEWED'::"VenueReviewStatus"
-        AND "operationalStatus" <> 'CLOSED'::"VenueOperationalStatus"
-        AND "deletedAt" IS NULL
-        AND (${category}::text IS NULL OR "category"::text = ${category})
-        AND (
-          ${searchText} = ''
-          OR POSITION(${searchText} IN LOWER("name")) > 0
-          OR POSITION(${searchText} IN LOWER("address")) > 0
-          OR POSITION(${searchText} IN LOWER("publicLocality")) > 0
-        )
-        AND (
-          ${areaSearch} = ''
-          OR POSITION(${areaSearch} IN LOWER("publicLocality")) > 0
-          OR POSITION(${areaSearch} IN LOWER("city")) > 0
-          OR POSITION(${areaSearch} IN LOWER("address")) > 0
-        )
-        AND (
-          ${centerLatitude}::double precision IS NULL
-          OR ST_DWithin(
-            "locationPoint",
-            ST_SetSRID(ST_MakePoint(${centerLongitude}, ${centerLatitude}), 4326)::geography,
-            ${this.planning.venueRadiusMeters}
-          )
-        )
-      ORDER BY "rating" DESC NULLS LAST, "ratingCount" DESC NULLS LAST, "distanceKm" ASC NULLS LAST, "id"
-      LIMIT ${this.planning.maxVenueSuggestions}
-    `);
-
-    const items = rows
-      .map((venue): VenueSuggestionDto => ({
-        id: venue.id,
-        name: venue.name,
-        photoUrl: venue.photoUrl,
-        address: venue.address,
-        publicLocality: venue.publicLocality,
-        reviewLabel: "Venue details reviewed",
-        reviewSource: venue.reviewSource,
-        reviewedAt: venue.reviewedAt?.toISOString() ?? null,
-        availability: venue.operationalStatus === "OPEN" ? "OPEN" : "UNKNOWN",
-        category: venue.category,
-        priceTier: toPriceTier(venue.priceMaxPerPerson),
-        rating: venue.rating == null ? null : Number(venue.rating),
-        ratingCount: venue.ratingCount,
-        distanceKm: locationMode === "ME" ? venue.distanceKm : null,
-        accessibilityFacts: venue.accessibilityFacts,
-        atmosphereTags: venue.atmosphereTags,
-        isSynthetic: venue.isSynthetic,
-      }));
-    return { items, manualFallbackAvailable: true };
+  // Shared catalog query; solo and Duo callers retain their relationship policies.
+  reviewedVenues(query: VenueSearchQueryDto, searchPoint: { latitude: number; longitude: number } | null) {
+    return this.venues.search(query, searchPoint);
   }
 
   async create(input: {
@@ -176,6 +100,26 @@ export class DatePlansService {
     this.policy.assertActiveMatch(input.actor.user.id, match);
     if (Boolean(input.payload.eventId) !== Boolean(input.payload.eventVersion)) {
       throw new AppException(400, ERROR_CODES.VALIDATION_FAILED, "Event id and version are required together");
+    }
+    // A lost response must remain recoverable after the organizer changes or cancels
+    // the listing. Return the original snapshot, but reauthorize the relationship.
+    if (input.payload.eventId && input.payload.idempotencyKey) {
+      await this.events.assertEnabled(input.actor.user.id);
+      const existing = await this.repository.findIdempotent({ matchId: match.id, createdByUserId: input.actor.user.id, idempotencyKey: input.payload.idempotencyKey });
+      if (existing) {
+        if (existing.eventId !== input.payload.eventId || existing.eventVersion !== input.payload.eventVersion) {
+          throw new AppException(409, ERROR_CODES.IDEMPOTENCY_CONFLICT, "Idempotency key belongs to another invitation");
+        }
+        return this.prisma.$transaction(async tx => {
+          await tx.$queryRaw`SELECT id FROM "EventListing" WHERE id = ${existing.eventId}::uuid FOR UPDATE`;
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${mediaPairKey(match.userLowId, match.userHighId)}, 0))`;
+          await tx.$queryRaw`SELECT id FROM "Match" WHERE id = ${match.id}::uuid FOR UPDATE`;
+          await this.events.assertMatchEligible(match.id, input.actor.user.id, tx);
+          const current = await this.repository.findById(existing.id, tx);
+          this.policy.assertPlanParticipant(input.actor.user.id, current);
+          return { datePlan: mapDatePlan(current, input.actor.user.id) };
+        });
+      }
     }
     const event = input.payload.eventId
       ? await this.events.proposal(input.payload.eventId, input.payload.eventVersion!, input.actor.user.id)
@@ -344,6 +288,8 @@ export class DatePlansService {
         await this.events.assertMatchEligible(plan.matchId, input.actor.user.id, tx);
         plan = await this.repository.findById(input.datePlanId, tx);
         this.policy.assertPlanParticipant(input.actor.user.id, plan);
+        const acceptedVersion = plan.proposalVersion;
+        if (plan.status === "ACCEPTED" && plan.responses.some(response => response.userId === input.actor.user.id && response.proposalVersion === acceptedVersion && response.response === "ACCEPTED")) return plan;
       }
       this.policy.assertPlanMatchActive(plan);
       this.policy.assertCanRespond(plan, ["PROPOSED", "COUNTERED"]);
@@ -904,8 +850,8 @@ function assertFutureDate(value: string): void {
   }
 }
 
-function assertSafePlan(payload: Pick<CreateDatePlanDto, "title" | "description" | "activityType">): void {
-  const text = `${payload.title} ${payload.description} ${payload.activityType}`;
+function assertSafePlan(payload: Pick<CreateDatePlanDto, "title" | "description" | "activityType" | "venueName">): void {
+  const text = `${payload.title} ${payload.description} ${payload.activityType} ${payload.venueName ?? ""}`;
   const unsafe = [/\b(home|apartment|flat|hotel)\b/i, /\blong drive\b/i, /\bisolated\b/i, /\b(bar|pub|nightclub)\b/i, /paid companion/i];
   if (unsafe.some((pattern) => pattern.test(text))) {
     throw new AppException(400, ERROR_CODES.DATE_PLAN_UNSAFE_SUGGESTION, "Choose a public, first-date-safe activity");
@@ -936,32 +882,6 @@ function cleanNullable(value: string | null | undefined): string | null {
   if (value == null) return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
-}
-
-type VenueQueryRow = {
-  id: string;
-  name: string;
-  photoUrl: string | null;
-  address: string;
-  publicLocality: string;
-  reviewSource: string | null;
-  reviewedAt: Date | null;
-  operationalStatus: "OPEN" | "CLOSED" | "UNKNOWN";
-  category: VenueCategoryValue | "OTHER";
-  priceMaxPerPerson: number | null;
-  rating: Prisma.Decimal | number | null;
-  ratingCount: number | null;
-  distanceKm: number | null;
-  accessibilityFacts: string[];
-  atmosphereTags: string[];
-  isSynthetic: boolean;
-};
-
-function toPriceTier(priceMaxPerPerson: number | null): "₹" | "₹₹" | "₹₹₹" | null {
-  if (priceMaxPerPerson == null) return null;
-  if (priceMaxPerPerson <= 400) return "₹";
-  if (priceMaxPerPerson <= 900) return "₹₹";
-  return "₹₹₹";
 }
 
 function isUniqueConstraintError(error: unknown): boolean {

@@ -48,7 +48,7 @@ export class ApplyModerationActionDto {
 
 export interface ModerationCaseDto {
   id: string;
-  subjectUserId: string;
+  subjectUserId: string | null;
   sourceReportId: string | null;
   caseType:
     | "USER_REPORT"

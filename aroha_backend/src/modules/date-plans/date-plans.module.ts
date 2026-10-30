@@ -1,3 +1,4 @@
+import { ReviewedVenuesModule } from "./reviewed-venues.module";
 import { EventsModule } from "../events/events.module";
 import { Module } from "@nestjs/common";
 import { AppLogger } from "../../common/logger/app-logger.service";
@@ -10,7 +11,7 @@ import { DatePlanPolicy } from "./domain/date-plans.policy";
 import { DatePlansRepository } from "./infrastructure/date-plans.repository";
 
 @Module({
-  imports: [AnalyticsModule, NotificationsCoreModule, EventsModule],
+  imports: [AnalyticsModule, NotificationsCoreModule, EventsModule, ReviewedVenuesModule],
   controllers: [DatePlansController],
   providers: [
     AppLogger,

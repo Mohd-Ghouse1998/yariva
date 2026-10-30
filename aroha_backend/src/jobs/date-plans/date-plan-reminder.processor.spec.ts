@@ -47,4 +47,16 @@ describe("DatePlanReminderProcessor", () => {
 
     expect(notifications.execute).not.toHaveBeenCalled();
   });
+  it.each(["CANCELLED", "CHANGED", "STALE"])("suppresses reminders for an event that is %s", async state => {
+    const notifications = { execute: jest.fn() };
+    const event = { status: state === "CANCELLED" ? "CANCELLED" : "PUBLISHED", version: state === "CHANGED" ? 2 : 1,
+      verifiedAt: new Date(Date.now() - (state === "STALE" ? 8 : 0) * 86400000) };
+    const processor = new DatePlanReminderProcessor(
+      { datePlan: { findUnique: jest.fn().mockResolvedValue({ ...plan, eventVersion: 1, event }) } } as any,
+      notifications as any, { warn: jest.fn() } as any,
+    );
+    await processor.process({ data: { datePlanId: plan.id, kind: "DATE_REMINDER" } } as any);
+    expect(notifications.execute).not.toHaveBeenCalled();
+  });
+
 });

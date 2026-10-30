@@ -7,6 +7,7 @@ import { Text } from "../ui/Text";
 import { PetalGradient } from "../ui/PetalGradient";
 import { useTheme } from "../../theme/ThemeContext";
 import { controlSize } from "../../theme/spacing";
+import { useLocalization } from "../../localization/LocalizationContext";
 import {
   BOTTOM_NAV_VISUAL_HEIGHT,
   getBottomNavigationMetrics,
@@ -16,7 +17,7 @@ import {
 const TAB_META: Record<string, { label: string; compactLabel?: string; icon: IconName }> = {
   discover: { label: "Discover", icon: "leaf" },
   connections: { label: "Connections", compactLabel: "Connect", icon: "people" },
-  "date-plans": { label: "Meetups", icon: "calendar" },
+  "date-plans": { label: "Events", icon: "calendar" },
   chats: { label: "Chats", icon: "chat" },
   profile: { label: "Profile", icon: "user" },
 };
@@ -30,6 +31,7 @@ const TAB_META: Record<string, { label: string; compactLabel?: string; icon: Ico
 export const FloatingTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
   const insets = useSafeAreaInsets();
   const { palette } = useTheme();
+  const { t } = useLocalization();
   const current = state.routes[state.index];
   const visibility = descriptors[current.key]?.options.tabBarStyle as
     { display?: string } | undefined;
@@ -55,13 +57,14 @@ export const FloatingTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors
       {state.routes.map((route, index) => {
         const focused = state.index === index;
         const meta = TAB_META[route.name] ?? { label: route.name, icon: "compass" as IconName };
+        const label = route.name === "date-plans" ? t("events.title") : meta.label;
         const color = focused ? palette.brandStrong : palette.textMuted;
         return (
           <Pressable
             key={route.key}
             accessibilityRole="tab"
             accessibilityState={{ selected: focused }}
-            accessibilityLabel={meta.label}
+            accessibilityLabel={label}
             onPress={() => {
               const event = navigation.emit({
                 type: "tabPress",
@@ -78,7 +81,7 @@ export const FloatingTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors
               <Icon name={meta.icon} filled={focused} size={21} color={color} />
             </View>
             <Text variant="micro" weight="600" style={[styles.label, { color }]} numberOfLines={1}>
-              {meta.compactLabel ?? meta.label}
+              {meta.compactLabel ?? label}
             </Text>
           </Pressable>
         );

@@ -340,6 +340,7 @@ enum CallEndReason {
 }
 
 enum ReportTargetType {
+  EVENT_LISTING
   USER
   MESSAGE
   PROFILE_PHOTO
@@ -1165,6 +1166,7 @@ model DatePlan {
   @@index([createdByUserId, createdAt])
   @@index([reviewedVenueId])
   @@index([eventId])
+  @@index([eventId, id])
   @@index([status, proposedStartAt])
 }
 
@@ -1186,37 +1188,43 @@ enum EventCategory {
 
 // Curated public listings; saving or inviting never publishes attendance.
 model EventListing {
-  id              String             @id @default(uuid()) @db.Uuid
-  version         Int                @default(1)
-  status          EventListingStatus @default(DRAFT)
-  title           String             @db.VarChar(140)
-  description     String             @db.VarChar(1000)
-  category        EventCategory
-  city            String             @db.VarChar(120)
-  locality        String             @db.VarChar(160)
-  venueName       String             @db.VarChar(200)
-  venueAddress    String             @db.VarChar(500)
-  startsAt        DateTime
-  endsAt          DateTime
-  timezone        String             @db.VarChar(64)
-  priceMinPaise   Int?
-  priceMaxPaise   Int?
-  currency        String             @default("INR") @db.Char(3)
-  sourceUrl       String             @db.VarChar(1024)
-  sourceName      String             @db.VarChar(120)
-  bookingUrl      String?            @db.VarChar(1024)
-  imageUrl        String?            @db.VarChar(1024)
-  imageRights     String?            @db.VarChar(500)
-  verifiedAt      DateTime
-  dedupeKey       String             @unique @db.VarChar(64)
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  saves           SavedEvent[]
-  datePlans       DatePlan[]
+  id            String                                 @id @default(uuid()) @db.Uuid
+  version       Int                                    @default(1)
+  status        EventListingStatus                     @default(DRAFT)
+  title         String                                 @db.VarChar(140)
+  description   String                                 @db.VarChar(1000)
+  category      EventCategory
+  city          String                                 @db.VarChar(120)
+  locality      String                                 @db.VarChar(160)
+  venueName     String                                 @db.VarChar(200)
+  venueAddress  String                                 @db.VarChar(500)
+  startsAt      DateTime                               @db.Timestamptz(3)
+  endsAt        DateTime                               @db.Timestamptz(3)
+  timezone      String                                 @db.VarChar(64)
+  priceMinPaise Int?
+  priceMaxPaise Int?
+  currency      String                                 @default("INR") @db.Char(3)
+  sourceUrl     String                                 @db.VarChar(1024)
+  sourceName    String                                 @db.VarChar(120)
+  bookingUrl    String?                                @db.VarChar(1024)
+  imageUrl      String?                                @db.VarChar(1024)
+  imageRights   String?                                @db.VarChar(500)
+  verifiedAt    DateTime                               @db.Timestamptz(3)
+  dedupeKey     String                                 @unique @db.VarChar(64)
+  createdAt     DateTime                               @default(now())
+  updatedAt     DateTime                               @updatedAt
+  latitude      Decimal?                               @db.Decimal(9, 6)
+  longitude     Decimal?                               @db.Decimal(9, 6)
+  locationPoint Unsupported("geography(Point, 4326)")?
+  changeNotices EventChangeNotice[]
+  reports       Report[]
+  saves         SavedEvent[]
+  datePlans     DatePlan[]
 
   @@unique([sourceUrl, startsAt])
   @@index([status, city, startsAt, id])
   @@index([status, verifiedAt])
+  @@index([createdAt, id])
 }
 
 model SavedEvent {
@@ -1231,8 +1239,10 @@ model SavedEvent {
 }
 
 model ReviewedVenue {
+  version            Int                                    @default(1)
   id                 String                                 @id @default(uuid()) @db.Uuid
   name               String                                 @db.VarChar(200)
+  photoRights        String?                                @db.VarChar(500)
   photoUrl           String?                                @db.VarChar(1024)
   address            String                                 @db.VarChar(500)
   publicLocality     String                                 @db.VarChar(160)
@@ -1265,6 +1275,7 @@ model ReviewedVenue {
   @@index([reviewStatus, operationalStatus, deletedAt])
   @@index([city, publicLocality])
   @@index([rating, ratingCount])
+  @@index([createdAt, id])
 }
 
 model DatePlanResponse {
@@ -1588,7 +1599,7 @@ model Block {
 model Report {
   id                   String           @id @default(uuid()) @db.Uuid
   reporterUserId       String           @db.Uuid
-  reportedUserId       String           @db.Uuid
+  reportedUserId       String?          @db.Uuid
   targetType           ReportTargetType
   reasonCode           ReportReasonCode
   description          String?          @db.VarChar(2000)
@@ -1597,6 +1608,7 @@ model Report {
   targetMessageId      String?          @db.Uuid
   targetPhotoId        String?          @db.Uuid
   targetCallSessionId  String?          @db.Uuid
+  targetEventId        String?          @db.Uuid
   targetPrivateStoryId String?          @db.Uuid
   status               ReportStatus     @default(OPEN)
   dedupeKey            String           @unique @db.VarChar(255)
@@ -1605,13 +1617,14 @@ model Report {
   closedAt             DateTime?
 
   reporter           User             @relation("ReportReporter", fields: [reporterUserId], references: [id], onDelete: Restrict)
-  reported           User             @relation("ReportReported", fields: [reportedUserId], references: [id], onDelete: Restrict)
+  reported           User?            @relation("ReportReported", fields: [reportedUserId], references: [id], onDelete: Restrict)
   targetMatch        Match?           @relation("ReportTargetMatch", fields: [targetMatchId], references: [id], onDelete: SetNull)
   targetConversation Conversation?    @relation("ReportTargetConversation", fields: [targetConversationId], references: [id], onDelete: SetNull)
   targetMessage      Message?         @relation("ReportTargetMessage", fields: [targetMessageId], references: [id], onDelete: SetNull)
   targetPhoto        ProfilePhoto?    @relation("ReportTargetPhoto", fields: [targetPhotoId], references: [id], onDelete: SetNull)
   targetCallSession  CallSession?     @relation("ReportTargetCall", fields: [targetCallSessionId], references: [id], onDelete: SetNull)
   targetPrivateStory PrivateStory?    @relation("ReportTargetPrivateStory", fields: [targetPrivateStoryId], references: [id], onDelete: SetNull)
+  targetEvent        EventListing?    @relation(fields: [targetEventId], references: [id], onDelete: Restrict)
   moderationCases    ModerationCase[]
 
   @@index([reportedUserId, status, createdAt])
@@ -1619,11 +1632,12 @@ model Report {
   @@index([targetMessageId])
   @@index([targetPhotoId])
   @@index([targetPrivateStoryId])
+  @@index([targetEventId])
 }
 
 model ModerationCase {
   id                  String               @id @default(uuid()) @db.Uuid
-  subjectUserId       String               @db.Uuid
+  subjectUserId       String?              @db.Uuid
   sourceReportId      String?              @db.Uuid
   caseType            ModerationCaseType
   priority            ModerationPriority   @default(MEDIUM)
@@ -1637,7 +1651,7 @@ model ModerationCase {
   updatedAt           DateTime             @updatedAt
   closedAt            DateTime?
 
-  subjectUser   User    @relation("ModerationSubject", fields: [subjectUserId], references: [id], onDelete: Restrict)
+  subjectUser   User?   @relation("ModerationSubject", fields: [subjectUserId], references: [id], onDelete: Restrict)
   sourceReport  Report? @relation(fields: [sourceReportId], references: [id], onDelete: SetNull)
   assignedAdmin User?   @relation("ModerationAssignee", fields: [assignedAdminUserId], references: [id], onDelete: SetNull)
 
@@ -1836,4 +1850,18 @@ model AuditLog {
   @@index([actorUserId, createdAt])
   @@index([entityType, entityId])
   @@index([targetUserId, createdAt])
+}
+
+// Durable event-edit fan-out cursor. No attendee/profile data is stored here.
+model EventChangeNotice {
+  id           String @id @default(uuid()) @db.Uuid
+  eventId      String @db.Uuid
+  eventVersion Int
+  status       EventListingStatus
+  afterPlanId  String? @db.Uuid
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  completedAt  DateTime? @db.Timestamptz(3)
+  event        EventListing @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  @@unique([eventId, eventVersion])
+  @@index([completedAt, createdAt, id])
 }

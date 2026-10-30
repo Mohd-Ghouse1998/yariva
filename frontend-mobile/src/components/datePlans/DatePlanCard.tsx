@@ -7,7 +7,8 @@ import { formatDateTime } from "../../utils/format";
 import { Badge } from "../ui/Badge";
 import { Icon } from "../ui/Icon";
 import { Text } from "../ui/Text";
-import { planHasElapsed, planStatusLabel } from "../../features/datePlans/planPresentation";
+import { useLocalization } from "../../localization/LocalizationContext";
+import { planHasElapsed, planNeedsEventReview, planStatusLabel } from "../../features/datePlans/planPresentation";
 
 const STATUS: Record<
   DatePlanDto["status"],
@@ -32,8 +33,11 @@ export const DatePlanCard: React.FC<{
 }> = ({ plan, onPress, personName, personPhoto, viewerUserId, now = Date.now() }) => {
   const { palette } = useTheme();
   const styles = useStyles();
+  const { t } = useLocalization();
   const status = STATUS[plan.status];
+  const needsReview = planNeedsEventReview({ ...plan, startAt: plan.proposedStartAt }, now);
   const waitingForReply =
+    !needsReview &&
     plan.status === "PROPOSED" &&
     !planHasElapsed({ ...plan, startAt: plan.proposedStartAt }, now) &&
     viewerUserId === plan.createdByUserId;
@@ -67,7 +71,7 @@ export const DatePlanCard: React.FC<{
           <Text variant="caption" color="textSecondary" numberOfLines={1} style={styles.title}>
             {personName ? `With ${personName}` : "Meetup plan"}
           </Text>
-          <Badge label={waitingForReply ? "Waiting" : planStatusLabel({ ...plan, startAt: plan.proposedStartAt }, now)} tone={waitingForReply ? "neutral" : status.tone} />
+          <Badge label={waitingForReply ? "Waiting" : planStatusLabel({ ...plan, startAt: plan.proposedStartAt }, now, t)} tone={needsReview ? "warning" : waitingForReply ? "neutral" : status.tone} />
         </View>
       </View>
       <Icon name="chevronRight" size={17} color={palette.textMuted} />

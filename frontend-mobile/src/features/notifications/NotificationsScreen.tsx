@@ -12,6 +12,7 @@ import { Text } from "../../components/ui/Text";
 import { useToast } from "../../components/ui/Toast";
 import { useSafeBack } from "../../navigation/useSafeBack";
 import { useRealtime } from "../../realtime/RealtimeProvider";
+import { useLocalization } from "../../localization/LocalizationContext";
 import { createThemeStyleHook, useTheme } from "../../theme/ThemeContext";
 import type { NotificationDto, NotificationType } from "../../types/notifications";
 import { formatRelativeTime } from "../../utils/format";
@@ -40,6 +41,7 @@ export const NotificationsScreen: React.FC = () => {
   const router = useRouter();
   const goBack = useSafeBack("/(app)/(tabs)/discover");
   const realtime = useRealtime();
+  const { t } = useLocalization();
   const toast = useToast();
   const { palette } = useTheme();
   const styles = useStyles();
@@ -97,11 +99,11 @@ export const NotificationsScreen: React.FC = () => {
       // Invalidate in-flight reads as well as removing already displayed rows.
       requestVersion.current++;
       requestBusyRef.current = false;
-      setItems(current => current.filter(item => item.data?.route !== "private-story"));
+      setItems(current => current.filter(item => !["private-story", "event-plan-change"].includes(String(item.data?.route))));
     };
     const unsubscribe = realtime.onNotification(({ notification }) => {
         if (!activeRef.current) return;
-        if (notification.data?.route === "private-story") {
+        if (["private-story", "event-plan-change"].includes(String(notification.data?.route))) {
           // Recheck the server policy instead of trusting an earlier event.
           void load("refresh");
           return;
@@ -158,7 +160,7 @@ export const NotificationsScreen: React.FC = () => {
       <Pressable
         onPress={() => handlePress(item)}
         accessibilityRole="button"
-        accessibilityLabel={`${unread ? "Unread. " : ""}${notificationDisplayCopy(item).title}. ${notificationDisplayCopy(item).body}`}
+        accessibilityLabel={`${unread ? "Unread. " : ""}${notificationDisplayCopy(item, t).title}. ${notificationDisplayCopy(item, t).body}`}
         style={({ pressed }) => [
           styles.row,
           unread ? styles.rowUnread : null,
@@ -174,10 +176,10 @@ export const NotificationsScreen: React.FC = () => {
         )}
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text variant="bodyStrong" numberOfLines={1} style={{ fontSize: 14 }}>
-            {notificationDisplayCopy(item).title}
+            {notificationDisplayCopy(item, t).title}
           </Text>
           <Text variant="caption" color="textSubdued" numberOfLines={2} style={{ marginTop: 1 }}>
-            {notificationDisplayCopy(item).body}
+            {notificationDisplayCopy(item, t).body}
           </Text>
           <Text variant="micro" color="textSubdued" style={{ marginTop: 3 }}>
             {formatRelativeTime(item.createdAt)}

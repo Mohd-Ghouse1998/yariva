@@ -1,3 +1,4 @@
+import { EventsService } from "../../events/events.service";
 import { Injectable } from "@nestjs/common";
 import { ERROR_CODES } from "../../../common/constants/error-codes";
 import { AppException } from "../../../common/errors/app.exception";
@@ -63,6 +64,7 @@ export class CreateReportService {
     private readonly trustScoreService: RecomputeTrustScoreService,
     private readonly domainEventPublisher: DomainEventPublisher,
     private readonly privateStories: PrivateStoriesService,
+    private readonly events: EventsService,
   ) {}
 
   async execute(input: {
@@ -70,15 +72,19 @@ export class CreateReportService {
     payload: CreateReportDto;
     metadata: ReportActionMetadata;
   }): Promise<CreateReportResponseDto> {
+    if (input.payload.targetType !== "EVENT_LISTING" && !input.payload.reportedUserId) throw invalidTarget();
+    const reportedUserId = input.payload.targetType === "EVENT_LISTING" ? null : input.payload.reportedUserId ?? null;
+    if (input.payload.targetType === "EVENT_LISTING" && (input.payload.reportedUserId || input.payload.targetMatchId || input.payload.targetMessageId || input.payload.targetPhotoId || input.payload.targetConversationId || input.payload.targetCallSessionId || input.payload.targetPrivateStoryId)) throw invalidTarget();
+    if (input.payload.targetType !== "EVENT_LISTING" && input.payload.targetEventId) throw invalidTarget();
     this.reportPolicyService.assertCanReport({
       reporterUserId: input.actor.user.id,
-      reportedUserId: input.payload.reportedUserId,
+      reportedUserId,
     });
 
     const targetId = await this.validateTarget(input.actor.user.id, input.payload);
     const dedupeKey = this.deduplicationService.buildDedupeKey({
       reporterUserId: input.actor.user.id,
-      reportedUserId: input.payload.reportedUserId,
+      reportedUserId,
       targetType: input.payload.targetType,
       targetId,
       reasonCode: input.payload.reasonCode,
@@ -87,10 +93,11 @@ export class CreateReportService {
     const result = await this.prisma.$transaction(async (tx) => {
       const reportResult = await this.reportRepository.createOrGet(tx, {
         reporterUserId: input.actor.user.id,
-        reportedUserId: input.payload.reportedUserId,
+        reportedUserId,
         targetType: input.payload.targetType,
         reasonCode: input.payload.reasonCode,
         description: input.payload.description ?? null,
+        targetEventId: input.payload.targetEventId ?? null,
         targetMatchId: input.payload.targetMatchId ?? null,
         targetConversationId: input.payload.targetConversationId ?? null,
         targetMessageId: input.payload.targetMessageId ?? null,
@@ -105,7 +112,7 @@ export class CreateReportService {
       if (reportResult.created) {
         await tx.moderationCase.create({
           data: {
-            subjectUserId: input.payload.reportedUserId,
+            subjectUserId: reportedUserId,
             sourceReportId: reportResult.report.id,
             caseType:
               input.payload.targetType === "MESSAGE"
@@ -135,7 +142,7 @@ export class CreateReportService {
           action: "report.create",
           entityType: "Report",
           entityId: reportResult.report.id,
-          targetUserId: input.payload.reportedUserId,
+          targetUserId: reportedUserId,
           ipAddress: input.metadata.ipAddress,
           userAgent: input.metadata.userAgent,
           metadata: {
@@ -153,7 +160,7 @@ export class CreateReportService {
       };
     });
 
-    await this.trustScoreService.execute(input.payload.reportedUserId);
+    if (reportedUserId) await this.trustScoreService.execute(reportedUserId);
     await this.domainEventPublisher.publishSafely(REPORT_EVENTS.CREATED, {
       reportId: result.report.id,
       reporterUserId: result.report.reporterUserId,
@@ -172,9 +179,15 @@ export class CreateReportService {
     reporterUserId: string,
     payload: CreateReportDto,
   ): Promise<string> {
-    const reportedUser = await this.targetRepository.findUser(
-      payload.reportedUserId,
-    );
+    if (payload.targetType === "EVENT_LISTING") {
+      if (!payload.targetEventId) throw invalidTarget();
+      await this.events.assertEnabled(reporterUserId);
+      const event = await this.prisma.eventListing.findUnique({ where: { id: payload.targetEventId } });
+      if (!event || !["PUBLISHED", "CANCELLED"].includes(event.status)) throw invalidTarget();
+      return event.id;
+    }
+    if (!payload.reportedUserId) throw invalidTarget();
+    const reportedUser = await this.targetRepository.findUser(payload.reportedUserId);
     if (!reportedUser || reportedUser.deletedAt) {
       throw new AppException(
         400,
@@ -218,7 +231,7 @@ export class CreateReportService {
     if (
       !message ||
       message.senderId !== payload.reportedUserId ||
-      !conversationIncludes(message.conversation, reporterUserId, payload.reportedUserId)
+      !conversationIncludes(message.conversation, reporterUserId, payload.reportedUserId ?? "")
     ) {
       throw invalidTarget();
     }
@@ -248,7 +261,7 @@ export class CreateReportService {
     );
     if (
       !conversation ||
-      !conversationIncludes(conversation, reporterUserId, payload.reportedUserId)
+      !conversationIncludes(conversation, reporterUserId, payload.reportedUserId ?? "")
     ) {
       throw invalidTarget();
     }
@@ -269,7 +282,7 @@ export class CreateReportService {
         match.userLowId,
         match.userHighId,
         reporterUserId,
-        payload.reportedUserId,
+        payload.reportedUserId ?? "",
       )
     ) {
       throw invalidTarget();
@@ -291,7 +304,7 @@ export class CreateReportService {
         call.initiatorUserId,
         call.receiverUserId,
         reporterUserId,
-        payload.reportedUserId,
+        payload.reportedUserId ?? "",
       )
     ) {
       throw invalidTarget();
@@ -303,7 +316,7 @@ export class CreateReportService {
     if (!payload.targetPrivateStoryId) throw invalidTarget();
     // Reuse the Story's full, fail-closed read policy instead of relying on a
     // stale client audience or the mere existence of a grant.
-    try { await this.privateStories.assertReportable(reporterUserId, payload.targetPrivateStoryId, payload.reportedUserId); }
+    try { await this.privateStories.assertReportable(reporterUserId, payload.targetPrivateStoryId, payload.reportedUserId ?? ""); }
     catch { throw invalidTarget(); }
     return payload.targetPrivateStoryId;
   }
@@ -314,6 +327,7 @@ export function mapReport(report: Report): ReportDto {
     id: report.id,
     reporterUserId: report.reporterUserId,
     reportedUserId: report.reportedUserId,
+    targetEventId: report.targetEventId,
     targetType: report.targetType,
     reasonCode: report.reasonCode,
     description: report.description,

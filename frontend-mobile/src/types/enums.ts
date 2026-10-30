@@ -168,6 +168,7 @@ export const CALL_END_REASON = [
 export type CallEndReason = (typeof CALL_END_REASON)[number];
 
 export const REPORT_TARGET_TYPE = [
+  "EVENT_LISTING",
   "USER",
   "MESSAGE",
   "PROFILE_PHOTO",

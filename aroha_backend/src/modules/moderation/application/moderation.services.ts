@@ -320,9 +320,12 @@ export class ApplyModerationActionService {
       );
     }
 
+    if (!existing.subjectUserId && input.action !== "NOTE_ONLY") {
+      throw new AppException(409, ERROR_CODES.CONFLICT, "Curate the reported event instead of applying an account action");
+    }
     const now = new Date();
     const moderationCase = await this.prisma.$transaction(async (tx) => {
-      await this.accountActionService.apply(tx, {
+      if (existing.subjectUserId) await this.accountActionService.apply(tx, {
         userId: existing.subjectUserId,
         action: input.action,
         now,
@@ -341,6 +344,7 @@ export class ApplyModerationActionService {
         action: input.action,
         actionNotes: input.actionNotes ?? null,
         findings: {
+          ...(existing.findings && typeof existing.findings === "object" && !Array.isArray(existing.findings) ? existing.findings : {}),
           actionAppliedAt: now.toISOString(),
           appliedByUserId: input.actor.user.id,
         },
@@ -368,16 +372,18 @@ export class ApplyModerationActionService {
       return updated;
     });
 
-    await this.trustScoreService.execute(moderationCase.subjectUserId);
-    await this.notificationService.execute({
-      userId: moderationCase.subjectUserId,
-      actorUserId: input.actor.user.id,
-      type: "MODERATION_ACTION",
-      title: "Account notice",
-      body: "A moderation action was applied to your account.",
-      data: { caseId: moderationCase.id, action: input.action },
-      dedupeKey: ["MODERATION_ACTION", moderationCase.id, input.action].join(":"),
-    });
+    if (moderationCase.subjectUserId) {
+      await this.trustScoreService.execute(moderationCase.subjectUserId);
+      await this.notificationService.execute({
+        userId: moderationCase.subjectUserId,
+        actorUserId: input.actor.user.id,
+        type: "MODERATION_ACTION",
+        title: "Account notice",
+        body: "A moderation action was applied to your account.",
+        data: { caseId: moderationCase.id, action: input.action },
+        dedupeKey: ["MODERATION_ACTION", moderationCase.id, input.action].join(":"),
+      });
+    }
     await this.domainEventPublisher.publishSafely(
       MODERATION_EVENTS.ACTION_APPLIED,
       {

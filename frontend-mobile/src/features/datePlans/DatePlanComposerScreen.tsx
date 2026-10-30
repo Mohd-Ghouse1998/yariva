@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { eventsApi } from "../../api/endpoints/events";
 import { datePlansApi } from "../../api/endpoints/datePlans";
 import { duoPlansApi } from "../../api/endpoints/duoPlans";
 import { matchesApi } from "../../api/endpoints/matches";
@@ -52,9 +53,10 @@ export const DatePlanComposerScreen: React.FC = () => {
   const { palette } = useTheme();
   const styles = useStyles();
   const router = useRouter();
-  const goBack = useSafeBack("/(app)/(tabs)/date-plans");
+  const goBack = useSafeBack("/(app)/date-plan");
   const toast = useToast();
   const params = useLocalSearchParams<{
+    reviewedVenueId?: string;
     matchId?: string | string[];
     conversationId?: string;
     counterPlanId?: string;
@@ -167,7 +169,7 @@ export const DatePlanComposerScreen: React.FC = () => {
   }, [matchId]);
 
   useEffect(() => {
-    if (!hasSubject) return;
+    if (!hasSubject || step !== 1) return;
     const timer = setTimeout(
       () => {
         void loadVenues(category, searchInput, locationMode, area);
@@ -175,7 +177,20 @@ export const DatePlanComposerScreen: React.FC = () => {
       searchInput.trim() ? 250 : 0,
     );
     return () => clearTimeout(timer);
-  }, [area, category, loadVenues, locationMode, hasSubject, searchInput]);
+  }, [area, category, loadVenues, locationMode, hasSubject, searchInput, step]);
+
+  useEffect(() => {
+    if (!params.reviewedVenueId || !hasSubject) return;
+    let active = true;
+    void eventsApi.place(params.reviewedVenueId).then(venue => {
+      if (!active) return;
+      setSelectedVenue(venue); setVenues([venue]);
+      setCategory(venue.category === "RESTAURANT" ? "RESTAURANT" : "CAFE");
+      setArea(venue.publicLocality); setLocationMode("AREA");
+      setStep(2);
+    }).catch(() => { if (active) setSearchError("This reviewed place is no longer available. Choose another place."); });
+    return () => { active = false; };
+  }, [hasSubject, params.reviewedVenueId]);
 
   const chooseCategory = (value: VenueCategory) => {
     setCategory(value);

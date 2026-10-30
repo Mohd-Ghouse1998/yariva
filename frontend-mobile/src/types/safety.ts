@@ -22,7 +22,8 @@ export interface CreateBlockRequest {
 export interface ReportDto {
   id: string;
   reporterUserId: string;
-  reportedUserId: string;
+  reportedUserId: string | null;
+  targetEventId?: string | null;
   targetType: ReportTargetType;
   reasonCode: ReportReasonCode;
   description: string | null;
@@ -38,7 +39,7 @@ export interface ReportPageDto {
 
 export interface CreateReportRequest {
   targetType: ReportTargetType;
-  reportedUserId: string;
+  reportedUserId?: string | null;
   reasonCode: ReportReasonCode;
   description?: string | null;
   targetMatchId?: string | null;
@@ -46,6 +47,7 @@ export interface CreateReportRequest {
   targetMessageId?: string | null;
   targetPhotoId?: string | null;
   targetCallSessionId?: string | null;
+  targetEventId?: string;
   targetPrivateStoryId?: string | null;
 }
 

@@ -1,4 +1,4 @@
-import { curateEventData, eventUnavailable, publicHttpsUrl } from "./events.policy";
+import { curateEventData, eventUnavailable, isActiveAdult, publicHttpsUrl } from "./events.policy";
 import type { CurateEventDto } from "./events.dto";
 
 describe("curated event policy", () => {
@@ -18,7 +18,7 @@ describe("curated event policy", () => {
     expect(first.dedupeKey).toBe(second.dedupeKey);
     expect(first.priceMinPaise).toBeNull();
   });
-  it.each(["http://example.com", "https://127.0.0.1/x", "https://[::1]/", "https://host.local/", "https://user:pass@example.com", "https://example.com:8443"])("rejects unsafe source %s", (url) => {
+  it.each(["http://example.com", "https://127.0.0.1/x", "https://[::1]/", "https://host.local/", "https://localhost./", "https://host.local./", "https://host.internal/", "https://user:pass@example.com", "https://example.com:8443"])("rejects unsafe source %s", (url) => {
     expect(() => publicHttpsUrl(url)).toThrow();
   });
   it.each([
@@ -35,5 +35,13 @@ describe("curated event policy", () => {
     expect(eventUnavailable({ ...event, status: "CANCELLED" }, now)).toBe(true);
     expect(eventUnavailable(event, event.startsAt)).toBe(true);
     expect(eventUnavailable({ ...event, verifiedAt: new Date("2026-10-20") }, now)).toBe(true);
+  });
+  it("shares exact UTC adult eligibility between discovery and private event notices", () => {
+    const user = { status: "ACTIVE", deletedAt: null, profile: { dateOfBirth: new Date("2008-10-29T00:00:00Z") } };
+    expect(isActiveAdult(user, new Date("2026-10-28T23:59:59.999Z"))).toBe(false);
+    expect(isActiveAdult(user, new Date("2026-10-29T00:00:00Z"))).toBe(true);
+    expect(isActiveAdult({ ...user, profile: null }, now)).toBe(false);
+    expect(isActiveAdult({ ...user, status: "RESTRICTED" }, now)).toBe(false);
+    expect(isActiveAdult({ ...user, deletedAt: now }, now)).toBe(false);
   });
 });

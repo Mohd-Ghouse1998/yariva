@@ -1,0 +1,66 @@
+Yariva Events follow-up verification — 2026-10-29 UTC
+Base commit: 8e13de6a7ffad9fec7e1c962ed68d0c95b39fb8c (ancestor verified)
+Isolated PostgreSQL/PostGIS + Redis project: yariva_events_test
+Synthetic TEST data only; no production deployment or provider signup.
+
+Backend typecheck
+> aroha-backend@0.1.0 lint
+> tsc --noEmit --pretty false
+
+Backend build
+> aroha-backend@0.1.0 build
+> nest build
+
+Backend unit tests
+Test Suites: 46 passed, 46 total
+Tests:       236 passed, 236 total
+Snapshots:   0 total
+
+Mobile typecheck
+> yariva-mobile@0.3.0 typecheck
+> tsc --noEmit
+
+Mobile lint
+> yariva-mobile@0.3.0 lint
+> eslint "**/*.{ts,tsx}"
+
+Mobile tests
+ Test Files  61 passed (61)
+      Tests  362 passed (362)
+
+Events live HTTP/PostGIS integration
+Test Suites: 2 passed, 2 total
+Tests:       17 passed, 17 total
+Snapshots:   0 total
+
+Prisma schema validation
+The schema at prisma/schema.prisma is valid 🚀
+
+Prisma migrations
+Datasource "db": PostgreSQL database "aroha_live", schema "public" at "127.0.0.1:55432"
+34 migrations found in prisma/migrations
+Database schema is up to date!
+
+Real outbox/Redis/browser flow
+Invitation detail reached: True
+Private event notice records: 20
+Private outbox -> Redis -> open plan refresh without reload: passed
+Organizer edit to plan review and latest event: passed
+My plans and Duo entry: passed
+Reviewed-place selection to existing planner: passed
+Dark/compact/offline browser states: passed
+Errors: []
+
+Hindi/Telugu compact browser flow
+Invitation detail reached: True
+Organizer edit to plan review and latest event: passed
+My plans and Duo entry: passed
+Reviewed-place selection to existing planner: passed
+Dark/compact/offline browser states: passed
+Hindi/Telugu Events navigation and compact layouts: passed
+Errors: []
+
+Not verified: physical Android/iOS, native accessibility/large text/permissions/media/cache, populated Duo native flows, native-speaker approval, actual APNs/FCM receipt and legitimate pilot supply.
+Storage matrix blocker: pinned quay.io/minio/minio:RELEASE.2025-07-23T15-54-02Z returned registry unauthorized; network/TLS/checksum checks were not bypassed.
+Push revocation integration uses a mocked transport; no provider delivery is claimed.
+The existing implementation progress tracker is the source of acceptance status.

@@ -1,3 +1,5 @@
+import planningConfig from "../config/planning.config";
+import { EventNoticesModule } from "../modules/events/event-notices.module";
 import { Module } from "@nestjs/common";
 import { ActivityModule } from "../modules/activity/activity.module";
 import { WeeklyRecapProcessor } from "./activity/weekly-recap.processor";
@@ -42,12 +44,14 @@ import { PrivateStoryCleanupProcessor } from "./private-stories/private-story-cl
 
 @Module({
   imports: [
+    EventNoticesModule,
     ActivityModule,
     BlindModule,
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
       load: [
+        planningConfig,
         appConfig,
         authConfig,
         databaseConfig,

@@ -1,5 +1,6 @@
 import type { Href } from "expo-router";
 import type { NotificationDto } from "../../types/notifications";
+import type { EventTranslator } from "../events/eventPresentation";
 
 const DATE_NOTIFICATION_TYPES = new Set<NotificationDto["type"]>([
   "DATE_PROPOSED",
@@ -16,7 +17,10 @@ const stringValue = (value: unknown): string | null =>
 
 /** Legacy stored product notifications may predate the public Duo name.
  * Scope replacement to Duo system events; never rewrite user messages/routes. */
-export const notificationDisplayCopy = (notification: Pick<NotificationDto, "type" | "data" | "title" | "body">) => {
+export const notificationDisplayCopy = (notification: Pick<NotificationDto, "type" | "data" | "title" | "body">, t?: EventTranslator) => {
+  if (t && notification.data?.route === "event-plan-change" && ["DATE_CHANGED", "DATE_CANCELLED"].includes(notification.type)) {
+    return { title: t(notification.type === "DATE_CHANGED" ? "events.notice.changed" : "events.notice.unavailable"), body: t("events.notice.body") };
+  }
   const duo = notification.type === "SYSTEM" &&
     Boolean(stringValue(notification.data?.partyId) || stringValue(notification.data?.pairMatchId));
   return {

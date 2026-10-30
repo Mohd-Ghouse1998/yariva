@@ -1,7 +1,8 @@
-import { useLocalSearchParams } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  AppState,
   Alert,
   Linking,
   Pressable,
@@ -26,6 +27,7 @@ import { Icon } from "../../components/ui/Icon";
 import { Input } from "../../components/ui/Input";
 import { Text } from "../../components/ui/Text";
 import { useToast } from "../../components/ui/Toast";
+import { useLocalization } from "../../localization/LocalizationContext";
 import { useSafeBack } from "../../navigation/useSafeBack";
 import { createThemeStyleHook, useTheme } from "../../theme/ThemeContext";
 import { controlSize, layout, radius, spacing } from "../../theme/spacing";
@@ -50,8 +52,9 @@ import {
   type QuickMeetupTime,
 } from "./datePlanLogic";
 
-import { canCancelPlan, canRespondToPlan, planStatusLabel } from "./planPresentation";
+import { canCancelPlan, canRespondToPlan, planNeedsEventReview, planStatusLabel } from "./planPresentation";
 import { useCurrentTime } from "../../hooks/useCurrentTime";
+import { useRealtime } from "../../realtime/RealtimeProvider";
 
 const CATEGORIES: Array<{ value: VenueCategory; label: string; query: string }> = [
   { value: "CAFE", label: "Café", query: "cafes" },
@@ -62,7 +65,10 @@ const CATEGORIES: Array<{ value: VenueCategory; label: string; query: string }> 
 export const DatePlanDetailScreen: React.FC = () => {
   const { palette } = useTheme();
   const styles = useStyles();
-  const goBack = useSafeBack("/(app)/(tabs)/date-plans");
+  const { t } = useLocalization();
+  const realtime = useRealtime();
+  const router = useRouter();
+  const goBack = useSafeBack("/(app)/date-plan");
   const now = useCurrentTime();
   const toast = useToast();
   const { user } = useAuth();
@@ -90,6 +96,7 @@ export const DatePlanDetailScreen: React.FC = () => {
   const [safetyOpen, setSafetyOpen] = useState(false);
   const loadSequence = useRef(0);
   const mutationLock = useRef(false);
+  const active = useRef(false);
 
   const loadVenues = useCallback(
     async (
@@ -119,6 +126,7 @@ export const DatePlanDetailScreen: React.FC = () => {
   );
 
   const load = useCallback(async () => {
+    if (!active.current) return;
     const requestId = ++loadSequence.current;
     if (!datePlanId) {
       setPlan(null);
@@ -154,19 +162,37 @@ export const DatePlanDetailScreen: React.FC = () => {
     }
   }, [datePlanId]);
 
-  useEffect(() => {
-    void load();
-    return () => {
+  useFocusEffect(useCallback(() => {
+    active.current = AppState.currentState === "active";
+    if (active.current) void load();
+    const invalidate = () => {
       loadSequence.current += 1;
+      setPlan(null); setPersonPhoto(null); setPersonName("your match");
+      setTimeEditorOpen(false); setPlaceEditorOpen(false); setSafetyOpen(false);
     };
-  }, [load]);
+    const unsubscribe = realtime.onNotification(({ notification }) => {
+      if (active.current && notification.data?.route === "event-plan-change" && notification.data.datePlanId === datePlanId) {
+        invalidate(); void load();
+      }
+    });
+    const listener = AppState.addEventListener("change", state => {
+      active.current = state === "active";
+      if (active.current) void load();
+      else invalidate();
+    });
+    return () => {
+      active.current = false; listener.remove(); unsubscribe(); invalidate();
+    };
+  }, [load, realtime, datePlanId]));
 
   const mutate = async (action: () => Promise<DatePlanDto>, success: string): Promise<boolean> => {
     if (mutationLock.current) return false;
     mutationLock.current = true;
+    const requestId = loadSequence.current;
     setBusy(true);
     try {
       const updated = await action();
+      if (requestId !== loadSequence.current || !active.current) return false;
       setPlan(updated);
       toast.show(success, "success");
       return true;
@@ -353,9 +379,9 @@ export const DatePlanDetailScreen: React.FC = () => {
               </Text>
             </View>
             <Badge
-              label={planStatusLabel({ ...plan, startAt: plan.proposedStartAt }, now)}
+              label={planStatusLabel({ ...plan, startAt: plan.proposedStartAt }, now, t)}
               tone={
-                plan.status === "ACCEPTED" || plan.status === "COMPLETED"
+                planNeedsEventReview(schedule, now) ? "warning" : plan.status === "ACCEPTED" || plan.status === "COMPLETED"
                   ? "success"
                   : plan.status === "CANCELLED" || plan.status === "DECLINED"
                     ? "neutral"
@@ -409,10 +435,11 @@ export const DatePlanDetailScreen: React.FC = () => {
 
         {plan.eventChanged || plan.eventUnavailable ? (
           <Card>
-            <Text variant="bodyStrong">{plan.eventUnavailable ? "Event unavailable" : "Event details changed"}</Text>
+            <Text variant="bodyStrong">{t(plan.eventUnavailable ? "events.plan.unavailable" : "events.plan.changed")}</Text>
             <Text variant="body" color="textSubdued">
-              This plan keeps the details you originally reviewed. Check the event source and discuss changes in chat before meeting.
+              {t("events.plan.snapshot.hint")}
             </Text>
+            {plan.eventId ? <Button label={t("events.review.latest")} variant="secondary" onPress={() => router.push({ pathname: "/(app)/events/[eventId]", params: { eventId: plan.eventId! } })} /> : null}
           </Card>
         ) : null}
 

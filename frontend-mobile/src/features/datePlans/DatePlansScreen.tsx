@@ -1,14 +1,16 @@
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Modal, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { AppState, Modal, Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { datePlansApi } from "../../api/endpoints/datePlans";
-import { eventsApi } from "../../api/endpoints/events";
+import { conversationsApi } from "../../api/endpoints/conversations";
+import type { ConversationSummaryDto } from "../../types/conversation";
+import { useLocalization } from "../../localization/LocalizationContext";
+import { useSafeBack } from "../../navigation/useSafeBack";
 import { matchesApi } from "../../api/endpoints/matches";
 import { useAuth } from "../../auth/AuthContext";
 import { DatePlanCard } from "../../components/datePlans";
 import { SegmentedControl } from "../../components/dating";
-import { TabHeader } from "../../components/layout/TabHeader";
 import { useBottomNavigationInset } from "../../components/navigation/bottomNavigation";
 import { Button } from "../../components/ui/Button";
 import { Avatar } from "../../components/ui/Avatar";
@@ -23,11 +25,16 @@ import { createThemeStyleHook, useTheme } from "../../theme/ThemeContext";
 import type { DatePlanDto } from "../../types/datePlan";
 import type { MatchSummaryDto } from "../../types/match";
 import { useCurrentTime } from "../../hooks/useCurrentTime";
+import { useRealtime } from "../../realtime/RealtimeProvider";
 import { Header } from "../../components/layout/Header";
 import { planView, type PlanView } from "./planPresentation";
 
 export const DatePlansScreen: React.FC = () => {
   const router = useRouter();
+  const { reviewedVenueId } = useLocalSearchParams<{ reviewedVenueId?: string }>();
+  const { t } = useLocalization();
+  const realtime = useRealtime();
+  const goBack = useSafeBack("/(app)/(tabs)/date-plans");
   const { user } = useAuth();
   const { palette } = useTheme();
   const styles = useStyles();
@@ -38,23 +45,28 @@ export const DatePlansScreen: React.FC = () => {
   const [plans, setPlans] = useState<DatePlanDto[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
   const [matches, setMatches] = useState<MatchSummaryDto[]>([]);
-  const [matchPickerOpen, setMatchPickerOpen] = useState(false);
+  const [matchPickerOpen, setMatchPickerOpen] = useState(Boolean(reviewedVenueId));
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [matchQuery, setMatchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [eventsEnabled, setEventsEnabled] = useState(false);
+  const [duoOpen, setDuoOpen] = useState(false);
+  const [duoChats, setDuoChats] = useState<ConversationSummaryDto[]>([]);
+  const [duoCursor, setDuoCursor] = useState<string | null>(null);
+  const [duoError, setDuoError] = useState(false);
+  const [duoBusy, setDuoBusy] = useState(false);
+  const duoPending = useRef(false);
+  const duoSequence = useRef(0);
+  const [matchesLoading, setMatchesLoading] = useState(true);
+  const [matchesError, setMatchesError] = useState(false);
   const requestSequence = useRef(0);
+  const active = useRef(false);
 
   const load = useCallback(async (mode: "initial" | "refresh") => {
+    if (!active.current) return;
     const requestId = ++requestSequence.current;
     mode === "initial" ? setLoading(true) : setRefreshing(true);
-    void eventsApi.status().then((status) => {
-      if (requestId === requestSequence.current) setEventsEnabled(status.enabled);
-    }).catch(() => {
-      if (requestId === requestSequence.current) setEventsEnabled(false);
-    });
     try {
       const planPage = await datePlansApi.listMine({ limit: 30 });
       if (requestId !== requestSequence.current) return;
@@ -65,6 +77,8 @@ export const DatePlansScreen: React.FC = () => {
 
       // Names decorate the plan cards, but plans remain fully usable if this
       // optional request is unavailable or slower than the plan endpoint.
+      setMatchesLoading(true);
+      setMatchesError(false);
       void matchesApi
         .list({ limit: 30 })
         .then((matchPage) => {
@@ -76,7 +90,8 @@ export const DatePlansScreen: React.FC = () => {
             ),
           );
         })
-        .catch(() => undefined);
+        .catch(() => { if (requestId === requestSequence.current) setMatchesError(true); })
+        .finally(() => { if (requestId === requestSequence.current) setMatchesLoading(false); });
     } catch {
       if (requestId !== requestSequence.current) return;
       setError("Check your connection and try loading your meetups again.");
@@ -87,12 +102,43 @@ export const DatePlansScreen: React.FC = () => {
 
   useFocusEffect(
     useCallback(() => {
-      void load("initial");
-      return () => {
-        requestSequence.current += 1;
+      active.current = AppState.currentState === "active";
+      if (active.current) void load("initial");
+      const invalidate = () => {
+        requestSequence.current += 1; duoSequence.current += 1; duoPending.current = false;
+        setPlans([]); setMatches([]); setNames({}); setDuoChats([]); setSelectedMatchId(null);
+        setMatchPickerOpen(false); setDuoOpen(false);
       };
-    }, [load]),
+      const unsubscribe = realtime.onNotification(({ notification }) => {
+        if (active.current && notification.data?.route === "event-plan-change") {
+          invalidate(); void load("refresh");
+        }
+      });
+      const listener = AppState.addEventListener("change", state => {
+        active.current = state === "active";
+        if (active.current) void load("refresh");
+        else invalidate();
+      });
+      return () => {
+        active.current = false; listener.remove(); unsubscribe(); invalidate();
+      };
+    }, [load, realtime]),
   );
+
+  async function loadDuo(next?: string) {
+    if (duoPending.current) return;
+    duoPending.current = true;
+    const request = ++duoSequence.current;
+    setDuoBusy(true); setDuoError(false);
+    try {
+      const page = await conversationsApi.list({ cursor: next, limit: 30 });
+      if (request !== duoSequence.current) return;
+      const groups = page.items.filter(chat => chat.kind === "DUO" && chat.status === "ACTIVE");
+      setDuoChats(previous => next ? [...previous, ...groups.filter(chat => !previous.some(old => old.id === chat.id))] : groups);
+      setDuoCursor(page.nextCursor);
+    } catch { if (request === duoSequence.current) setDuoError(true); }
+    finally { if (request === duoSequence.current) { duoPending.current = false; setDuoBusy(false); } }
+  }
 
   const grouped = useMemo(
     () => ({
@@ -141,7 +187,7 @@ export const DatePlansScreen: React.FC = () => {
             <Text variant="caption" color="textSubdued">
               Who would you like to plan a meetup with?
             </Text>
-            {matches.length > 0 ? (
+            {matchesLoading ? <Text variant="body" color="textSubdued">Loading matches…</Text> : matchesError ? <Button label="Retry matches" onPress={() => void load("refresh")} /> : matches.length > 0 ? (
               <>
                 <Input
                   value={matchQuery}
@@ -187,7 +233,7 @@ export const DatePlansScreen: React.FC = () => {
                   onPress={() => {
                     if (!selectedMatchId) return;
                     setMatchPickerOpen(false);
-                    router.push({ pathname: "/(app)/date-plan/new", params: { matchId: selectedMatchId } });
+                    router.push({ pathname: "/(app)/date-plan/new", params: { matchId: selectedMatchId, reviewedVenueId } });
                   }}
                 />
               </>
@@ -213,9 +259,9 @@ export const DatePlansScreen: React.FC = () => {
   return (
     <View style={styles.screen}>
       <SafeAreaView edges={["top", "left", "right"]} style={styles.safe}>
-        <TabHeader
-          title="Meetups"
-          right={
+        <Header showBack onLeftPress={goBack}
+          title={t("events.myPlans")}
+          rightSlot={
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Plan a meetup"
@@ -254,17 +300,15 @@ export const DatePlansScreen: React.FC = () => {
             />
           }
         >
-          {eventsEnabled ? <Pressable accessibilityRole="button" accessibilityLabel="Explore events nearby"
-            onPress={() => router.push("/(app)/events")}>
-            <Card style={styles.refreshError}>
-              <Icon name="calendar" size={22} color={palette.brandStrong} />
-              <View style={styles.errorCopy}>
-                <Text variant="bodyStrong">Events around you</Text>
-                <Text variant="caption" color="textSubdued">Find something to enjoy with a match</Text>
-              </View>
-              <Icon name="chevronRight" size={18} color={palette.textMuted} />
-            </Card>
-          </Pressable> : null}
+          <Button label={t("events.duoPlans")} variant="secondary" onPress={() => { setDuoOpen(value => !value); if (!duoOpen) void loadDuo(); }} />
+          {duoOpen ? <View style={styles.planList}>
+            {duoBusy ? <Text variant="body" color="textSubdued">Loading plans…</Text> : null}
+            {duoError ? <Button label={t("events.duoError")} variant="ghost" onPress={() => void loadDuo()} /> : null}
+            {!duoBusy && !duoError && !duoChats.length ? <Text variant="body" color="textSubdued">{t("events.duoEmpty")}</Text> : null}
+            {duoChats.map(chat => <Button key={chat.id} label={chat.participants.map(person => person.displayName).join(" · ")}
+              variant="secondary" onPress={() => router.push({ pathname: "/(app)/duo-plans/[conversationId]", params: { conversationId: chat.id } })} />)}
+            {duoCursor ? <Button label={t("events.duoMore")} variant="ghost" disabled={duoBusy} onPress={() => void loadDuo(duoCursor)} /> : null}
+          </View> : null}
           {error && plans.length > 0 ? (
             <Card style={styles.refreshError}>
               <View style={styles.errorCopy}>

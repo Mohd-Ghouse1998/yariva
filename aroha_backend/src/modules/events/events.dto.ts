@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsIn, IsInt, IsISO8601, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
+import { IsIn, IsInt, IsISO8601, IsNotEmpty, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
 
 export const EVENT_CATEGORIES = ["CULTURE", "MUSIC", "FOOD", "OUTDOORS", "WORKSHOP", "COMMUNITY"] as const;
 export type EventCategoryValue = typeof EVENT_CATEGORIES[number];
@@ -13,11 +13,14 @@ export class EventQueryDto {
   @IsOptional() @IsISO8601({ strict: true }) until?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(0) @Max(100000000) maxPricePaise?: number;
   @IsOptional() @IsIn(["true", "false"]) saved?: string;
-  @IsOptional() @IsString() @MaxLength(512) cursor?: string;
+  @IsOptional() @Type(() => Number) @IsNumber() @Min(-90) @Max(90) latitude?: number;
+  @IsOptional() @Type(() => Number) @IsNumber() @Min(-180) @Max(180) longitude?: number;
+  @IsOptional() @IsString() @MaxLength(1024) cursor?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(50) limit?: number;
 }
 
 export class AdminEventQueryDto {
+  @IsOptional() @IsString() @MaxLength(1024) cursor?: string;
   @IsString() @IsNotEmpty() @MaxLength(120) city!: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(50) limit?: number;
 }
@@ -43,5 +46,7 @@ export class CurateEventDto {
   @IsOptional() @IsString() @MaxLength(1024) bookingUrl?: string | null;
   @IsOptional() @IsString() @MaxLength(1024) imageUrl?: string | null;
   @IsOptional() @IsString() @MaxLength(500) imageRights?: string | null;
+  @IsOptional() @IsNumber() @Min(-90) @Max(90) latitude?: number | null;
+  @IsOptional() @IsNumber() @Min(-180) @Max(180) longitude?: number | null;
   @IsISO8601({ strict: true }) verifiedAt!: string;
 }

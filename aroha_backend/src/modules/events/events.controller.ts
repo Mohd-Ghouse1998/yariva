@@ -15,6 +15,8 @@ export class EventsController {
   status(@CurrentUser() user: AuthContext["user"]) { return this.events.status(user.id); }
   @Get() @Header("Cache-Control", "private, no-store")
   list(@CurrentUser() user: AuthContext["user"], @Query() query: EventQueryDto) { return this.events.list(user.id, query); }
+  @Get("places/:id") @Header("Cache-Control", "private, no-store")
+  place(@CurrentUser() user: AuthContext["user"], @Param("id", new ParseUUIDPipe()) id: string) { return this.events.place(user.id, id); }
   @Get(":id") @Header("Cache-Control", "private, no-store")
   get(@CurrentUser() user: AuthContext["user"], @Param("id", new ParseUUIDPipe()) id: string) { return this.events.get(user.id, id); }
   @Post(":id/save")

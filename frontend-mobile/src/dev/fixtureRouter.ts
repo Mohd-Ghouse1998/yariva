@@ -1217,6 +1217,9 @@ export async function handleFixture<T>(req: FixtureRequest): Promise<T> {
     return { acceptedCount: body.events?.length ?? 0 } as unknown as T;
   }
 
+  // Events require reviewed real supply; development fixtures do not invent it.
+  if (path === "events/status" && req.method === "GET") return { enabled: false } as T;
+
   // Fall through
   throw new Error(`Fixture route not implemented: ${req.method} ${path}`);
 }

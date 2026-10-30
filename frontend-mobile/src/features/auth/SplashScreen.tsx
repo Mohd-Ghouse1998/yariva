@@ -5,7 +5,8 @@ import geometry from "../../../assets/brand/geometry.json";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const launchArt = require("../../../assets/brand/native-launch-continuity.png");
-const launchArtSize = Image.resolveAssetSource(launchArt);
+// Metro's web asset already carries dimensions; React Native Web has no resolver.
+const launchArtSize = Image.resolveAssetSource?.(launchArt) ?? launchArt;
 
 // The matching Android Activity layer keeps these glows visible while JS starts.
 export const SplashScreen: React.FC = () => {

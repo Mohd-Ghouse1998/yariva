@@ -1,3 +1,4 @@
+import { EventsModule } from "../events/events.module";
 import { Module } from "@nestjs/common";
 import { AuditLogService } from "../../common/services/audit-log.service";
 import { AnalyticsModule } from "../analytics/analytics.module";
@@ -23,7 +24,7 @@ import { PrivateStoriesModule } from "../private-stories/private-stories.module"
 import { AdminStoryModerationController } from "./controllers/admin-story-moderation.controller";
 
 @Module({
-  imports: [
+  imports: [EventsModule,
     AnalyticsModule,
     FeatureFlagsModule,
     ModerationModule,

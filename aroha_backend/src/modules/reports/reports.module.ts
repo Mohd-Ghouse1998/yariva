@@ -1,3 +1,4 @@
+import { EventsModule } from "../events/events.module";
 import { Module } from "@nestjs/common";
 import { AppLogger } from "../../common/logger/app-logger.service";
 import { AuditLogService } from "../../common/services/audit-log.service";
@@ -19,7 +20,7 @@ import {
 } from "./infrastructure/reports.infrastructure";
 
 @Module({
-  imports: [ModerationModule, PrivateStoriesModule],
+  imports: [ModerationModule, PrivateStoriesModule, EventsModule],
   controllers: [ReportsController],
   providers: [
     AppLogger,

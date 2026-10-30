@@ -67,6 +67,8 @@ export class ReportRepository {
     executor: PrismaTransactionalClient,
     input: Prisma.ReportUncheckedCreateInput,
   ): Promise<{ report: Report; created: boolean }> {
+    // Serialize same-report retries before the unique insert and case creation.
+    await executor.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${input.dedupeKey}, 0))`;
     const existing = await executor.report.findUnique({
       where: { dedupeKey: input.dedupeKey },
     });

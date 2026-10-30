@@ -114,3 +114,8 @@ export class AdminAnalyticsSummaryQueryDto {
   @IsIn(["24h", "7d", "30d"])
   readonly window!: "24h" | "7d" | "30d";
 }
+
+export class EventPilotSummaryQueryDto {
+  @IsString() @MaxLength(120) city!: string;
+  @IsOptional() @IsIn(["24h", "7d", "30d"]) window?: "24h" | "7d" | "30d";
+}

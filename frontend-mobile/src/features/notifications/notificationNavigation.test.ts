@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { actorInitials, notificationDisplayCopy, resolveNotificationHref } from "./notificationNavigation";
+import { translate } from "../../localization/translate";
 
 describe("notification navigation", () => {
+  it.each(["en", "hi", "te"] as const)("localizes private event change copy in %s and opens the existing plan route", language => {
+    const notification = { type: "DATE_CHANGED" as const, data: { route: "event-plan-change", datePlanId: "plan-1" }, title: "Stored title", body: "Stored body" };
+    const t = (key: string) => translate(language, "standard", key);
+    expect(notificationDisplayCopy(notification, t)).toEqual({ title: t("events.notice.changed"), body: t("events.notice.body") });
+    expect(notificationDisplayCopy({ ...notification, type: "DATE_CANCELLED" }, t).title).toBe(t("events.notice.unavailable"));
+    expect(resolveNotificationHref(notification)).toEqual({ pathname: "/(app)/date-plan/[datePlanId]", params: { datePlanId: "plan-1" } });
+  });
   it("normalizes historical Duo product copy but not user messages or routes", () => {
     const notification = { type: "SYSTEM" as const, data: { partyId: "wingman-party-1" }, title: "Wingman invite", body: "A friend invited you to create a wingman." };
     expect(notificationDisplayCopy(notification)).toEqual({ title: "Duo invite", body: "A friend invited you to create a Duo." });

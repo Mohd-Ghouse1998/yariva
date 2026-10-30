@@ -8,6 +8,7 @@ import {
 } from "class-validator";
 
 export const REPORT_TARGET_TYPE_VALUES = [
+  "EVENT_LISTING",
   "USER",
   "MESSAGE",
   "PROFILE_PHOTO",
@@ -33,8 +34,13 @@ export type ReportReasonCodeValue =
   (typeof REPORT_REASON_CODE_VALUES)[number];
 
 export class CreateReportDto {
+  @ValidateIf((input: CreateReportDto) => input.targetType !== "EVENT_LISTING" || input.reportedUserId != null)
   @IsUUID("4")
-  readonly reportedUserId!: string;
+  readonly reportedUserId?: string | null;
+
+  @IsOptional()
+  @IsUUID("4")
+  readonly targetEventId?: string | null;
 
   @IsIn(REPORT_TARGET_TYPE_VALUES)
   readonly targetType!: ReportTargetTypeValue;
@@ -80,7 +86,8 @@ export class CreateReportDto {
 export interface ReportDto {
   id: string;
   reporterUserId: string;
-  reportedUserId: string;
+  reportedUserId: string | null;
+  targetEventId: string | null;
   targetType: ReportTargetTypeValue;
   reasonCode: ReportReasonCodeValue;
   description: string | null;

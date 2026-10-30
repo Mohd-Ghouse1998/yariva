@@ -1,3 +1,4 @@
+import { EventNoticesService } from "../../modules/events/event-notices.service";
 import { Injectable, OnApplicationBootstrap } from "@nestjs/common";
 import type { Job } from "bullmq";
 import { BullmqProducer } from "../../integrations/bullmq/bullmq.producer";
@@ -9,6 +10,7 @@ export class NotificationDispatchProcessor implements OnApplicationBootstrap {
     private readonly notificationDispatchService: NotificationDispatchService,
     private readonly notifications: CreateNotificationService,
     private readonly queue: BullmqProducer,
+    private readonly eventNotices: EventNoticesService,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
@@ -16,6 +18,7 @@ export class NotificationDispatchProcessor implements OnApplicationBootstrap {
   }
 
   async reconcile(): Promise<void> {
+    await this.eventNotices.reconcile();
     await this.notifications.recoverPending();
   }
 

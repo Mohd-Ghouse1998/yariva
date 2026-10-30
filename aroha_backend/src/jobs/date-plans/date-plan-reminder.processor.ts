@@ -1,3 +1,4 @@
+import { eventFresh } from "../../modules/events/events.policy";
 import { Injectable } from "@nestjs/common";
 import type { Job } from "bullmq";
 import { AppLogger } from "../../common/logger/app-logger.service";
@@ -21,13 +22,14 @@ export class DatePlanReminderProcessor {
     const { datePlanId, kind } = job.data;
     const plan = await this.prisma.datePlan.findUnique({
       where: { id: datePlanId },
-      include: { match: { select: { userLowId: true, userHighId: true } } },
+      include: { event: true, match: { select: { userLowId: true, userHighId: true } } },
     });
 
     // Delayed jobs are intentionally left in the queue when a plan changes. The
     // current database state is the source of truth, so cancelled or completed
     // dates can never produce stale reminders.
     if (!plan || plan.status !== "ACCEPTED") return;
+    if (plan.event && (plan.event.status !== "PUBLISHED" || plan.event.version !== plan.eventVersion || !eventFresh(plan.event))) return;
 
     const isSafetyCheck = kind === "SAFETY_CHECK_IN";
     for (const userId of [plan.match.userLowId, plan.match.userHighId]) {

@@ -7,7 +7,7 @@ import type { ReportTargetType } from "../../../generated/prisma/client";
 export class ReportPolicyService {
   assertCanReport(input: {
     reporterUserId: string;
-    reportedUserId: string;
+    reportedUserId: string | null;
   }): void {
     if (input.reporterUserId === input.reportedUserId) {
       throw new AppException(
@@ -23,7 +23,7 @@ export class ReportPolicyService {
 export class ReportDeduplicationService {
   buildDedupeKey(input: {
     reporterUserId: string;
-    reportedUserId: string;
+    reportedUserId: string | null;
     targetType: ReportTargetType;
     targetId: string;
     reasonCode: string;

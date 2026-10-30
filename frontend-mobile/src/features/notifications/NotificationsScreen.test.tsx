@@ -34,6 +34,7 @@ vi.mock("../../components/ui/Icon", () => ({ Icon: "Icon" }));
 vi.mock("../../components/ui/Text", () => ({ Text: "Text" }));
 vi.mock("../../components/ui/Toast", () => ({ useToast: () => mocks.toast }));
 vi.mock("../../navigation/useSafeBack", () => ({ useSafeBack: () => vi.fn() }));
+vi.mock("../../localization/LocalizationContext", () => ({ useLocalization: () => ({ t: (key: string) => key }) }));
 vi.mock("../../realtime/RealtimeProvider", () => {
   const realtime = { onNotification: (callback: typeof mocks.event) => {
     mocks.event = callback;
@@ -88,6 +89,22 @@ describe("private activity lifecycle", () => {
     mocks.list.mockResolvedValueOnce(page([ordinaryNotice]));
     await act(async () => { mocks.appState?.("active"); });
     expect(mocks.list).toHaveBeenCalledTimes(calls + 1);
+    expect(rows(view)).toEqual([ordinaryNotice]);
+    await act(async () => view.unmount());
+  });
+
+  it("revalidates event-change activity instead of trusting the realtime payload and clears it on background", async () => {
+    const notice: NotificationDto = { ...ordinaryNotice, type: "DATE_CHANGED", id: "event-change", data: { route: "event-plan-change", eventId: "event", datePlanId: "plan" } };
+    mocks.list.mockResolvedValueOnce(page([ordinaryNotice]));
+    let view!: ReactTestRenderer;
+    await act(async () => { view = create(<NotificationsScreen />); });
+    let finish!: (value: ReturnType<typeof page>) => void;
+    mocks.list.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+    await act(async () => mocks.event?.({ notification: notice }));
+    expect(rows(view)).toEqual([ordinaryNotice]);
+    await act(async () => finish(page([notice, ordinaryNotice])));
+    expect(rows(view)).toEqual([notice, ordinaryNotice]);
+    await act(async () => mocks.appState?.("background"));
     expect(rows(view)).toEqual([ordinaryNotice]);
     await act(async () => view.unmount());
   });

@@ -17,6 +17,7 @@ import { Button } from "../../components/ui/Button";
 import { Icon } from "../../components/ui/Icon";
 import { Text } from "../../components/ui/Text";
 import { useToast } from "../../components/ui/Toast";
+import { useLocalization } from "../../localization/LocalizationContext";
 import { useSafeBack } from "../../navigation/useSafeBack";
 import { createThemeStyleHook, useTheme } from "../../theme/ThemeContext";
 import { typography } from "../../theme/typography";
@@ -38,11 +39,16 @@ export const ReportScreen: React.FC = () => {
   const styles = useStyles();
   const goBack = useSafeBack("/(app)/(tabs)/chats");
   const toast = useToast();
+  const { t } = useLocalization();
   const params = useLocalSearchParams<{
     targetType: string;
     targetId: string;
     reportedUserId?: string;
   }>();
+  const isEvent = params.targetType === "EVENT_LISTING";
+  const copy = (key: string, fallback: string) => isEvent ? t(`events.report.${key}`) : fallback;
+  const reasons = isEvent ? (["SAFETY_RISK", "SPAM", "INAPPROPRIATE_CONTENT", "OTHER"] as const)
+    .map(code => ({ code, label: t(`events.report.reason.${code}`) })) : REASONS;
 
   const [reason, setReason] = useState<ReportReasonCode | null>(null);
   const [description, setDescription] = useState("");
@@ -54,18 +60,18 @@ export const ReportScreen: React.FC = () => {
     const reportedUserId =
       params.reportedUserId ?? (targetType === "USER" ? params.targetId : undefined);
 
-    if (!reason || !targetType || !params.targetId || !reportedUserId) {
-      toast.show("Pick a reason first.", "warning");
+    if (!reason || !targetType || !params.targetId || (targetType !== "EVENT_LISTING" && !reportedUserId)) {
+      toast.show(copy("choose", "Pick a reason first."), "warning");
       return;
     }
     setSubmitting(true);
     try {
       const res = await safetyApi.report({
         targetType,
-        reportedUserId,
+        reportedUserId: targetType === "EVENT_LISTING" ? null : reportedUserId,
         reasonCode: reason,
         description: description.trim() || null,
-        ...(targetType === "MATCH"
+        ...(targetType === "EVENT_LISTING" ? { targetEventId: params.targetId } : targetType === "MATCH"
           ? { targetMatchId: params.targetId }
           : targetType === "CONVERSATION"
             ? { targetConversationId: params.targetId }
@@ -80,9 +86,9 @@ export const ReportScreen: React.FC = () => {
                   : {}),
       });
       if (res.isDuplicate) {
-        toast.show("You’ve already reported this. Our team will follow up.", "info");
+        toast.show(copy("duplicate", "You’ve already reported this. Our team will follow up."), "info");
       } else {
-        toast.show("Report submitted. Thank you.", "success");
+        toast.show(copy("success", "Report submitted. Thank you."), "success");
         void analyticsApi
           .ingest([
             {
@@ -96,10 +102,10 @@ export const ReportScreen: React.FC = () => {
       goBack();
     } catch (err) {
       if (err instanceof ApiError && err.isDuplicate()) {
-        toast.show("You’ve already reported this.", "info");
+        toast.show(copy("duplicate", "You’ve already reported this."), "info");
         goBack();
       } else {
-        toast.show("Couldn’t submit report.", "error");
+        toast.show(copy("error", "Couldn’t submit report."), "error");
       }
     } finally {
       setSubmitting(false);
@@ -110,10 +116,10 @@ export const ReportScreen: React.FC = () => {
     <View style={{ flex: 1, backgroundColor: palette.background }}>
       <SafeAreaView edges={["top", "bottom", "left", "right"]} style={{ flex: 1 }}>
         <Header
-          title="Report"
+          title={copy("title", "Report")}
           leftIcon={<Icon name="x" size={22} />}
           onLeftPress={goBack}
-          leftAccessibilityLabel="Close"
+          leftAccessibilityLabel={copy("close", "Close")}
         />
         <KeyboardAvoidingView
           style={{ flex: 1 }}
@@ -131,16 +137,15 @@ export const ReportScreen: React.FC = () => {
           >
             <View style={styles.banner}>
               <Text variant="caption" style={{ color: palette.textBrand, lineHeight: 18 }}>
-                Reports are reviewed by our safety team. You’re never told whose report it was, and
-                the person isn’t told either.
+                {copy("privacy", "Reports are reviewed by our safety team. You’re never told whose report it was, and the person isn’t told either.")}
               </Text>
             </View>
 
             <Text variant="bodyStrong" style={{ marginTop: 16, marginBottom: 10 }}>
-              What’s happening?
+              {copy("question", "What’s happening?")}
             </Text>
             <View style={{ gap: 6 }}>
-              {REASONS.map((r) => {
+              {reasons.map((r) => {
                 const active = reason === r.code;
                 return (
                   <Pressable
@@ -179,12 +184,12 @@ export const ReportScreen: React.FC = () => {
               color="textSubdued"
               style={{ marginTop: 18, marginBottom: 6 }}
             >
-              Anything else? (optional)
+              {copy("details", "Anything else? (optional)")}
             </Text>
             <TextInput
-              accessibilityLabel="Additional report details"
+              accessibilityLabel={copy("details.label", "Additional report details")}
               multiline
-              placeholder="Add details to help us…"
+              placeholder={copy("placeholder", "Add details to help us…")}
               placeholderTextColor={palette.textMuted}
               value={description}
               onChangeText={setDescription}
@@ -197,7 +202,7 @@ export const ReportScreen: React.FC = () => {
           </ScrollView>
           <View style={styles.footer}>
             <Button
-              label="Submit report"
+              label={copy("submit", "Submit report")}
               onPress={onSubmit}
               loading={submitting}
               disabled={!reason}

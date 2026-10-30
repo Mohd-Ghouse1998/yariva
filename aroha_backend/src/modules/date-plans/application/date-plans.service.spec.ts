@@ -1,3 +1,4 @@
+import { ReviewedVenuesService } from "./reviewed-venues.service";
 import { Prisma } from "../../../generated/prisma/client";
 import { DatePlanPolicy } from "../domain/date-plans.policy";
 import { DatePlansService } from "./date-plans.service";
@@ -73,6 +74,7 @@ describe("DatePlansService idempotency", () => {
       { warn: jest.fn() } as any,
       { venueSuggestionsEnabled: true, venueRadiusMeters: 12000, maxVenueSuggestions: 3 } as any,
       {} as any,
+      new ReviewedVenuesService(prisma as any, { venueSuggestionsEnabled: true, venueRadiusMeters: 12000, maxVenueSuggestions: 3 } as any),
     );
 
   it("returns an existing identical request without creating or notifying again", async () => {

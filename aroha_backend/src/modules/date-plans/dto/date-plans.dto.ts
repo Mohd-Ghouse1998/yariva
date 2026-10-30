@@ -69,6 +69,9 @@ export interface VenueSuggestionDto {
   reviewedAt: string | null;
   availability: "OPEN" | "CLOSED" | "UNKNOWN";
   category: VenueCategoryValue | "OTHER";
+  priceMinPerPerson?: number | null;
+  priceMaxPerPerson?: number | null;
+  currency?: string;
   priceTier: "₹" | "₹₹" | "₹₹₹" | null;
   rating: number | null;
   ratingCount: number | null;

@@ -168,6 +168,7 @@ export const validationSchema = Joi.object({
     .min(15)
     .max(300)
     .default(60),
+  VENUE_REVIEW_MAX_AGE_DAYS: Joi.number().integer().min(1).max(365).default(30),
   VENUE_SUGGESTIONS_ENABLED: Joi.boolean()
     .truthy("true")
     .falsy("false")

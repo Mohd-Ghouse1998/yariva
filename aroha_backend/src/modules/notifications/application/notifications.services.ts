@@ -1,3 +1,4 @@
+import { canReadEventPlanNotice } from "../../events/event-notices.service";
 import { NotificationIntentService, mapNotification, normalizeJsonObject, type CreateNotificationInput } from "./notification-intent.service";
 export { mapNotification, type CreateNotificationInput } from "./notification-intent.service";
 import { resolveMutualMeetAgain } from "../../date-plans/domain/date-plans.privacy";
@@ -371,6 +372,7 @@ async function canReadNotification(
   notification: { userId: string; type?: NotificationType; data?: unknown },
 ): Promise<boolean> {
   const data = normalizeJsonObject(notification.data as Prisma.JsonValue | null);
+  if (data.route === "event-plan-change") return canReadEventPlanNotice(db, notification);
   if (data.route === "private-story") {
     return typeof data.storyId === "string" && await stories.canAccess(notification.userId, data.storyId, db);
   }

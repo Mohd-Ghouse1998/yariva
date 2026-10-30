@@ -4,6 +4,7 @@ import { http } from "../http";
 export const eventsApi = {
   status: () => http.get<{ enabled: boolean }>("events/status"),
   list: (query: EventQuery) => http.get<EventPageDto>("events", { ...query }),
+  place: (id: string) => http.get<{ place: import("../../types/datePlan").VenueSuggestion }>(`events/places/${id}`).then(r => r.place),
   get: (id: string) => http.get<{ event: EventListingDto }>(`events/${id}`).then((r) => r.event),
   save: (id: string) => http.post<{ event: EventListingDto }>(`events/${id}/save`).then((r) => r.event),
   unsave: (id: string) => http.delete<{ saved: false }>(`events/${id}/save`),

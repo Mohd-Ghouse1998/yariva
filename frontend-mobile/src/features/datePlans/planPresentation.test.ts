@@ -40,4 +40,23 @@ describe("meetup presentation, not attendance", () => {
     expect(canCancelPlan({ ...plan, status: "CANCELLED" }, beforeEnd)).toBe(false);
     expect(plan.status).toBe("ACCEPTED");
   });
+  it.each(["eventChanged", "eventUnavailable"] as const)(
+    "does not present a future accepted plan as Confirmed when %s",
+    (flag) => {
+      const updated = { ...plan, [flag]: true };
+      const before = Date.parse(plan.startAt) - 1000;
+      expect(planView(updated, before)).toBe("PENDING");
+      expect(planStatusLabel(updated, before)).toBe(
+        flag === "eventChanged" ? "Review event" : "Event unavailable",
+      );
+      expect(canCancelPlan(updated, before)).toBe(true);
+      expect(updated.status).toBe("ACCEPTED");
+    },
+  );
+  it("does not invalidate an unchanged ongoing accepted event just because new invitations closed", () => {
+    const ongoing = { ...plan, eventUnavailable: true };
+    const during = Date.parse(plan.startAt) + 1000;
+    expect(planView(ongoing, during)).toBe("UPCOMING");
+    expect(planStatusLabel(ongoing, during)).toBe("Confirmed");
+  });
 });
