@@ -15,6 +15,7 @@ import type {
 } from "../../../generated/prisma/client";
 import { CreateNotificationService } from "../../notifications/application/notifications.services";
 import { ProfileCompletionSyncService } from "../../profiles/application/profiles.services";
+import { refreshIntentAgreements } from "../../social/intent-consent";
 import { MODERATION_EVENTS } from "../events/moderation.events";
 import type {
   ModerationCaseDto,
@@ -201,36 +202,42 @@ export class ApplyAccountActionService {
           where: { id: input.userId },
           data: { isDiscoveryFrozen: true, status: "RESTRICTED" },
         });
+        await refreshIntentAgreements(tx, input.userId);
         return;
       case "FREEZE_CHAT":
         await tx.user.update({
           where: { id: input.userId },
           data: { isChatFrozen: true, status: "RESTRICTED" },
         });
+        await refreshIntentAgreements(tx, input.userId);
         return;
       case "FREEZE_CALLS":
         await tx.user.update({
           where: { id: input.userId },
           data: { isCallFrozen: true, status: "RESTRICTED" },
         });
+        await refreshIntentAgreements(tx, input.userId);
         return;
       case "SHADOW_BAN":
         await tx.user.update({
           where: { id: input.userId },
           data: { isShadowBanned: true, status: "RESTRICTED" },
         });
+        await refreshIntentAgreements(tx, input.userId);
         return;
       case "SUSPEND":
         await tx.user.update({
           where: { id: input.userId },
           data: { status: "SUSPENDED", suspendedAt: input.now },
         });
+        await refreshIntentAgreements(tx, input.userId);
         return;
       case "BAN":
         await tx.user.update({
           where: { id: input.userId },
           data: { status: "BANNED", bannedAt: input.now },
         });
+        await refreshIntentAgreements(tx, input.userId);
         return;
       case "REMOVE_PHOTO":
         await this.removeReportedPhoto(tx, input);

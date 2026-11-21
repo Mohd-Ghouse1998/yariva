@@ -2,6 +2,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useRef, useState } from "react";
 import { Pressable, View, type ViewToken } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { socialApi } from "../../api/endpoints/social";
 import { discoveryApi } from "../../api/endpoints/discovery";
 import { analyticsApi } from "../../api/endpoints/analytics";
 import { likesApi } from "../../api/endpoints/likes";
@@ -36,6 +37,10 @@ export const DiscoverScreen: React.FC = () => {
   const styles = useStyles();
   const bottomNavigationInset = useBottomNavigationInset();
   const loaded = useRef(false);
+  const [social, setSocial] = useState<{ circles: boolean }>();
+  const [hadEligiblePeople, setHadEligiblePeople] = useState(false);
+  const [firstConnectionUserIds, setFirstConnectionUserIds] = useState<string[]>();
+  const [showFullSet, setShowFullSet] = useState(false);
   const [items, setItems] = useState<PublicProfileDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -77,7 +82,12 @@ export const DiscoverScreen: React.FC = () => {
     async (mode: "initial" | "refresh") => {
       try {
         mode === "initial" ? setLoading(true) : setRefreshing(true);
-        const [page, me] = await Promise.all([discoveryApi.feed({ limit: 8 }), profilesApi.me()]);
+        const [page, me, status] = await Promise.all([
+          discoveryApi.feed({ limit: 8 }), profilesApi.me(), socialApi.status().catch(() => undefined),
+        ]);
+        setSocial(status);
+        setFirstConnectionUserIds(page.firstConnectionUserIds);
+        setHadEligiblePeople(page.items.length > 0);
         setItems(page.items.slice(0, page.dailyLimit));
         setPreference(me.discoveryPreference);
         setScenePhotos(me.photos.filter((photo) => photo.moderationStatus === "APPROVED"));
@@ -234,6 +244,10 @@ export const DiscoverScreen: React.FC = () => {
     [router],
   );
 
+  const layoutPadding = spacing.lg;
+  const startingSet = firstConnectionUserIds !== undefined && !showFullSet;
+  const startingProfiles = startingSet ? items.filter(({ userId }) => firstConnectionUserIds.includes(userId)) : items;
+
   const discoverHeader = (
     <>
       <View style={styles.header}>
@@ -271,6 +285,13 @@ export const DiscoverScreen: React.FC = () => {
         <WingmanEntry compact />
         <BlindEntry compact />
       </View>
+      {social?.circles ? <View style={{ paddingHorizontal: layoutPadding, marginBottom: spacing.sm }}>
+        <Button label="Circles & nearby activities" variant="secondary" onPress={() => router.push("/(app)/circles")} />
+      </View> : null}
+      {startingSet ? <View style={{ paddingHorizontal: layoutPadding, paddingBottom: spacing.md, gap: spacing.sm }}>
+        <Text variant="titleSm" accessibilityRole="header">First connections</Text>
+        {items.length > startingProfiles.length ? <Button label="Show all of today’s people" variant="ghost" onPress={() => setShowFullSet(true)} /> : null}
+      </View> : null}
     </>
   );
 
@@ -303,7 +324,7 @@ export const DiscoverScreen: React.FC = () => {
         ) : (
           <View style={{ flex: 1, marginBottom: bottomNavigationInset }}>
             <ProfileFeed
-              profiles={items}
+              profiles={startingProfiles}
               header={discoverHeader}
               refreshing={refreshing}
               onRefresh={() => void load("refresh")}
@@ -315,10 +336,9 @@ export const DiscoverScreen: React.FC = () => {
               empty={
                 <View style={styles.emptyCard}>
                   <Text variant="titleSm" align="center">
-                    That’s everyone we selected for today.
-                  </Text>
-                  <Text variant="body" color="textSubdued" align="center">
-                    Your next set arrives tomorrow.
+                    {startingSet
+                      ? "No eligible first connections within your chosen distance right now."
+                      : hadEligiblePeople ? "You’re caught up for now." : "No eligible people to show right now."}
                   </Text>
                   <Button
                     label="Review preferences"

@@ -9,6 +9,7 @@ export interface CursorPageQuery {
 }
 
 export interface DiscoveryFeedResponseDto {
+  firstConnectionUserIds?: string[];
   items: PublicProfileDto[];
   nextCursor: string | null;
   snapshotExpiresAt: string;
@@ -19,6 +20,7 @@ export interface DiscoveryFeedResponseDto {
 export interface CreateLikeRequest {
   targetUserId: string;
   introNote?: string;
+  sceneId?: string;
 }
 
 export interface CreateLikeResponseDto {
@@ -63,7 +65,7 @@ export interface ReceivedLikePreviewDto {
   likedAt: string;
   introNote: string | null;
   displayName: string;
-  age: number;
+  age: number | null;
   headline: string | null;
   intents: ReceivedLikeIntent[];
   primaryPhotoUrl: string | null;

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { ConfigType } from "@nestjs/config";
 import { randomUUID } from "node:crypto";
 import authConfig from "../../../config/auth.config";
@@ -34,6 +34,8 @@ import {
   type DiscoverySnapshot,
   type ViewerDiscoveryContext,
 } from "../infrastructure/discovery.infrastructure";
+import { EvaluateFeatureFlagService } from "../../feature-flags/application/feature-flags.services";
+import { FIRST_CONNECTIONS_FLAG, isFirstConnectionsEligible } from "../../social/social-access";
 import { mapDatingProfileFields } from "./public-profile-fields";
 
 export const DAILY_CURATED_PROFILE_LIMIT = 8;
@@ -68,6 +70,7 @@ export class GetDiscoveryFeedService {
     private readonly objectStorageService: ObjectStorageService,
     @Inject(authConfig.KEY)
     private readonly authConfiguration: ConfigType<typeof authConfig>,
+    @Optional() private readonly flags?: EvaluateFeatureFlagService,
   ) {}
 
   async execute(input: {
@@ -132,17 +135,19 @@ export class GetDiscoveryFeedService {
         ...exclusionState.activePassUserIds, ...exclusionState.activeLikeUserIds,
       ]),
     };
-    const eligibleIds = new Set(pageRecords.filter((candidate) =>
-      this.candidateEligibilityService.isEligible(viewer, candidate, eligibilityInput).eligible,
-    ).map((candidate) => candidate.id));
+    const eligibleDistances = new Map<string, number>();
+    for (const candidate of pageRecords) {
+      const result = this.candidateEligibilityService.isEligible(viewer, candidate, eligibilityInput);
+      if (result.eligible) eligibleDistances.set(candidate.id, result.distanceKm);
+    }
     const candidates: CandidateDiscoveryRecord[] = [];
     let newIndex = nextIndex;
     while (newIndex < snapshot.candidateIds.length && candidates.length < limit) {
       const id = snapshot.candidateIds[newIndex++]!;
-      if (eligibleIds.has(id)) candidates.push(recordsById.get(id)!);
+      if (eligibleDistances.has(id)) candidates.push(recordsById.get(id)!);
     }
     // Avoid an empty terminal page when all remaining cached IDs were revoked.
-    if (!snapshot.candidateIds.slice(newIndex).some(id => eligibleIds.has(id))) {
+    if (!snapshot.candidateIds.slice(newIndex).some(id => eligibleDistances.has(id))) {
       newIndex = snapshot.candidateIds.length;
     }
     const items = await Promise.all(
@@ -169,12 +174,20 @@ export class GetDiscoveryFeedService {
           )
         : null;
 
+    const firstConnections = !input.cursor && isFirstConnectionsEligible(viewer, now.getTime()) &&
+      (await this.flags?.execute({ key: FIRST_CONNECTIONS_FLAG, userId: viewer.id }))?.enabled;
+    const chosenDistance = viewer.discoveryPreference?.maxDistanceKm ?? 50;
     return {
       items,
+      ...(firstConnections ? {
+        firstConnectionUserIds: items
+          .filter(({ userId }) => (eligibleDistances.get(userId) ?? Infinity) <= chosenDistance)
+          .slice(0, 5).map(({ userId }) => userId),
+      } : {}),
       nextCursor,
       snapshotExpiresAt: snapshot.expiresAt,
       dailyLimit: DAILY_CURATED_PROFILE_LIMIT,
-      remainingToday: snapshot.candidateIds.slice(newIndex).filter(id => eligibleIds.has(id)).length,
+      remainingToday: snapshot.candidateIds.slice(newIndex).filter(id => eligibleDistances.has(id)).length,
     };
   }
 

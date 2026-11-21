@@ -13,6 +13,7 @@ import { UserRepository } from "../../users/infrastructure/users.infrastructure"
 import { InvalidateDiscoverySnapshotService } from "../../discovery/application/discovery.services";
 import { ConversationReaderService } from "../../conversations/application/conversations.services";
 import { MATCH_EVENTS } from "../../matches/events/matches.events";
+import { ScenesService } from "../../scenes/application/scenes.services";
 import {
   CreateMatchArtifactsService,
   MatchReaderService,
@@ -99,6 +100,8 @@ export class GetLikesReceivedService {
     const eligibleRows = visible.filter(
       (row) =>
         row.actor.profile &&
+        !row.actor.isDiscoveryFrozen &&
+        !row.actor.profile.deletedAt &&
         !row.actor.profile.isHidden &&
         row.actor.profile.isComplete,
     );
@@ -113,7 +116,7 @@ export class GetLikesReceivedService {
           introNote: row.introNote,
           displayName: profile.displayName ?? "Someone",
           headline: profile.headline ?? null,
-          age: profile.dateOfBirth ? calculateAge(profile.dateOfBirth) : 0,
+          age: !profile.hideAge && profile.dateOfBirth ? calculateAge(profile.dateOfBirth) : null,
           intents: row.actor.intents.map(
             (i) => i.intent as ReceivedLikePreviewDto["intents"][number],
           ),
@@ -182,6 +185,7 @@ export class CreateLikeService {
     private readonly likeIdempotencyRepository: LikeIdempotencyRepository,
     private readonly auditLogService: AuditLogService,
     private readonly logger: AppLogger,
+    private readonly scenes: ScenesService,
   ) {}
 
   async execute(input: {
@@ -196,11 +200,14 @@ export class CreateLikeService {
       input.payload.targetUserId,
     );
 
-    if (input.idempotencyKey) {
+    const idempotencyKey = input.payload.sceneId ? undefined : input.idempotencyKey;
+    if (input.payload.sceneId) {
+      await this.scenes.assertResponseAllowed(input.userId, input.payload.targetUserId, input.payload.sceneId);
+    } else if (idempotencyKey) {
       const cached =
         await this.likeIdempotencyRepository.get<CreateLikeResponseDto>(
           input.userId,
-          input.idempotencyKey,
+          idempotencyKey,
         );
       if (cached) {
         return cached;
@@ -243,7 +250,7 @@ export class CreateLikeService {
       );
       await this.persistIdempotentResponse(
         input.userId,
-        input.idempotencyKey,
+        idempotencyKey,
         response,
       );
       return response;
@@ -257,7 +264,7 @@ export class CreateLikeService {
       };
       await this.persistIdempotentResponse(
         input.userId,
-        input.idempotencyKey,
+        idempotencyKey,
         response,
       );
       return response;
@@ -268,6 +275,9 @@ export class CreateLikeService {
     const transactionResult = await withSerializableRetry(async () =>
       this.prisma.$transaction(
         async (tx) => {
+          if (input.payload.sceneId) {
+            await this.scenes.assertResponseAllowed(input.userId, input.payload.targetUserId, input.payload.sceneId, tx);
+          }
           const txBlocked =
             await this.likeInteractionRepository.hasActiveBlockBetween(
               input.userId,
@@ -289,6 +299,8 @@ export class CreateLikeService {
               profile: {
                 select: {
                   isHidden: true,
+                  isIncognito: true,
+                  isPaused: true,
                   isComplete: true,
                   deletedAt: true,
                 },
@@ -307,6 +319,15 @@ export class CreateLikeService {
             },
           });
           this.likePolicyService.assertTargetEligible(targetInsideTx);
+          if (targetInsideTx.profile?.isIncognito || targetInsideTx.profile?.isPaused) {
+            const invitation = await this.likeRepository.findByActorAndTarget(
+              input.payload.targetUserId, input.userId, tx,
+            );
+            if (invitation?.status !== "ACTIVE") {
+              throw new AppException(409, ERROR_CODES.LIKE_TARGET_NOT_ELIGIBLE,
+                "Target cannot currently be interacted with");
+            }
+          }
 
           const historicalMatch =
             await this.likeInteractionRepository.hasHistoricalMatchBetween(
@@ -495,7 +516,7 @@ export class CreateLikeService {
 
     await this.persistIdempotentResponse(
       input.userId,
-      input.idempotencyKey,
+      idempotencyKey,
       response,
     );
 

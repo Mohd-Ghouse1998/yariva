@@ -47,12 +47,14 @@ import { ScenesModule } from "./modules/scenes/scenes.module";
 import { VibesModule } from "./modules/vibes/vibes.module";
 import { WingmanModule } from "./modules/wingman/wingman.module";
 import { BlindModule } from "./modules/blind/blind.module";
+import { SocialModule } from "./modules/social/social.module";
 import { PrivateStoriesModule } from "./modules/private-stories/private-stories.module";
 
 @Module({
   imports: [
     ActivityModule,
     BlindModule,
+    SocialModule,
     PrivateStoriesModule,
     ConfigModule.forRoot({
       isGlobal: true,

@@ -99,7 +99,7 @@ describe("Interests services", () => {
   });
 
   it("updates intents and recomputes profile completion", async () => {
-    const tx = {};
+    const tx = { $queryRaw: jest.fn().mockResolvedValue([]) };
     const prisma = {
       $transaction: jest.fn(async (callback: (client: object) => Promise<unknown>) =>
         callback(tx),

@@ -10,6 +10,7 @@ import type { PrismaTransactionalClient } from "../../../database/prisma/prisma.
 import type { Scene } from "../../../generated/prisma/client";
 import { ObjectStorageService } from "../../../integrations/object-storage/object-storage.service";
 import { EvaluateFeatureFlagService } from "../../feature-flags/application/feature-flags.services";
+import { acceptsDatingPreferences, isEligible, isPublic, socialUser } from "../../social/social-access";
 import {
   isSceneActive,
   normalizeSceneActivity,
@@ -107,6 +108,29 @@ export class ScenesService {
       return { scene: null };
     }
     return { scene: await this.toDto(scene, viewerId) };
+  }
+
+  async assertResponseAllowed(
+    viewerId: string,
+    targetId: string,
+    sceneId: string,
+    db: PrismaTransactionalClient = this.prisma,
+  ): Promise<void> {
+    await this.assertEnabled(viewerId);
+    const blocked = await db.block.count({ where: { deletedAt: null, OR: [
+      { blockerId: viewerId, blockedId: targetId }, { blockerId: targetId, blockedId: viewerId },
+    ] } });
+    const scene = await db.scene.findFirst({
+      where: { id: sceneId, ownerId: targetId, status: "ACTIVE", expiresAt: { gt: new Date() } },
+      select: { intent: true, owner: { select: socialUser } },
+    });
+    if (scene && !blocked && isEligible(scene.owner) && isPublic(scene.owner.profile)) {
+      if (scene.intent !== "DATING") return;
+      const viewer = await db.user.findUnique({ where: { id: viewerId }, select: socialUser });
+      if (viewer && isEligible(viewer) && acceptsDatingPreferences(viewer, scene.owner) &&
+          acceptsDatingPreferences(scene.owner, viewer)) return;
+    }
+    throw new AppException(404, ERROR_CODES.SCENE_NOT_FOUND, "Scene not found");
   }
 
   async create(
@@ -314,10 +338,13 @@ export class ScenesService {
       const validRows = cached.sceneIds
         .map((id) => byId.get(id))
         .filter((row): row is SceneCandidateRow => Boolean(row));
-      return {
-        items: await this.mapCandidates(validRows, input.userId),
-        nextCursor: cached.nextCursor,
-      };
+      const last = validRows.at(-1);
+      if (!cached.nextCursor || (last && encodeCursor(last) === cached.nextCursor)) {
+        return {
+          items: await this.mapCandidates(validRows, input.userId),
+          nextCursor: cached.nextCursor,
+        };
+      }
     }
 
     const rows = await this.repository.listCandidates({
@@ -328,14 +355,7 @@ export class ScenesService {
     const hasMore = rows.length > limit;
     const page = hasMore ? rows.slice(0, limit) : rows;
     const last = page.at(-1);
-    const nextCursor =
-      hasMore && last
-        ? encodeCursor({
-            distanceMeters: last.distanceMeters,
-            createdAt: last.sceneCreatedAt.toISOString(),
-            sceneId: last.sceneId,
-          })
-        : null;
+    const nextCursor = hasMore && last ? encodeCursor(last) : null;
     await this.cache.set(
       cacheKey,
       { sceneIds: page.map((row) => row.sceneId), nextCursor },
@@ -502,7 +522,7 @@ export class ScenesService {
                 })
               : null,
         },
-        distance: distanceSummary(row.distanceMeters),
+        distance: row.hideDistance ? null : distanceSummary(row.distanceMeters),
         availability: row.availability,
       })),
     );
@@ -603,7 +623,7 @@ export function mapScene(
 
 function distanceSummary(
   distanceMeters: number,
-): SceneCandidateDto["distance"] {
+): NonNullable<SceneCandidateDto["distance"]> {
   const roundedKm = Math.round((distanceMeters / 1000) * 2) / 2;
   return {
     roundedKm,
@@ -622,12 +642,8 @@ interface SceneCursor {
   sceneId: string;
 }
 
-function encodeCursor(value: {
-  distanceMeters: number;
-  createdAt: string;
-  sceneId: string;
-}): string {
-  return Buffer.from(JSON.stringify(value)).toString("base64url");
+function encodeCursor({ distanceMeters, sceneCreatedAt, sceneId }: SceneCandidateRow): string {
+  return Buffer.from(JSON.stringify({ distanceMeters, createdAt: sceneCreatedAt.toISOString(), sceneId })).toString("base64url");
 }
 
 function decodeCursor(value?: string): SceneCursor | null {

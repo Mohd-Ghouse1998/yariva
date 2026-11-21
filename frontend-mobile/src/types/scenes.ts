@@ -42,7 +42,7 @@ export interface SceneCandidateDto {
     verificationStatus: string;
     photoUrl: string | null;
   };
-  distance: { roundedKm: number; band: "LOCAL" | "NEARBY" | "FARTHER" };
+  distance: { roundedKm: number; band: "LOCAL" | "NEARBY" | "FARTHER" } | null;
   availability: "CONFIRMED" | "UNCONFIRMED";
 }
 

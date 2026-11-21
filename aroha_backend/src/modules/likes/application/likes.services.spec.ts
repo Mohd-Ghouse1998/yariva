@@ -161,6 +161,7 @@ describe("CreateLikeService", () => {
       {
         error: jest.fn(),
       } as any,
+      {} as any,
     );
 
     const result = await service.execute({
@@ -284,6 +285,7 @@ describe("CreateLikeService", () => {
       {
         error: jest.fn(),
       } as any,
+      {} as any,
     );
 
     const result = await service.execute({
@@ -456,6 +458,7 @@ describe("CreateLikeService post-commit safety", () => {
         write: jest.fn().mockResolvedValue(undefined),
       } as any,
       logger as any,
+      {} as any,
     );
 
     const result = await service.execute({

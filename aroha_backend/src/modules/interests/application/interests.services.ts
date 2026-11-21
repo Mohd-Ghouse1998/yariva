@@ -1,3 +1,4 @@
+import { refreshIntentAgreements } from "../../social/intent-consent";
 import { Injectable } from "@nestjs/common";
 import { AuditLogService } from "../../../common/services/audit-log.service";
 import {
@@ -192,6 +193,10 @@ export class UpdateUserIntentsService {
         if (!existingIntents.has(intent)) {
           await this.userIntentRepository.create(tx, input.userId, intent);
         }
+      }
+
+      if (existing.some((row) => !row.deletedAt && !desired.has(row.intent))) {
+        await refreshIntentAgreements(tx, input.userId);
       }
 
       const snapshot = await this.interestProfileCompletionRepository.findByUserId(

@@ -18,6 +18,9 @@ import type {
   UserProfile,
 } from "../../../generated/prisma/client";
 
+import { EvaluateFeatureFlagService } from "../../feature-flags/application/feature-flags.services";
+import { acceptsIntent, CIRCLES_FLAG, isEligible, socialUser } from "../../social/social-access";
+
 type ConversationExecutor = PrismaService | PrismaTransactionalClient;
 
 export type ConversationProjection = Prisma.ConversationGetPayload<{
@@ -26,7 +29,10 @@ export type ConversationProjection = Prisma.ConversationGetPayload<{
 
 @Injectable()
 export class ConversationRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly flags: EvaluateFeatureFlagService,
+  ) {}
 
   async assertMediaSharingAllowed(matchId: string | null, executor: ConversationExecutor = this.prisma): Promise<void> {
     if (matchId && await executor.blindRelationship.findFirst({ where: { matchId, revealedAt: null } })) {
@@ -50,6 +56,7 @@ export class ConversationRepository {
         OR: [
           { match: { OR: [{ userLowId: userId }, { userHighId: userId }] } },
           { duoMatchId: { not: null }, members: { some: { userId } } },
+          { circle: { status: "OPEN", expiresAt: { gt: new Date() } }, status: "ACTIVE", members: { some: { userId } } },
         ],
         ...(cursor
           ? {
@@ -106,6 +113,7 @@ export class ConversationRepository {
         OR: [
           { match: { OR: [{ userLowId: userId }, { userHighId: userId }] } },
           { duoMatchId: { not: null }, members: { some: { userId } } },
+          { circle: { status: "OPEN", expiresAt: { gt: new Date() } }, status: "ACTIVE", members: { some: { userId } } },
         ],
       },
       include: conversationInclude(userId),
@@ -113,7 +121,40 @@ export class ConversationRepository {
     return conversation && await this.isGroupAccessible(conversation, userId, db) ? conversation : null;
   }
 
+  async findCurrentCircleChatForMember(previousId: string, userId: string): Promise<string | null> {
+    return this.prisma.$transaction(async (tx) => {
+      const previous = await tx.conversation.findFirst({
+        where: { id: previousId, circleId: { not: null }, status: { not: "ACTIVE" }, members: { some: { userId } } },
+        select: { circleId: true },
+      });
+      if (!previous?.circleId) return null;
+      await tx.$queryRaw`SELECT id FROM "Circle" WHERE id = ${previous.circleId}::uuid FOR UPDATE`;
+      const next = await tx.conversation.findFirst({
+        where: { circleId: previous.circleId, status: "ACTIVE" }, select: { id: true },
+      });
+      if (!next) return null;
+      return (await this.findByIdForUser(next.id, userId, tx))?.id ?? null;
+    });
+  }
+
   private async isGroupAccessible(conversation: ConversationProjection, userId: string, db: ConversationExecutor): Promise<boolean> {
+    if (conversation.circle) {
+      const circle = conversation.circle;
+      if (conversation.status !== "ACTIVE" || circle.status !== "OPEN" || circle.expiresAt <= new Date()) return false;
+      const ids = conversation.members.map((member) => member.userId);
+      if (!ids.includes(userId) || !ids.includes(circle.organizerId) ||
+          !(await this.flags.execute({ key: CIRCLES_FLAG, userId })).enabled ||
+          conversation.members.some(({ user }) => user.deletedAt || user.status !== "ACTIVE" ||
+            user.isShadowBanned || user.isDiscoveryFrozen || user.isChatFrozen ||
+            !user.profile?.isComplete || user.profile.deletedAt)) return false;
+      const current = await db.circleMembership.findMany({ where: { circleId: circle.id, status: "APPROVED" }, select: { userId: true } });
+      if (current.length !== ids.length || !current.every(({ userId: id }) => ids.includes(id)) ||
+          await db.block.count({ where: { deletedAt: null, blockerId: { in: ids }, blockedId: { in: ids } } })) return false;
+      const people = await db.user.findMany({ where: { id: { in: ids } }, select: socialUser });
+      return people.length === ids.length && people.every((person, index) =>
+        isEligible(person) && people.slice(index + 1).every((peer) =>
+          acceptsIntent(person, peer, circle.intent) && acceptsIntent(peer, person, circle.intent)));
+    }
     if (!conversation.duoMatch) return true;
     const group = conversation.duoMatch;
     const members = conversation.members;
@@ -236,12 +277,15 @@ export async function lockConversationForMutation(
 ): Promise<void> {
   const subject = await tx.conversation.findUnique({
     where: { id: conversationId },
-    select: { duoMatch: { select: { partyLowId: true, partyHighId: true } } },
+    select: { circleId: true, duoMatch: { select: { partyLowId: true, partyHighId: true } } },
   });
   if (subject?.duoMatch) {
     for (const id of [subject.duoMatch.partyLowId, subject.duoMatch.partyHighId].sort()) {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${id}, 0))`;
     }
+  }
+  if (subject?.circleId) {
+    await tx.$queryRaw`SELECT id FROM "Circle" WHERE id = ${subject.circleId}::uuid FOR UPDATE`;
   }
   await tx.$queryRaw`SELECT id FROM "Conversation" WHERE id = ${conversationId}::uuid FOR UPDATE`;
 }
@@ -369,6 +413,7 @@ export class MessageRepository {
 
 export function conversationInclude(userId?: string) {
   return {
+    circle: true,
     reads: { where: userId ? {} : { userId: { in: [] } } },
     members: { include: { user: userInclude() } },
     duoMatch: { include: { partyLow: true, partyHigh: true } },

@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { FeatureFlagsModule } from "../feature-flags/feature-flags.module";
 import { DiscoveryController } from "./controllers/discovery.controller";
 import {
   DiscoveryQueryService,
@@ -18,6 +19,7 @@ import {
 } from "./infrastructure/discovery.infrastructure";
 
 @Module({
+  imports: [FeatureFlagsModule],
   controllers: [DiscoveryController],
   providers: [
     GetDiscoveryFeedService,

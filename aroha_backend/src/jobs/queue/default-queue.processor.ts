@@ -14,6 +14,7 @@ import { SessionsCleanupInactiveProcessor } from "../sessions/sessions-cleanup-i
 import { VibeMediaProcessor } from "../vibes/vibe-media.processor";
 import { BlindEventsProcessor } from "../blind/blind-events.processor";
 import { PrivateStoryCleanupProcessor } from "../private-stories/private-story-cleanup.processor";
+import { MessageAttachmentCleanupProcessor } from "../messages/message-attachment-cleanup.processor";
 
 @Processor("default", {
   concurrency: 5,
@@ -34,6 +35,7 @@ export class DefaultQueueProcessor extends WorkerHost {
     private readonly blindEventsProcessor: BlindEventsProcessor,
     private readonly weeklyRecapProcessor: WeeklyRecapProcessor,
     private readonly privateStoryCleanupProcessor: PrivateStoryCleanupProcessor,
+    private readonly messageAttachmentCleanupProcessor: MessageAttachmentCleanupProcessor,
   ) {
     super();
   }
@@ -57,6 +59,9 @@ export class DefaultQueueProcessor extends WorkerHost {
         return;
       case "message.attachment.moderation":
         await this.messageAttachmentModerationProcessor.process(job);
+        return;
+      case "message.attachment.cleanup":
+        await this.messageAttachmentCleanupProcessor.process(job.data);
         return;
       case "analytics.rollup":
         await this.analyticsRollupProcessor.process(job);

@@ -135,7 +135,7 @@ export const ConnectionsScreen: React.FC = () => {
                       <Avatar uri={like.primaryPhotoUrl} initials={like.displayName} size={48} />
                       <View style={styles.rowText}>
                         <Text variant="bodyStrong" numberOfLines={1}>
-                          {like.displayName}, {like.age}
+                          {like.displayName}{like.age != null ? `, ${like.age}` : ""}
                         </Text>
                         <Text variant="caption" color="textSubdued" numberOfLines={1}>
                           {[like.city, like.region].filter(Boolean).join(", ")} ·{" "}

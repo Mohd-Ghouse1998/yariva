@@ -27,7 +27,7 @@ export function mapDatingProfileFields(
     compatibility:
       compatibility ?? {
         score: 80,
-        reasons: ["You chose each other and your intentions align"],
+        reasons: [],
         sharedInterests: [],
         scheduleOverlap: null,
       },

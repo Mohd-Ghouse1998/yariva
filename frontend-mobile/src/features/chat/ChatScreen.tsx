@@ -15,6 +15,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { analyticsApi } from "../../api/endpoints/analytics";
+import { socialApi } from "../../api/endpoints/social";
+import { ApiError } from "../../api/errors";
 import { conversationsApi } from "../../api/endpoints/conversations";
 import { callsApi } from "../../api/endpoints/calls";
 import { useLocalization } from "../../localization/LocalizationContext";
@@ -105,11 +107,15 @@ const ConversationOption: React.FC<{
 // avatar + name + Active-now status + phone/video/more, scrollable
 // messages list with "You matched on …" header chip, gradient own bubbles,
 // typing indicator while partner is typing, paperclip/smile/send composer.
+function isConversationUnavailable(err: unknown): boolean {
+  return err instanceof ApiError && [401, 403, 404].includes(err.status);
+}
+
 export const ChatScreen: React.FC = () => {
   const { palette, resolved } = useTheme();
   const styles = useStyles();
   const router = useRouter();
-  const params = useLocalSearchParams<{ conversationId: string; helloEnded?: string }>();
+  const params = useLocalSearchParams<{ conversationId: string; helloEnded?: string; members?: string }>();
   const { t } = useLocalization();
   const conversationId = params.conversationId;
   const { user, tokens } = useAuth();
@@ -140,7 +146,8 @@ export const ChatScreen: React.FC = () => {
   const [helloOpen, setHelloOpen] = useState(false);
   const [helloBusy, setHelloBusy] = useState(false);
   const [helloReturn, setHelloReturn] = useState(false);
-  const [membersOpen, setMembersOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(params.members === "1");
+  const [canCheckIn, setCanCheckIn] = useState(false);
   const [safetyMember, setSafetyMember] = useState<PublicProfileDto | null>(null);
   const [blockOpen, setBlockOpen] = useState(false);
   const [blocking, setBlocking] = useState(false);
@@ -149,6 +156,10 @@ export const ChatScreen: React.FC = () => {
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlightMessageIds = useRef(new Set<string>());
+  const unavailableChat = useRef<string | null>(null);
+  const currentChatId = useRef(conversationId);
+  currentChatId.current = conversationId;
+  const loadGeneration = useRef(0);
   const previousRealtimeStatus = useRef(realtime.status);
 
   const sortedMessages = useMemo(() => sortMessages(messages), [messages]);
@@ -160,7 +171,30 @@ export const ChatScreen: React.FC = () => {
     [sortedMessages, user?.id],
   );
 
-  const load = useCallback(async () => {
+  const handleUnavailableChat = useCallback(async (id: string, retry = false) => {
+    if (currentChatId.current !== id || (!retry && unavailableChat.current === id)) return;
+    unavailableChat.current = id;
+    loadGeneration.current++;
+    setMessages([]);
+    setConversation(null);
+    setLoading(false);
+    setCanCheckIn(false);
+    setMembersOpen(false);
+    setMenuOpen(false);
+    setSafetyMember(null);
+    setText("");
+    setFailedMessageIds(new Set());
+    setMemberReads({});
+    setLoadError("This conversation is no longer available.");
+    const next = await socialApi.currentCircleChat(id).catch(() => null);
+    if (next && currentChatId.current === id && unavailableChat.current === id) {
+      router.replace({ pathname: "/(app)/conversation/[conversationId]", params: { conversationId: next.conversationId } });
+    }
+  }, [router]);
+
+  const load = useCallback(async (retryUnavailable = false) => {
+    const generation = ++loadGeneration.current;
+    const isCurrentLoad = () => currentChatId.current === conversationId && loadGeneration.current === generation;
     setLoading(true);
     setLoadError(null);
     setMatchDetail(null);
@@ -176,14 +210,29 @@ export const ChatScreen: React.FC = () => {
         conversationsApi.get(conversationId),
         conversationsApi.messages(conversationId, { limit: 50 }),
       ]);
+      const helloEnabled = c.kind === "SOLO" && (await callsApi.capabilities().catch(() => ({ voiceIntroductionsEnabled: false }))).voiceIntroductionsEnabled;
+      if (!isCurrentLoad()) return;
+      unavailableChat.current = null;
       setConversation(c);
-      setHelloEnabled(c.kind !== "DUO" && (await callsApi.capabilities().catch(() => ({ voiceIntroductionsEnabled: false }))).voiceIntroductionsEnabled);
+      setCanCheckIn(false);
+      if (c.matchId && c.status === "ACTIVE") {
+        void socialApi.status().then(async (flags) => {
+          if (flags.checkIn) {
+            await socialApi.checkIn(c.id);
+            if (isCurrentLoad()) setCanCheckIn(true);
+          }
+        }).catch(() => undefined);
+      }
+      setHelloEnabled(helloEnabled);
       setMemberReads(Object.fromEntries((c.readStates ?? []).map(read => [read.userId, read.lastReadSequence])));
       setMessages(m.items);
       try {
-        setMatchDetail(c.matchId ? await matchesApi.get(c.matchId) : null);
+        const match = c.matchId ? await matchesApi.get(c.matchId) : null;
+        if (!isCurrentLoad()) return;
+        setMatchDetail(match);
         setCallSettingsStatus("ready");
       } catch {
+        if (!isCurrentLoad()) return;
         setMatchDetail(null);
         setCallSettingsStatus("error");
       }
@@ -194,18 +243,33 @@ export const ChatScreen: React.FC = () => {
           .read(conversationId, { lastReadSequence: latest })
           .catch(() => undefined);
       }
-    } catch {
+    } catch (err) {
+      if (!isCurrentLoad()) return;
       setConversation(null);
       setCallSettingsStatus("error");
-      setLoadError("We couldn’t load this conversation. Check your connection and try again.");
+      if (isConversationUnavailable(err)) {
+        setLoadError("This conversation is no longer available.");
+        void handleUnavailableChat(conversationId, retryUnavailable);
+      }
+      else setLoadError("We couldn’t load this conversation. Check your connection and try again.");
     } finally {
-      setLoading(false);
+      if (isCurrentLoad()) setLoading(false);
     }
-  }, [conversationId]);
+  }, [conversationId, handleUnavailableChat]);
 
   useFocusEffect(useCallback(() => {
     void load();
   }, [load]));
+  const circleChat = conversation?.kind === "CIRCLE";
+  useFocusEffect(useCallback(() => {
+    if (!circleChat || !conversationId) return;
+    const timer = setInterval(() => {
+      void conversationsApi.get(conversationId).catch((err: unknown) => {
+        if (isConversationUnavailable(err)) void handleUnavailableChat(conversationId);
+      });
+    }, 15000);
+    return () => clearInterval(timer);
+  }, [circleChat, conversationId, handleUnavailableChat]));
   useEffect(() => {
     if (params.helloEnded === "1") { setHelloReturn(true); router.setParams({ helloEnded: undefined }); }
   }, [params.helloEnded, router]);
@@ -224,7 +288,7 @@ export const ChatScreen: React.FC = () => {
 
   useEffect(() => {
     const offCreated = realtime.onMessageCreated(({ message, conversationId: cid }) => {
-      if (cid !== conversationId || message.conversationId !== conversationId) return;
+      if (cid === unavailableChat.current || cid !== conversationId || message.conversationId !== conversationId) return;
       setMessages((prev) => upsertMessage(prev, message));
       if (conversationId && message.senderId !== user?.id) {
         void conversationsApi
@@ -234,14 +298,10 @@ export const ChatScreen: React.FC = () => {
     });
     const offClosed = realtime.onConversationClosed(({ conversationId: cid }) => {
       if (cid !== conversationId) return;
-      setMessages([]);
-      setConversation(null);
-      setMembersOpen(false);
-      setMenuOpen(false);
-      setLoadError("This conversation is no longer available.");
+      void handleUnavailableChat(cid);
     });
     const offUpdated = realtime.onMessageUpdated(({ message }) => {
-      if (message.conversationId !== conversationId) return;
+      if (message.conversationId === unavailableChat.current || message.conversationId !== conversationId) return;
       setMessages((prev) => upsertMessage(prev, message));
     });
     const offDeleted = realtime.onMessageDeleted(({ conversationId: cid, messageId }) => {
@@ -274,7 +334,7 @@ export const ChatScreen: React.FC = () => {
       setPartnerTyping(false);
       setPartnerPresence(null);
     };
-  }, [conversation?.otherUser.userId, conversationId, realtime, user?.id]);
+  }, [conversation?.otherUser.userId, conversationId, handleUnavailableChat, realtime, user?.id]);
 
   useEffect(() => {
     if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
@@ -315,7 +375,8 @@ export const ChatScreen: React.FC = () => {
 
   const deliverMessage = async (optimistic: MessageDto, isFirstMessage: boolean) => {
     const deliveryId = optimistic.clientMessageId ?? optimistic.id;
-    if (!conversationId || inFlightMessageIds.current.has(deliveryId)) return;
+    if (!conversationId || optimistic.conversationId !== conversationId || currentChatId.current !== conversationId ||
+        unavailableChat.current === conversationId || inFlightMessageIds.current.has(deliveryId)) return;
     inFlightMessageIds.current.add(deliveryId);
     setFailedMessageIds((current) => {
       const next = new Set(current);
@@ -328,13 +389,19 @@ export const ChatScreen: React.FC = () => {
         textBody: optimistic.textBody?.slice(0, MESSAGE_MAX_LENGTH) ?? "",
         clientMessageId: deliveryId,
       });
+      if (currentChatId.current !== conversationId || unavailableChat.current === conversationId) return;
       setMessages((current) => upsertMessage(current, response));
       if (isFirstMessage) {
         void analyticsApi
           .ingest([{ name: "first_message_sent", contextId: conversationId }])
           .catch(() => undefined);
       }
-    } catch {
+    } catch (err) {
+      if (circleChat && isConversationUnavailable(err)) {
+        await handleUnavailableChat(conversationId);
+        return;
+      }
+      if (currentChatId.current !== conversationId || unavailableChat.current === conversationId) return;
       setFailedMessageIds((current) => new Set(current).add(deliveryId));
       toast.show("Message wasn’t sent.", "error", {
         label: "Retry",
@@ -403,7 +470,7 @@ export const ChatScreen: React.FC = () => {
 
   const onAttach = async () => {
     if (blindActive) { toast.show("Reveal photos together before sharing images.", "info"); return; }
-    if (!conversationId || attaching) return;
+    if (!conversationId || attaching || unavailableChat.current === conversationId) return;
     setAttaching(true);
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -416,7 +483,7 @@ export const ChatScreen: React.FC = () => {
         quality: 0.85,
       });
       const asset = getSelectedAttachmentAsset(result);
-      if (!asset) return;
+      if (!asset || currentChatId.current !== conversationId || unavailableChat.current === conversationId) return;
       const mimeType = asset.mimeType ?? "image/jpeg";
       if (!isMessageImageMimeType(mimeType)) {
         toast.show("Choose a JPEG, PNG, or WebP image.", "warning");
@@ -455,9 +522,15 @@ export const ChatScreen: React.FC = () => {
         height: asset.height,
         fixturePreviewUri,
       });
+      if (currentChatId.current !== conversationId || unavailableChat.current === conversationId) return;
       setMessages((current) => upsertMessage(current, message));
       toast.show("Photo sent.", "success");
-    } catch {
+    } catch (err) {
+      if (circleChat && isConversationUnavailable(err)) {
+        await handleUnavailableChat(conversationId);
+        return;
+      }
+      if (currentChatId.current !== conversationId || unavailableChat.current === conversationId) return;
       toast.show("Couldn’t send image.", "error");
     } finally {
       setAttaching(false);
@@ -497,7 +570,7 @@ export const ChatScreen: React.FC = () => {
             {loadError ?? "We couldn’t find this conversation."}
           </Text>
           <View style={styles.errorActions}>
-            <Button label="Try again" fullWidth onPress={() => void load()} />
+            <Button label="Try again" fullWidth onPress={() => void load(true)} />
             <Button label="Back to Chats" variant="secondary" fullWidth onPress={goBack} />
           </View>
         </SafeAreaView>
@@ -508,7 +581,8 @@ export const ChatScreen: React.FC = () => {
   const closed = !isConversationWritable(conversation.status);
   const partner = conversation.otherUser;
   const isDuo = conversation.kind === "DUO";
-  const chatName = isDuo ? "Duo chat" : partner.displayName;
+  const isGroup = isDuo || circleChat;
+  const chatName = circleChat ? conversation.circleTitle ?? "Circle chat" : isDuo ? "Duo chat" : partner.displayName;
   const members = conversation.participants ?? [partner];
   const seenCount = members.filter(member => member.userId !== user?.id && (memberReads[member.userId] ?? 0) >= lastMineSeq).length;
   const blockTarget = safetyMember ?? partner;
@@ -610,9 +684,9 @@ export const ChatScreen: React.FC = () => {
           </IconButton>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={isDuo ? "View Duo chat members" : `View ${partner.displayName}'s profile`}
+            accessibilityLabel={isGroup ? `View ${chatName} members` : `View ${partner.displayName}'s profile`}
             onPress={() =>
-              isDuo ? setMembersOpen(true) : router.push({
+              isGroup ? setMembersOpen(true) : router.push({
                 pathname: "/(app)/profile/[userId]",
                 params: {
                   userId: partner.userId,
@@ -626,7 +700,7 @@ export const ChatScreen: React.FC = () => {
               pressed ? styles.headerIdentityPressed : null,
             ]}
           >
-            <Avatar size={34} uri={isDuo ? undefined : partnerPhoto} initials={chatName} />
+            <Avatar size={34} uri={isGroup ? undefined : partnerPhoto} initials={chatName} />
             <View style={styles.headerIdentityCopy}>
               <Text variant="bodyStrong" style={{ fontSize: 15 }} numberOfLines={1}>
                 {chatName}
@@ -635,7 +709,7 @@ export const ChatScreen: React.FC = () => {
                 <Text variant="caption" color="textBrand" style={{ fontSize: 11 }}>
                   Typing…
                 </Text>
-              ) : isDuo || partnerPresence ? (
+              ) : isGroup || partnerPresence ? (
                 <View style={styles.statusRow}>
                   {partnerPresence === "ONLINE" ? <View style={styles.activeDot} /> : null}
                   <Text
@@ -643,14 +717,14 @@ export const ChatScreen: React.FC = () => {
                     color={partnerPresence === "ONLINE" ? "success" : "textSubdued"}
                     style={{ fontSize: 11 }}
                   >
-                    {isDuo ? `${members.length} people` : partnerPresence === "ONLINE" ? "Online" : "Offline"}
+                    {isGroup ? `${members.length} people` : partnerPresence === "ONLINE" ? "Online" : "Offline"}
                   </Text>
                 </View>
               ) : null}
             </View>
           </Pressable>
           <View style={styles.headerActions}>
-            {!isDuo ? <>
+            {!isGroup ? <>
             {!blindActive ? <IconButton
               size={36}
               tone="soft"
@@ -697,10 +771,11 @@ export const ChatScreen: React.FC = () => {
           {isEmpty ? (
             <ChatEmptyBody
               isDuo={isDuo}
+              isCircle={circleChat}
               partnerName={chatName}
               onSelectOpener={onTextChange}
               onPlanDate={openDatePlanner}
-              onSayHello={!isDuo && helloEnabled && allowsVoice ? () => setHelloOpen(true) : undefined}
+              onSayHello={!isGroup && helloEnabled && allowsVoice ? () => setHelloOpen(true) : undefined}
             />
           ) : (
             <ScrollView
@@ -718,8 +793,8 @@ export const ChatScreen: React.FC = () => {
                   key={m.id}
                   message={m}
                   accessToken={tokens?.accessToken}
-                  senderName={isDuo ? members.find((member) => member.userId === m.senderId)?.displayName : undefined}
-                  readLabel={isDuo && seenCount > 0 && m.senderId === user?.id && m.sequence === lastMineSeq ? `Seen by ${seenCount}` : undefined}
+                  senderName={isGroup ? members.find((member) => member.userId === m.senderId)?.displayName : undefined}
+                  readLabel={isGroup && seenCount > 0 && m.senderId === user?.id && m.sequence === lastMineSeq ? `Seen by ${seenCount}` : undefined}
                   isMine={m.senderId === user?.id}
                   deliveryState={
                     failedMessageIds.has(m.clientMessageId ?? m.id)
@@ -730,7 +805,7 @@ export const ChatScreen: React.FC = () => {
                   }
                   onRetry={() => void deliverMessage(m, false)}
                   showRead={
-                    !isDuo && m.senderId === user?.id &&
+                    !isGroup && m.senderId === user?.id &&
                     m.sequence === lastMineSeq &&
                     partnerLastReadSeq >= m.sequence
                   }
@@ -842,12 +917,18 @@ export const ChatScreen: React.FC = () => {
           </IconButton>
         </View>
         <View>
-          {isDuo ? <>
-            <ConversationOption icon="calendar" label="Duo meetup" accent onPress={() => { setMenuOpen(false); openDatePlanner(); }} />
-            <View style={styles.optionDivider} />
+          {isGroup ? <>
+            {isDuo ? <>
+              <ConversationOption icon="calendar" label="Duo meetup" accent onPress={() => { setMenuOpen(false); openDatePlanner(); }} />
+              <View style={styles.optionDivider} />
+            </> : null}
             <ConversationOption icon="shield" label="Members & safety" onPress={() => { setMenuOpen(false); setMembersOpen(true); }} />
           </> : <>
             {helloEnabled && allowsVoice ? <ConversationOption icon="phone" label={t("hello.action")} onPress={() => { setMenuOpen(false); setHelloOpen(true); }} /> : null}
+            {canCheckIn && !blindActive ? <ConversationOption icon="heart" label="Connection check-in" onPress={() => {
+              setMenuOpen(false);
+              router.push({ pathname: "/(app)/connection-check-in/[conversationId]", params: { conversationId: conversation.id } });
+            }} /> : null}
             {conversation.matchId ? <>
               <ConversationOption icon="calendar" label="Plan a meetup" accent onPress={() => { setMenuOpen(false); openDatePlanner(); }} />
               <ConversationOption icon="heart" label="Match details" onPress={() => { setMenuOpen(false); router.push(`/(app)/match/${conversation.matchId}`); }} />
@@ -871,6 +952,7 @@ export const ChatScreen: React.FC = () => {
       <DuoMembersDialog
         visible={membersOpen}
         members={members}
+        label={circleChat ? "Circle chat members" : undefined}
         currentUserId={user?.id}
         onClose={() => setMembersOpen(false)}
         onReport={(member) => {
@@ -894,7 +976,7 @@ export const ChatScreen: React.FC = () => {
           <Button label={t("hello.call")} fullWidth loading={helloBusy} onPress={() => void sayHello()} />
         </ButtonRow>
       </CenterDialog>
-      <CenterDialog visible={helloReturn && !isDuo} style={styles.compactDialog} onClose={() => setHelloReturn(false)} accessibilityLabel={t("hello.after")}>
+      <CenterDialog visible={helloReturn && !isGroup} style={styles.compactDialog} onClose={() => setHelloReturn(false)} accessibilityLabel={t("hello.after")}>
         <Text variant="subheading">{t("hello.after")}</Text>
         <ButtonRow>
           <Button label={t("hello.chat")} variant="secondary" fullWidth onPress={() => setHelloReturn(false)} />
@@ -908,11 +990,12 @@ export const ChatScreen: React.FC = () => {
 // Inline empty state used when the conversation has no messages yet.
 const ChatEmptyBody: React.FC<{
   isDuo?: boolean;
+  isCircle?: boolean;
   partnerName: string;
   onSelectOpener: (opener: string) => void;
   onPlanDate: () => void;
   onSayHello?: () => void;
-}> = ({ isDuo, partnerName, onSelectOpener, onPlanDate, onSayHello }) => {
+}> = ({ isDuo, isCircle, partnerName, onSelectOpener, onPlanDate, onSayHello }) => {
   const { t } = useLocalization();
   const { palette } = useTheme();
   const styles = useStyles();
@@ -921,6 +1004,11 @@ const ChatEmptyBody: React.FC<{
     "Recommend me one thing — book, walk, anything.",
     "What’s on your Saturday list?",
   ];
+  if (isCircle) return (
+    <View style={{ flex: 1, padding: spacing.xxl, alignItems: "center", justifyContent: "center" }}>
+      <Text variant="subheading">No messages yet</Text>
+    </View>
+  );
   if (isDuo) return (
     <View style={{ flex: 1, padding: spacing.xxl, alignItems: "center", justifyContent: "center", gap: spacing.md }}>
       <Text variant="subheading">Everyone’s here</Text>

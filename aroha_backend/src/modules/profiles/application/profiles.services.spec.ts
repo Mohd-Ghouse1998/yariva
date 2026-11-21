@@ -477,7 +477,7 @@ describe("UpdateProfileService", () => {
 
 describe("Discovery category preference updates", () => {
   it.each([{ categories: undefined }, { categories: [] }, { categories: ["TECHNOLOGY"] }])("preserves omission and persists explicit selections: %p", async ({ categories }) => {
-    const tx = {};
+    const tx = { $queryRaw: jest.fn().mockResolvedValue([]) };
     const upsert = jest.fn().mockResolvedValue(undefined);
     const preference = {
       minAge: 18, maxAge: 99, maxDistanceKm: 15, intentFilter: [], preferredGenders: [],

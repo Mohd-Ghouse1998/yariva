@@ -11,7 +11,8 @@ import type { PublicProfileDto } from "./profile";
 export interface ConversationSummaryDto {
   id: string;
   matchId: string | null;
-  kind: "SOLO" | "DUO";
+  kind: "SOLO" | "DUO" | "CIRCLE";
+  circleTitle?: string;
   duoMatchId: string | null;
   participants: PublicProfileDto[];
   readStates: Array<{ userId: string; lastReadSequence: number }>;

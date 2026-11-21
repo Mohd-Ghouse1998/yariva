@@ -14,6 +14,10 @@ export class CreateLikeDto {
   readonly targetUserId!: string;
 
   @IsOptional()
+  @IsUUID("4")
+  readonly sceneId?: string;
+
+  @IsOptional()
   @IsString()
   @MaxLength(300)
   readonly introNote?: string;
@@ -62,7 +66,7 @@ export interface ReceivedLikePreviewDto {
   likedAt: string;
   introNote: string | null;
   displayName: string;
-  age: number;
+  age: number | null;
   headline: string | null;
   intents: Array<
     "FRIENDSHIP" | "COMPANIONSHIP" | "SHARED_INTERESTS" | "RELATIONSHIP"

@@ -29,6 +29,7 @@ export interface SceneCandidateRow {
   scenePhotoHeight: number | null;
   photoBucket: string | null;
   photoObjectKey: string | null;
+  hideDistance: boolean;
   distanceMeters: number;
   availability: "CONFIRMED" | "UNCONFIRMED";
 }
@@ -213,7 +214,7 @@ export class SceneRepository {
       : Prisma.sql`AND cardinality(dp."preferredGenders") = 0`;
     const restrictCondition = input.restrictSceneIds
       ? input.restrictSceneIds.length
-        ? Prisma.sql`AND s."id" IN (${Prisma.join(input.restrictSceneIds)})`
+        ? Prisma.sql`AND s."id" IN (${Prisma.join(input.restrictSceneIds.map(id => Prisma.sql`${id}::uuid`))})`
         : Prisma.sql`AND FALSE`
       : Prisma.empty;
     const cursorCondition = input.cursor
@@ -250,7 +251,10 @@ export class SceneRepository {
           scene_photo."height" AS "scenePhotoHeight",
           photo."bucket" AS "photoBucket",
           photo."objectKey" AS "photoObjectKey",
-          ST_Distance(viewer_profile."locationPoint", p."locationPoint")::double precision AS "distanceMeters",
+          p."hideDistance",
+          CASE WHEN p."hideDistance" THEN 2147483647::double precision
+            ELSE ROUND(ST_Distance(viewer_profile."locationPoint", p."locationPoint") / 500) * 500
+          END AS "distanceMeters",
           CASE
             WHEN s."availableFrom" IS NULL OR s."availableUntil" IS NULL
               OR ${input.viewerScene.availableFrom}::timestamp IS NULL
@@ -307,8 +311,10 @@ export class SceneRepository {
           AND viewer_profile."locationPoint" IS NOT NULL
           AND viewer_profile."locationUpdatedAt" >= ${input.locationFreshAfter}
           AND ST_DWithin(viewer_profile."locationPoint", p."locationPoint", ${input.radiusMeters})
-          ${preferredGenderCondition}
-          ${viewerGenderCondition}
+          ${input.viewerScene.intent === "DATING" ? Prisma.sql`
+            ${preferredGenderCondition}
+            ${viewerGenderCondition}
+          ` : Prisma.empty}
           AND (${input.viewerMinAge}::integer IS NULL OR date_part('year', age(${input.now}::timestamp, p."dateOfBirth")) >= ${input.viewerMinAge})
           AND (${input.viewerMaxAge}::integer IS NULL OR date_part('year', age(${input.now}::timestamp, p."dateOfBirth")) <= ${input.viewerMaxAge})
           AND (dp."minAge" IS NULL OR date_part('year', age(${input.now}::timestamp, ${input.viewerDateOfBirth}::timestamp)) >= dp."minAge")
@@ -378,7 +384,7 @@ export class SceneDiscoveryCacheRepository {
     limit: number;
   }): string {
     return [
-      "scenes:feed:v1",
+      "scenes:feed:v2",
       input.viewerId,
       input.sceneId,
       input.sceneVersion,

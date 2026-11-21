@@ -1,4 +1,4 @@
-import type { Match, User, WingmanPairMatch, WingmanParty } from "../../../generated/prisma/client";
+import type { Circle, Match, User, WingmanPairMatch, WingmanParty } from "../../../generated/prisma/client";
 
 type Participant = Pick<User, "id" | "status" | "deletedAt" | "isChatFrozen">;
 export interface ConversationContext {
@@ -6,6 +6,7 @@ export interface ConversationContext {
     userLow: Participant;
     userHigh: Participant;
   }) | null;
+  circle?: Pick<Circle, "status" | "expiresAt"> | null;
   members?: { userId: string; user: Participant }[];
   duoMatch?: (Pick<WingmanPairMatch, "status" | "partyLowMembershipVersion" | "partyHighMembershipVersion"> & {
     partyLow: Pick<WingmanParty, "status" | "membershipVersion">;
@@ -27,6 +28,7 @@ export function conversationParticipantIds(context: ConversationContext | null):
 
 export function relationshipIsActive(context: ConversationContext): boolean {
   if (context.match) return context.match.status === "ACTIVE";
+  if (context.circle) return context.circle.status === "OPEN" && context.circle.expiresAt > new Date();
   const duo = context.duoMatch;
   return Boolean(duo && duo.status === "ACTIVE" && context.members?.length === 4 &&
     duo.partyLow.status === "ACTIVE" && duo.partyHigh.status === "ACTIVE" &&

@@ -11,6 +11,7 @@ import type { PublicProfileDto } from "../../types/profile";
 interface DuoMembersDialogProps {
   visible: boolean;
   members: PublicProfileDto[];
+  label?: string;
   currentUserId?: string;
   onClose: () => void;
   onReport: (member: PublicProfileDto) => void;
@@ -21,6 +22,7 @@ interface DuoMembersDialogProps {
 export const DuoMembersDialog: React.FC<DuoMembersDialogProps> = ({
   visible,
   members,
+  label = "Duo chat members",
   currentUserId,
   onClose,
   onReport,
@@ -40,7 +42,7 @@ export const DuoMembersDialog: React.FC<DuoMembersDialogProps> = ({
     <CenterDialog
       visible={visible}
       onClose={onClose}
-      accessibilityLabel="Duo chat members"
+      accessibilityLabel={label}
       style={styles.dialog}
     >
       <View style={styles.header}>

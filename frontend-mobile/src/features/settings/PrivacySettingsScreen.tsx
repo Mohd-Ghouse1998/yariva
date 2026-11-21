@@ -94,7 +94,7 @@ export const PrivacySettingsScreen: React.FC = () => {
                 grouped
                 first
                 label="Incognito"
-                sub="Only people you mark Interested can see you."
+                sub="Hidden from Discover. People you mark Interested and active matches can still see you."
                 value={value.isIncognito}
                 disabled={settings.saving}
                 onValueChange={(isIncognito) => void settings.update({ ...value, isIncognito })}

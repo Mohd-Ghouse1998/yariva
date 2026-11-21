@@ -77,9 +77,10 @@ export const ProfileDetailScreen: React.FC = () => {
   const router = useRouter();
   const goBack = useSafeBack("/(app)/(tabs)/discover");
   const toast = useToast();
-  const { userId, sceneView, profileMode, conversationId } = useLocalSearchParams<{
+  const { userId, sceneView, sceneId, profileMode, conversationId } = useLocalSearchParams<{
     userId: string;
     sceneView?: string;
+    sceneId?: string;
     profileMode?: string;
     conversationId?: string;
   }>();
@@ -120,7 +121,7 @@ export const ProfileDetailScreen: React.FC = () => {
         vibesApi.forUser(userId).catch(() => ({ vibe: null })),
       ]);
       setProfile(found);
-      setCurrentScene(sceneResponse.scene);
+      setCurrentScene(sceneView === "1" && sceneId && sceneResponse.scene?.id !== sceneId ? null : sceneResponse.scene);
       setCurrentVibe(vibeResponse.vibe);
       void analyticsApi
         .ingest([
@@ -136,7 +137,7 @@ export const ProfileDetailScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [sceneId, sceneView, userId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -161,12 +162,14 @@ export const ProfileDetailScreen: React.FC = () => {
   const interested = async (introNote?: string): Promise<boolean> => {
     if (!profile || submitting) return false;
     const note = introNote?.trim();
-    const fromScene = sceneView === "1" && Boolean(currentScene);
+    const fromScene = sceneView === "1";
+    if (fromScene && !currentScene) return false;
     setSubmitting(true);
     try {
       const response = await likesApi.like(
         {
           targetUserId: profile.userId,
+          ...(fromScene && currentScene ? { sceneId: currentScene.id } : {}),
           ...(note ? { introNote: note } : {}),
         },
         `${fromScene ? "scene" : "intentional"}-like-${profile.userId}-${Date.now()}`,
@@ -239,8 +242,10 @@ export const ProfileDetailScreen: React.FC = () => {
     );
   }
 
-  if (!profile) {
-    const failure = PROFILE_FAILURE_COPY[loadFailure ?? "unavailable"];
+  if (!profile || (sceneView === "1" && !currentScene)) {
+    const failure = profile
+      ? { title: "Scene unavailable", body: "Refresh Scenes to see what’s available now.", retry: false }
+      : PROFILE_FAILURE_COPY[loadFailure ?? "unavailable"];
     return (
       <SafeAreaView edges={["top", "left", "right"]} style={styles.screen}>
         <Header showBack onLeftPress={goBack} title="Profile" />

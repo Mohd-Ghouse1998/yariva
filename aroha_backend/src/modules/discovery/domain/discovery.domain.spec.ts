@@ -157,6 +157,26 @@ describe("Discovery people filters", () => {
       },
     ).eligible;
 
+  it("requires mutual dating preferences while preserving shared friendship", () => {
+    const person = {
+      ...candidate,
+      profile: { ...candidate.profile, gender: "TRANS_WOMAN" },
+      intents: [{ intent: "DATING" }, { intent: "FRIENDSHIP" }],
+    };
+    const browse = (selectedIntents: string[], preferredGenders: string[], reciprocal: string[]) =>
+      service.isEligible(
+        { ...viewer, profile: { ...viewer.profile, gender: "NON_BINARY" } } as any,
+        { ...person, discoveryPreference: { preferredGenders: reciprocal } } as any,
+        { maxDistanceKm: 15, selectedIntents, preferredGenders, excludedUserIds: new Set() },
+      );
+
+    expect(browse(["DATING"], ["TRANS_WOMAN"], ["NON_BINARY"]).eligible).toBe(true);
+    expect(browse(["DATING"], ["WOMAN"], ["NON_BINARY"]).eligible).toBe(false);
+    expect(browse(["DATING"], ["TRANS_WOMAN"], ["MAN"]).eligible).toBe(false);
+    expect(browse(["DATING", "FRIENDSHIP"], ["WOMAN"], ["MAN"]))
+      .toMatchObject({ eligible: true, primaryIntentBucket: "FRIENDSHIP" });
+  });
+
   it("preserves discovery when optional filters are empty", () => {
     expect(eligible({})).toBe(true);
     expect(

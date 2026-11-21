@@ -80,6 +80,7 @@ export interface PublicProfileDto {
 }
 
 export interface DiscoveryFeedResponseDto {
+  firstConnectionUserIds?: string[];
   items: PublicProfileDto[];
   nextCursor: string | null;
   snapshotExpiresAt: string;

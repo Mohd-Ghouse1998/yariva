@@ -1,6 +1,6 @@
 # Yariva implementation tracker
 
-Last updated: 29 October 2026 (Asia/Kolkata). Latest audit: Events still has coding follow-ups as well as device/supply/provider acceptance gates; see the source audit under EVM-01–08.
+Last updated 21 November 2026 (Asia/Kolkata). See EVM-01–08 for the separate Events audit and acceptance gates.
 
 **Historical Stories checkpoint, 29 October:** Your Stories now has an optional, owner-only Saved archive and compact Active/Saved underline tabs using the same shared component as Connect. The latest user request explicitly authorizes this archive, superseding earlier “no archive” notes. Three authorized Samsung screenshots reviewed against the supplied design; save/reload/unsave/delete, empty states and large-text hierarchy checks performed. Mobile 56 files/319 tests, backend 45 suites/212 unit tests and 40 real Story integration tests pass; mobile/backend typechecks and mobile lint pass. Eleven temporary Story rows and eight media objects removed and absence verified; rollout unchanged. Full platform, provider, operations and security gates remain open.
 
@@ -8,6 +8,25 @@ Specification: [Full-stack UI/UX master prompt](YARIVA_FULL_STACK_UI_UX_MASTER_P
 Feature I implementation prompt: [Private Stories and approved-audience sharing](YARIVA_PRIVATE_STORIES_IMPLEMENTATION_PROMPT_2026-09-30.md).
 
 ## Current checkpoint
+
+### Circles, activities and connection check-in, 21 November
+
+The existing `codex/yariva-social` worktree starts at `4016f7bf2338` and targets `origin/main`. The prior seven-feature implementation and the review corrections are included in this checkpoint.
+
+| Finding | Correction | Backend evidence | Frontend evidence | Remaining limitation |
+| --- | --- | --- | --- | --- |
+| Organizer lockout | Independent, redacted recovery and atomic seat release | Block, suspension, unaffected participants and repeat recovery | Recovery and approved-attendee removal controls, terminal-state rendering tests | Android acceptance |
+| Guest participation history | Preserve a redacted receipt, distinguish organizer removal from guest withdrawal | Live unpublish, cancel, expiry and restricted payload checks | Historical RSVP and terminal labels tested | Android acceptance |
+| Older personal items | Paginate My Circles and activities separately from Nearby | Live 60-plus newer items, empty pages and deduplicated traversal | Independent pagination and redacted actions tested | Android acceptance |
+| Roster chat and media | Authorized handoff, retained retired data and cleanup of abandoned uploads | Real socket revocation, committed and rejected sends, HTTP upload/finalization/download, MinIO cleanup | Chat handoff and retry compile in Android export | Device transition and production worker verification, historical access decision |
+| Intent Handshake | Neutral pending and fresh consent after invalidation | Live concurrency, stale versions, withdrawal and preference reversion | Pending and foreground/timed refresh tested | Android acceptance |
+| Vibe Together | First accepted answers remain fixed until reset | Live replay, changed resubmission, mutual reveal and stale reset | Check-in UI compiles in Android export | Android acceptance |
+| Privacy and dating actions | Enforce current audience boundaries and bilateral preferences for Dating Scenes | Live Incognito, hidden age/distance, cached previews, explicit Scene action and friendship checks | Exact Scene ID carried by mobile action | Future audience choice and Android acceptance |
+| Existing flows | Preserve First Connections, Story independence, Solo/Duo and Scene expiry | Live discovery/radius, Stories, Duo and Scenes coverage, Solo plan unit tests | Full mobile regression and Android export | Full native acceptance |
+
+- The additive migration adds Circles, activities, responses and check-ins and links Circles to Conversations. All 35 migrations applied to fresh isolated Postgres/PostGIS. Redis and MinIO backed live checks. See the [API contracts and privacy and action matrices](YARIVA_FULL_STACK_UI_UX_MASTER_PROMPT_2026-09-20.md#13c-small-group-discovery-and-connection-check-in).
+- Backend lint, build and 237 unit tests passed. The live runs verified 69 cases across Circles/check-in, Private Stories, Duo chat, Discover/Meet Again and Scenes. The combined-run Scenes 404 came from an inherited test allowlist. The corrected Scenes fixture passed after the social suite. The earlier intermittent Scenes socket failure remains unclassified. Mobile typecheck, lint, 365 tests and Android export passed. Full physical Android acceptance is pending.
+- All three `social.*` flags default off. No production migration, deployment, data change or flag change was performed. **Circle messages, activity updates and check-ins have no push delivery.** Circle chat uses in-app sockets. Production rollout still requires native acceptance and release-environment migration, worker and storage verification.
 
 **Cloud Events continuation, 29 October:** The clean `work` branch was fast-forwarded to verified handoff `8e13de6a7ffad9fec7e1c962ed68d0c95b39fb8c` before edits; no reset, force push or prior work discarded. Events now owns the existing visible Meetups tab route, with a virtualized photo-led paginated feed, private Saved view, filters, consented approximate/manual location and My plans for existing solo/Duo routes. The shared reviewed-venue query supplies a strictly filtered fallback only on successful empty first discovery. Added event geolocation/timestamptz/report support and place-photo rights metadata; all **33 migrations** applied to fresh isolated `yariva_events_test` PostgreSQL/PostGIS, and repeat deployment reports no pending migrations. Prisma generation/checksum/TLS validation now works. No environment configuration or network policy was widened in this implementation run.
 

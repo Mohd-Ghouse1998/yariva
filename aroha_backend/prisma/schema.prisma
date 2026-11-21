@@ -474,6 +474,9 @@ model User {
 
   sessions                   UserSession[]
   savedEvents                SavedEvent[]
+  organizedCircles           Circle[]
+  circleMemberships          CircleMembership[]
+  circleActivityResponses    CircleActivityResponse[]
   pushTokens                 PushToken[]
   profile                    UserProfile?
   photos                     ProfilePhoto[]
@@ -1271,6 +1274,7 @@ model ReviewedVenue {
   updatedAt          DateTime                               @updatedAt
 
   selectedPlans DatePlan[]
+  circleActivities CircleActivity[]
 
   @@index([reviewStatus, operationalStatus, deletedAt])
   @@index([city, publicLocality])
@@ -1338,6 +1342,7 @@ model Conversation {
   id                  String                   @id @default(uuid()) @db.Uuid
   matchId             String?                  @unique @db.Uuid
   duoMatchId          String?                  @unique @db.Uuid
+  circleId            String?                  @db.Uuid
   status              ConversationStatus       @default(ACTIVE)
   lastMessageSequence Int                      @default(0)
   lastMessagePreview  String?                  @db.VarChar(160)
@@ -1351,6 +1356,8 @@ model Conversation {
 
   match        Match?             @relation(fields: [matchId], references: [id], onDelete: Restrict)
   duoMatch     WingmanPairMatch?  @relation(fields: [duoMatchId], references: [id], onDelete: Restrict)
+  circle       Circle?            @relation(fields: [circleId], references: [id], onDelete: Restrict)
+  checkIn      ConversationCheckIn?
   members      ConversationMember[]
   duoPlans     DuoPlan[]
   messages     Message[]
@@ -1359,6 +1366,7 @@ model Conversation {
   reports      Report[]           @relation("ReportTargetConversation")
 
   @@index([status, lastMessageSentAt])
+  @@index([circleId, status])
 }
 
 /// Immutable membership snapshot. A replacement buddy never inherits old messages.
@@ -1864,4 +1872,102 @@ model EventChangeNotice {
   event        EventListing @relation(fields: [eventId], references: [id], onDelete: Cascade)
   @@unique([eventId, eventVersion])
   @@index([completedAt, createdAt, id])
+}
+
+enum CircleStatus {
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+enum CircleRequestStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  WITHDRAWN
+  REMOVED
+}
+
+model Circle {
+  id          String           @id @default(uuid()) @db.Uuid
+  organizerId String           @db.Uuid
+  title       String           @db.VarChar(80)
+  description String           @db.VarChar(500)
+  intent      ConnectionIntent
+  city        String           @db.VarChar(120)
+  region      String           @db.VarChar(120)
+  countryCode String           @db.Char(2)
+  capacity    Int
+  status      CircleStatus     @default(OPEN)
+  expiresAt   DateTime
+  createdAt   DateTime         @default(now())
+  organizer   User             @relation(fields: [organizerId], references: [id], onDelete: Restrict)
+  memberships CircleMembership[]
+  activities  CircleActivity[]
+  chats       Conversation[]
+
+  @@index([countryCode, city, region, status, expiresAt])
+  @@index([organizerId, status])
+}
+
+model CircleMembership {
+  circleId  String              @db.Uuid
+  userId    String              @db.Uuid
+  status    CircleRequestStatus @default(PENDING)
+  createdAt DateTime            @default(now())
+  circle    Circle              @relation(fields: [circleId], references: [id], onDelete: Restrict)
+  user      User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@id([circleId, userId])
+  @@index([userId, status])
+  @@index([circleId, status])
+}
+
+model CircleActivity {
+  id            String   @id @default(uuid()) @db.Uuid
+  circleId      String   @db.Uuid
+  title         String   @db.VarChar(80)
+  description   String   @db.VarChar(500)
+  venueId       String?  @db.Uuid
+  startsAt      DateTime?
+  expiresAt     DateTime
+  capacity      Int
+  openToNearby  Boolean  @default(false)
+  helpNeeds     String[]
+  cancelledAt   DateTime?
+  version       Int      @default(1)
+  createdAt     DateTime @default(now())
+  circle        Circle   @relation(fields: [circleId], references: [id], onDelete: Restrict)
+  venue         ReviewedVenue? @relation(fields: [venueId], references: [id], onDelete: Restrict)
+  responses     CircleActivityResponse[]
+
+  @@index([circleId, expiresAt])
+  @@index([openToNearby, expiresAt])
+}
+
+model CircleActivityResponse {
+  activityId String              @db.Uuid
+  userId     String              @db.Uuid
+  /// 0 = participation, 1..3 = the corresponding voluntary help need.
+  need       Int
+  status     CircleRequestStatus @default(PENDING)
+  activity   CircleActivity      @relation(fields: [activityId], references: [id], onDelete: Restrict)
+  user       User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@id([activityId, userId, need])
+  @@index([activityId, need, status])
+  @@index([userId, status])
+}
+
+model ConversationCheckIn {
+  conversationId String            @id @db.Uuid
+  intentVersion  Int               @default(0)
+  lowIntent      ConnectionIntent?
+  highIntent     ConnectionIntent?
+  vibeVersion    Int               @default(0)
+  vibeInviterId  String?           @db.Uuid
+  vibeAccepted   Boolean           @default(false)
+  lowAnswers     String[]          @default([])
+  highAnswers    String[]          @default([])
+  conversation   Conversation      @relation(fields: [conversationId], references: [id], onDelete: Restrict)
 }

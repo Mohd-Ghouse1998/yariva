@@ -64,6 +64,7 @@ export class NotificationDomainEventSubscriberService
     }
 
     if (eventName === "conversation.message.created") {
+      if (payload.inAppOnly === true) return;
       await this.createMessageNotifications(payload);
       return;
     }

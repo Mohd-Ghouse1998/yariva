@@ -15,7 +15,7 @@ export type LikeTargetRecord = Pick<
   User,
   "id" | "status" | "deletedAt" | "isShadowBanned" | "isDiscoveryFrozen"
 > & {
-  profile: Pick<UserProfile, "isHidden" | "isComplete" | "deletedAt"> | null;
+  profile: Pick<UserProfile, "isHidden" | "isPaused" | "isIncognito" | "isComplete" | "deletedAt"> | null;
   photos: Array<{
     id: string;
   }>;
@@ -130,6 +130,7 @@ export class LikeRepository {
           city: string | null;
           region: string | null;
           isHidden: boolean;
+          hideAge: boolean;
           isComplete: boolean;
           deletedAt: Date | null;
         } | null;
@@ -195,6 +196,7 @@ export class LikeRepository {
                 city: true,
                 region: true,
                 isHidden: true,
+                hideAge: true,
                 isComplete: true,
                 deletedAt: true,
               },
@@ -301,6 +303,8 @@ export class LikeInteractionRepository {
         profile: {
           select: {
             isHidden: true,
+            isPaused: true,
+            isIncognito: true,
             isComplete: true,
             deletedAt: true,
           },

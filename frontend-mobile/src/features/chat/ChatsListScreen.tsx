@@ -115,7 +115,9 @@ export const ChatsListScreen: React.FC = () => {
             }
             renderItem={({ item: conversation }) => {
               const isDuo = conversation.kind === "DUO";
-              const name = isDuo ? "Duo chat" : conversation.otherUser.displayName;
+              const isCircle = conversation.kind === "CIRCLE";
+              const isGroup = isDuo || isCircle;
+              const name = isCircle ? conversation.circleTitle ?? "Circle chat" : isDuo ? "Duo chat" : conversation.otherUser.displayName;
               const photo =
                 conversation.otherUser.photos.find((item) => item.isPrimary)?.url ??
                 conversation.otherUser.photos[0]?.url;
@@ -132,14 +134,14 @@ export const ChatsListScreen: React.FC = () => {
                   }
                   style={({ pressed }) => [styles.row, pressed ? styles.pressed : null]}
                 >
-                  <Avatar size={44} uri={isDuo ? undefined : photo} initials={name} />
+                  <Avatar size={44} uri={isGroup ? undefined : photo} initials={name} />
                   <View style={styles.rowText}>
                     <View style={styles.topLine}>
                       <View style={styles.nameLine}>
                         <Text variant="bodyStrong" numberOfLines={1}>
                           {name}
                         </Text>
-                        {!isDuo ? <VerificationBadge
+                        {!isGroup ? <VerificationBadge
                           status={conversation.otherUser.verificationStatus}
                           compact
                         /> : null}

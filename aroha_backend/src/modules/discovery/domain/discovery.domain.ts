@@ -13,6 +13,14 @@ import type {
   ViewerDiscoveryContext,
 } from "../infrastructure/discovery.infrastructure";
 
+export function isSocialIntent(intent: string): boolean {
+  return intent === "FRIENDSHIP" || intent === "COMPANIONSHIP" || intent === "SHARED_INTERESTS";
+}
+
+export function genderPreferenceMatches(preferences: readonly string[], gender?: string | null): boolean {
+  return preferences.length === 0 || (gender != null && preferences.includes(gender));
+}
+
 export interface CandidateEligibilityResult {
   eligible: boolean;
   distanceKm: number;
@@ -112,10 +120,7 @@ export class CandidateEligibilityService {
       candidateAge < 18 ||
       viewerAge < 18 ||
       (preference?.minAge != null && viewerAge < preference.minAge) ||
-      (preference?.maxAge != null && viewerAge > preference.maxAge) ||
-      (preference?.preferredGenders.length &&
-        (!viewer.profile.gender ||
-          !preference.preferredGenders.includes(viewer.profile.gender)))
+      (preference?.maxAge != null && viewerAge > preference.maxAge)
     ) {
       return {
         eligible: false,
@@ -146,15 +151,8 @@ export class CandidateEligibilityService {
       return { eligible: false, distanceKm, primaryIntentBucket: "NONE" };
     }
 
-    if (distanceKm > input.maxDistanceKm) {
-      return { eligible: false, distanceKm, primaryIntentBucket: "NONE" };
-    }
-
-    if (
-      input.preferredGenders.length > 0 &&
-      (!candidate.profile.gender ||
-        !input.preferredGenders.includes(candidate.profile.gender))
-    ) {
+    if (distanceKm > input.maxDistanceKm ||
+        (preference?.maxDistanceKm != null && distanceKm > preference.maxDistanceKm)) {
       return { eligible: false, distanceKm, primaryIntentBucket: "NONE" };
     }
 
@@ -209,7 +207,10 @@ export class CandidateEligibilityService {
         : candidate.intents.map((intent) => intent.intent),
     );
     const overlappingIntents = input.selectedIntents.filter((intent) =>
-      candidateIntentSet.has(intent),
+      candidateIntentSet.has(intent) &&
+      (isSocialIntent(intent) ||
+        (genderPreferenceMatches(input.preferredGenders, candidate.profile?.gender) &&
+         genderPreferenceMatches(preference?.preferredGenders ?? [], viewer.profile?.gender))),
     );
 
     if (overlappingIntents.length === 0) {

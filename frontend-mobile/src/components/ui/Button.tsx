@@ -42,6 +42,7 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   hitSlop,
   accessibilityLabel,
+  accessibilityState,
   ...rest
 }) => {
   const { palette } = useTheme();
@@ -107,7 +108,7 @@ export const Button: React.FC<ButtonProps> = ({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ disabled: isDisabled, busy: loading }}
+      accessibilityState={{ ...accessibilityState, disabled: isDisabled, busy: loading }}
       hitSlop={accessibleHitSlop}
       disabled={isDisabled}
       style={({ pressed }) => {

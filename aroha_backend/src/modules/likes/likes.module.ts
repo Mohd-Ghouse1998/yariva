@@ -7,6 +7,7 @@ import { DiscoveryModule } from "../discovery/discovery.module";
 import { MatchesModule } from "../matches/matches.module";
 import { ConversationsModule } from "../conversations/conversations.module";
 import { UsersModule } from "../users/users.module";
+import { ScenesModule } from "../scenes/scenes.module";
 import { LikesController } from "./controllers/likes.controller";
 import {
   CreateLikeService,
@@ -31,6 +32,7 @@ import {
     MatchesModule,
     ConversationsModule,
     ObjectStorageModule,
+    ScenesModule,
   ],
   controllers: [LikesController],
   providers: [

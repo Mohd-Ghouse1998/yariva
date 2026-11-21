@@ -34,6 +34,7 @@ import { CallCleanupStaleProcessor } from "./calls/call-cleanup-stale.processor"
 import { PassesCleanupExpiredProcessor } from "./likes/passes-cleanup-expired.processor";
 import { PhotoModerationProcessor } from "./moderation/photo-moderation.processor";
 import { MessageAttachmentModerationProcessor } from "./moderation/message-attachment-moderation.processor";
+import { MessageAttachmentCleanupProcessor } from "./messages/message-attachment-cleanup.processor";
 import { TrustScoreRecomputeProcessor } from "./moderation/trustscore-recompute.processor";
 import { NotificationDispatchProcessor } from "./notification/notification-dispatch.processor";
 import { DefaultQueueProcessor } from "./queue/default-queue.processor";
@@ -84,6 +85,7 @@ import { PrivateStoryCleanupProcessor } from "./private-stories/private-story-cl
     NotificationDispatchProcessor,
     PhotoModerationProcessor,
     MessageAttachmentModerationProcessor,
+    MessageAttachmentCleanupProcessor,
     AnalyticsRollupProcessor,
     TrustScoreRecomputeProcessor,
     CallCleanupStaleProcessor,

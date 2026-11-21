@@ -7,7 +7,7 @@ type LikeTargetRecord = Pick<
   User,
   "id" | "status" | "deletedAt" | "isShadowBanned" | "isDiscoveryFrozen"
 > & {
-  profile: Pick<UserProfile, "isHidden" | "isComplete" | "deletedAt"> | null;
+  profile: Pick<UserProfile, "isHidden" | "isPaused" | "isIncognito" | "isComplete" | "deletedAt"> | null;
   photos: Array<{
     id: string;
   }>;

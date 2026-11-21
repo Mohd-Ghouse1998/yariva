@@ -1,3 +1,4 @@
+import { isPublic } from "../../social/social-access";
 import { conversationParticipantIds, relationshipIsActive } from "../domain/conversation-context";
 import { Injectable } from "@nestjs/common";
 import { ERROR_CODES } from "../../../common/constants/error-codes";
@@ -84,24 +85,28 @@ export class ConversationReaderService {
   ): Promise<ConversationSummaryDto> {
     const users = conversation.match ? [conversation.match.userLow, conversation.match.userHigh] :
       conversation.members.map((member) => member.user);
-    const otherUser = users.find((user) => user.id !== viewerUserId)!;
+    const otherUser = users.find((user) => user.id !== viewerUserId) ?? users[0]!;
     const viewerProfile = users.find((user) => user.id === viewerUserId)?.profile ?? null;
     const readState = conversation.reads.find(read => read.userId === viewerUserId);
+
+    const project = async (user: (typeof users)[number]) => {
+      if (!conversation.circle) return mapPublicProfile(viewerProfile, user, this.objectStorageService, viewerUserId);
+      const publicFields = await mapPublicProfile(null, {
+        id: user.id, profile: null, photos: [], lifestyle: null, interests: [], intents: [],
+      }, this.objectStorageService, viewerUserId);
+      return { ...publicFields, displayName: isPublic(user.profile) ? user.profile?.displayName ?? "Circle member" : "Circle member" };
+    };
 
     return {
       id: conversation.id,
       matchId: conversation.matchId,
-      kind: conversation.duoMatchId ? "DUO" : "SOLO",
+      kind: conversation.circle ? "CIRCLE" : conversation.duoMatchId ? "DUO" : "SOLO",
+      ...(conversation.circle ? { circleTitle: conversation.circle.title } : {}),
       duoMatchId: conversation.duoMatchId,
-      participants: await Promise.all(users.map((user) => mapPublicProfile(viewerProfile, user, this.objectStorageService, viewerUserId))),
+      participants: await Promise.all(users.map(project)),
       readStates: conversation.reads.map(read => ({ userId: read.userId, lastReadSequence: read.lastReadSequence })),
       status: conversation.status,
-      otherUser: await mapPublicProfile(
-        viewerProfile,
-        otherUser,
-        this.objectStorageService,
-        viewerUserId,
-      ),
+      otherUser: await project(otherUser),
       lastMessageSequence: conversation.lastMessageSequence,
       lastMessagePreview: conversation.lastMessagePreview ?? null,
       lastMessageType: conversation.lastMessageType ?? null,

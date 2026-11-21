@@ -19,7 +19,10 @@ describeLive("Scene HTTP vertical slice", () => {
     await configureHttpServer(app);
     await app.init();
     prisma = app.get(PrismaService);
-    await prisma.featureFlag.update({ where: { key: "scenes.v1" }, data: { enabled: true } });
+    await prisma.featureFlag.update({
+      where: { key: "scenes.v1" },
+      data: { enabled: true, scope: "GLOBAL" },
+    });
   });
 
   afterAll(async () => {

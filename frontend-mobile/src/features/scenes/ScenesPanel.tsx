@@ -272,7 +272,7 @@ export const ScenesPanel: React.FC<{
                 onPress={() =>
                   router.push({
                     pathname: "/(app)/profile/[userId]",
-                    params: { userId: candidate.profile.userId, sceneView: "1" },
+                    params: { userId: candidate.profile.userId, sceneView: "1", sceneId: candidate.scene.id },
                   })
                 }
               />

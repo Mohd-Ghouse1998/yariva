@@ -1,3 +1,4 @@
+import { refreshIntentAgreements } from "../../social/intent-consent";
 import { Injectable } from "@nestjs/common";
 import { ERROR_CODES } from "../../../common/constants/error-codes";
 import { AppException } from "../../../common/errors/app.exception";
@@ -187,6 +188,7 @@ export class GetPublicProfileService {
     this.profileVisibilityPolicyService.assertProfileExists(target.profile);
     if (
       target.status !== "ACTIVE" ||
+      target.profile.deletedAt ||
       target.isShadowBanned ||
       target.isDiscoveryFrozen
     ) {
@@ -216,7 +218,9 @@ export class GetPublicProfileService {
               where: {
                 status: "ACTIVE",
                 OR: [
-                  { actorId: input.viewerId, targetId: input.targetUserId },
+                  ...(target.profile?.isIncognito || target.profile?.isHidden || target.profile?.isPaused
+                    ? []
+                    : [{ actorId: input.viewerId, targetId: input.targetUserId }]),
                   { actorId: input.targetUserId, targetId: input.viewerId },
                 ],
               },
@@ -456,6 +460,10 @@ export class UpdateProfileService {
         tx,
         new Date(),
       );
+
+      if (parsedDateOfBirth !== undefined || input.payload.gender !== undefined) {
+        await refreshIntentAgreements(tx, input.userId);
+      }
 
       await this.auditLogService.write(
         {
@@ -700,6 +708,8 @@ export class UpdateDiscoveryPreferenceService {
         tx,
         new Date(),
       );
+
+      await refreshIntentAgreements(tx, input.userId);
 
       await this.auditLogService.write(
         {

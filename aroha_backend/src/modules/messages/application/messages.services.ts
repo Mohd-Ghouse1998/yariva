@@ -98,6 +98,7 @@ export class MessageDispatchService {
     conversationId: string;
     recipientUserIds: string[];
     messageByUserId: MessageEventPayloadByUser;
+    inAppOnly?: boolean;
   }): Promise<void> {
     await this.domainEventPublisher.publishSafely(MESSAGE_EVENTS.CREATED, input);
   }
@@ -188,6 +189,7 @@ export class InitiateMessageAttachmentUploadService {
     private readonly attachmentUploadStateStore: MessageAttachmentUploadStateStore,
     @Inject(objectStorageConfig.KEY)
     private readonly storageConfig: ConfigType<typeof objectStorageConfig>,
+    private readonly bullmqProducer: BullmqProducer,
   ) {}
 
   async execute(input: {
@@ -237,6 +239,15 @@ export class InitiateMessageAttachmentUploadService {
       },
       MESSAGE_ATTACHMENT_UPLOAD_TTL_SECONDS,
     );
+
+    if (conversation.circleId) {
+      await this.bullmqProducer.enqueue("message.attachment.cleanup", {
+        conversationId: conversation.id,
+        objectKey,
+        bucket: this.storageConfig.bucketMessageAttachments,
+        expiresAt: instruction.expiresAt.toISOString(),
+      }, { delayMs: instruction.expiresAt.getTime() - Date.now() + 60 * 60 * 1000 });
+    }
 
     return {
       uploadToken,
@@ -424,12 +435,14 @@ export class SendMessageService {
         return {
           message,
           participantIds,
+          inAppOnly: Boolean(conversation.circleId),
           created: true,
         };
       });
 
       if (result.created) {
         await this.messageDispatchService.emitCreated({
+          ...(result.inAppOnly ? { inAppOnly: true } : {}),
           conversationId: result.message.conversationId,
           recipientUserIds: result.participantIds,
           messageByUserId: await buildMessageByUserId(
@@ -493,15 +506,16 @@ export class FinalizeAttachmentMessageService {
     await this.userReaderService.getRequiredById(input.userId);
     this.attachmentPolicyService.assertFinalizeAllowed(input.payload);
 
+    const currentConversation = await this.conversationRepository.findByIdForUser(input.payload.conversationId, input.userId);
+    this.messagePolicyService.assertConversationWritable(currentConversation, input.userId,
+      await this.messageInteractionRepository.hasActiveBlockAmong(resolveParticipantIds(currentConversation)));
+
     const existing = await this.messageRepository.findByConversationAndClientMessageId(
       input.payload.conversationId,
       input.userId,
       input.payload.clientMessageId,
     );
     if (existing) {
-      const replayConversation = await this.conversationRepository.findByIdForUser(input.payload.conversationId, input.userId);
-      this.messagePolicyService.assertConversationWritable(replayConversation, input.userId,
-        await this.messageInteractionRepository.hasActiveBlockAmong(resolveParticipantIds(replayConversation)));
       return { message: await this.messageReaderService.mapMessage(existing, input.userId) };
     }
 
@@ -567,6 +581,9 @@ export class FinalizeAttachmentMessageService {
             participantIds,
             created: false,
           };
+        }
+        if (conversation.circleId && Date.parse(uploadState.expiresAt) <= Date.now()) {
+          throw new AppException(400, ERROR_CODES.MESSAGE_ATTACHMENT_UPLOAD_INVALID, "Attachment upload is invalid or expired");
         }
 
         if (input.payload.replyToMessageId) {
@@ -656,6 +673,7 @@ export class FinalizeAttachmentMessageService {
         return {
           message,
           participantIds,
+          inAppOnly: Boolean(conversation.circleId),
           created: true,
         };
       });
@@ -665,6 +683,7 @@ export class FinalizeAttachmentMessageService {
       if (result.created) {
         await this.enqueueAttachmentModerationSafely(result.message.id);
         await this.messageDispatchService.emitCreated({
+          ...(result.inAppOnly ? { inAppOnly: true } : {}),
           conversationId: result.message.conversationId,
           recipientUserIds: result.participantIds,
           messageByUserId: await buildMessageByUserId(
@@ -722,6 +741,7 @@ export class EditMessageService {
     private readonly messageDispatchService: MessageDispatchService,
     private readonly conversationSummaryService: ConversationMessageSummaryService,
     private readonly auditLogService: AuditLogService,
+    private readonly conversationRepository?: ConversationRepository,
   ) {}
 
   async execute(input: {
@@ -749,6 +769,10 @@ export class EditMessageService {
         input.messageId,
         tx,
       );
+      if (current?.conversation.circleId &&
+          !await this.conversationRepository?.findByIdForUser(current.conversation.id, input.userId, tx)) {
+        throw new AppException(404, ERROR_CODES.CONVERSATION_NOT_FOUND, "Conversation not found");
+      }
       this.messagePolicyService.assertEditable(current, input.userId, now);
       const txOtherUserId = resolveParticipantIds(current.conversation).find((id) => id !== input.userId) ?? input.userId;
       const txBlocked = await this.messageInteractionRepository.hasActiveBlockAmong(resolveParticipantIds(current.conversation), tx);
@@ -816,6 +840,7 @@ export class DeleteMessageService {
     private readonly conversationSummaryService: ConversationMessageSummaryService,
     private readonly messageDispatchService: MessageDispatchService,
     private readonly auditLogService: AuditLogService,
+    private readonly conversationRepository?: ConversationRepository,
   ) {}
 
   async execute(input: {
@@ -832,8 +857,12 @@ export class DeleteMessageService {
         input.messageId,
         tx,
       );
+      if (current?.conversation.circleId &&
+          !await this.conversationRepository?.findByIdForUser(current.conversation.id, input.userId, tx)) {
+        throw new AppException(404, ERROR_CODES.CONVERSATION_NOT_FOUND, "Conversation not found");
+      }
       this.messagePolicyService.assertDeletable(current, input.userId);
-      if (current.conversation.duoMatchId) {
+      if (current.conversation.duoMatchId || current.conversation.circleId) {
         const ids = resolveParticipantIds(current.conversation);
         const blocked = await tx.block.count({ where: {
           deletedAt: null, blockerId: { in: ids }, blockedId: { in: ids },
