@@ -15,6 +15,10 @@ const DATE_NOTIFICATION_TYPES = new Set<NotificationDto["type"]>([
 const stringValue = (value: unknown): string | null =>
   typeof value === "string" && value.trim() ? value : null;
 
+export function isSocialNotificationRoute(route: unknown): boolean {
+  return route === "circle-message" || route === "circle-membership" || route === "circle-activity" || route === "connection-check-in";
+}
+
 /** Legacy stored product notifications may predate the public Duo name.
  * Scope replacement to Duo system events; never rewrite user messages/routes. */
 export const notificationDisplayCopy = (notification: Pick<NotificationDto, "type" | "data" | "title" | "body">, t?: EventTranslator) => {
@@ -33,6 +37,16 @@ export const resolveNotificationHref = (
   notification: Pick<NotificationDto, "type" | "data">,
 ): Href | null => {
   const data = notification.data ?? {};
+  if (notification.type === "SYSTEM" && (data.route === "circle-membership" || data.route === "circle-activity")) {
+    const circleId = stringValue(data.circleId);
+    const activityId = data.route === "circle-activity" ? stringValue(data.activityId) : null;
+    if (!circleId || (data.route === "circle-activity" && !activityId)) return null;
+    return { pathname: "/(app)/circles/[circleId]", params: { circleId, ...(activityId ? { activityId } : {}) } };
+  }
+  if (notification.type === "SYSTEM" && data.route === "connection-check-in") {
+    const conversationId = stringValue(data.conversationId);
+    return conversationId ? { pathname: "/(app)/connection-check-in/[conversationId]", params: { conversationId } } : null;
+  }
   if (notification.type === "SYSTEM" && data.route === "private-story") {
     const storyId = stringValue(data.storyId);
     return storyId ? { pathname: "/(app)/private-stories", params: { storyId } } : null;

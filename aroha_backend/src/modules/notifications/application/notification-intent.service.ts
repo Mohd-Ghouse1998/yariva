@@ -8,6 +8,7 @@ import type { Notification, NotificationChannel, NotificationType, Prisma } from
 import { NotificationRepository, type NotificationWithActor } from "../infrastructure/notifications.infrastructure";
 import type { NotificationDto } from "../dto/notifications.dto";
 import { NOTIFICATION_EVENTS } from "../events/notification.events";
+import { isSocialNoticeRoute, socialNoticeLink } from "../../social/social-notice-data";
 
 export interface CreateNotificationInput {
   userId: string;
@@ -79,13 +80,14 @@ export function mapNotification(
   notification: Notification | NotificationWithActor,
 ): NotificationDto {
   const actorUser = "actorUser" in notification ? notification.actorUser : null;
+  const data = normalizeJsonObject(notification.data);
   return {
     id: notification.id,
     type: notification.type,
     channel: notification.channel,
     title: notification.title,
     body: notification.body,
-    data: normalizeJsonObject(notification.data),
+    data: isSocialNoticeRoute(data.route) ? socialNoticeLink(data) : data,
     actor: notification.actorUserId
       ? {
           userId: notification.actorUserId,

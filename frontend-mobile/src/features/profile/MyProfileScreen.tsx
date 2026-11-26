@@ -172,7 +172,8 @@ export const MyProfileScreen: React.FC = () => {
       .map((part) => part[0]?.toUpperCase())
       .join("") || "–";
   const age = (() => {
-    if (!profile.dateOfBirth || profile.hideAge) return null;
+    const ageAudience = profile.fieldAudiences?.age ?? (profile.hideAge ? "ONLY_ME" : "ALL_ELIGIBLE");
+    if (!profile.dateOfBirth || ageAudience === "ONLY_ME") return null;
     const dob = new Date(profile.dateOfBirth);
     if (Number.isNaN(dob.getTime())) return null;
     const now = new Date();

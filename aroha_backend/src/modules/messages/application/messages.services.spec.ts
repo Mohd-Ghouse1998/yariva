@@ -131,6 +131,7 @@ describe("SendMessageService", () => {
       messageReaderService as never,
       messageDispatchService as never,
       auditLogService as never,
+      { dispatch: jest.fn() } as never,
     );
 
     const response = await service.execute({
@@ -207,6 +208,7 @@ describe("SendMessageService", () => {
       messageReaderService as never,
       { emitCreated: jest.fn() } as never,
       { write: jest.fn() } as never,
+      { dispatch: jest.fn() } as never,
     );
 
     const response = await service.execute({

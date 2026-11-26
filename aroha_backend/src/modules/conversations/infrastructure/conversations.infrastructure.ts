@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { Buffer } from "node:buffer";
 import { ERROR_CODES } from "../../../common/constants/error-codes";
 import { AppException } from "../../../common/errors/app.exception";
+import { decodeScopedCursor, encodeScopedCursor } from "../../../common/utils/scoped-cursor.util";
 import { PrismaService } from "../../../database/prisma/prisma.service";
 import type { PrismaTransactionalClient } from "../../../database/prisma/prisma.transaction";
 import type {
@@ -18,8 +19,7 @@ import type {
   UserProfile,
 } from "../../../generated/prisma/client";
 
-import { EvaluateFeatureFlagService } from "../../feature-flags/application/feature-flags.services";
-import { acceptsIntent, CIRCLES_FLAG, isEligible, socialUser } from "../../social/social-access";
+import { canReadActiveCircleChat, circleChatRosterAllowed } from "../../social/circle-access";
 
 type ConversationExecutor = PrismaService | PrismaTransactionalClient;
 
@@ -29,10 +29,7 @@ export type ConversationProjection = Prisma.ConversationGetPayload<{
 
 @Injectable()
 export class ConversationRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly flags: EvaluateFeatureFlagService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async assertMediaSharingAllowed(matchId: string | null, executor: ConversationExecutor = this.prisma): Promise<void> {
     if (matchId && await executor.blindRelationship.findFirst({ where: { matchId, revealedAt: null } })) {
@@ -124,37 +121,71 @@ export class ConversationRepository {
   async findCurrentCircleChatForMember(previousId: string, userId: string): Promise<string | null> {
     return this.prisma.$transaction(async (tx) => {
       const previous = await tx.conversation.findFirst({
-        where: { id: previousId, circleId: { not: null }, status: { not: "ACTIVE" }, members: { some: { userId } } },
-        select: { circleId: true },
+        where: { id: previousId, circleId: { not: null }, status: "CLOSED_UNMATCHED" },
+        select: { circleId: true, members: { where: { userId }, select: { circleChatGrantId: true } } },
       });
-      if (!previous?.circleId) return null;
+      const grant = previous?.members[0]?.circleChatGrantId;
+      if (!previous?.circleId || !grant) return null;
       await tx.$queryRaw`SELECT id FROM "Circle" WHERE id = ${previous.circleId}::uuid FOR UPDATE`;
       const next = await tx.conversation.findFirst({
-        where: { circleId: previous.circleId, status: "ACTIVE" }, select: { id: true },
+        where: { circleId: previous.circleId, status: "ACTIVE", members: { some: { userId, circleChatGrantId: grant } } },
+        select: { id: true },
       });
       if (!next) return null;
       return (await this.findByIdForUser(next.id, userId, tx))?.id ?? null;
     });
   }
 
-  private async isGroupAccessible(conversation: ConversationProjection, userId: string, db: ConversationExecutor): Promise<boolean> {
-    if (conversation.circle) {
-      const circle = conversation.circle;
-      if (conversation.status !== "ACTIVE" || circle.status !== "OPEN" || circle.expiresAt <= new Date()) return false;
-      const ids = conversation.members.map((member) => member.userId);
-      if (!ids.includes(userId) || !ids.includes(circle.organizerId) ||
-          !(await this.flags.execute({ key: CIRCLES_FLAG, userId })).enabled ||
-          conversation.members.some(({ user }) => user.deletedAt || user.status !== "ACTIVE" ||
-            user.isShadowBanned || user.isDiscoveryFrozen || user.isChatFrozen ||
-            !user.profile?.isComplete || user.profile.deletedAt)) return false;
-      const current = await db.circleMembership.findMany({ where: { circleId: circle.id, status: "APPROVED" }, select: { userId: true } });
-      if (current.length !== ids.length || !current.every(({ userId: id }) => ids.includes(id)) ||
-          await db.block.count({ where: { deletedAt: null, blockerId: { in: ids }, blockedId: { in: ids } } })) return false;
-      const people = await db.user.findMany({ where: { id: { in: ids } }, select: socialUser });
-      return people.length === ids.length && people.every((person, index) =>
-        isEligible(person) && people.slice(index + 1).every((peer) =>
-          acceptsIntent(person, peer, circle.intent) && acceptsIntent(peer, person, circle.intent)));
+  async findRetiredCircleChatForUser(id: string, userId: string): Promise<ConversationProjection | null> {
+    const chat = await this.prisma.conversation.findFirst({
+      where: { id, circleId: { not: null }, status: "CLOSED_UNMATCHED", closedAt: { not: null }, members: { some: { userId } } },
+      include: conversationInclude(userId),
+    });
+    if (!chat?.circle) return null;
+    const active = await this.prisma.conversation.findFirst({
+      where: { circleId: chat.circle.id, status: "ACTIVE" }, include: conversationInclude(userId),
+    });
+    const grant = active?.members.find((member) => member.userId === userId)?.circleChatGrantId;
+    if (!active || !grant || !chat.members.some((member) => member.userId === userId && member.circleChatGrantId === grant) ||
+        !await this.isGroupAccessible(active, userId, this.prisma) ||
+        !await circleChatRosterAllowed(this.prisma, chat.members.map((member) => member.userId), chat.circle.intent)) return null;
+    return chat;
+  }
+
+  async listCircleChatHistory(activeId: string, userId: string, cursorValue?: string) {
+    let active = await this.findByIdForUser(activeId, userId);
+    if (!active) {
+      const currentId = await this.findCurrentCircleChatForMember(activeId, userId);
+      if (currentId) active = await this.findByIdForUser(currentId, userId);
     }
+    if (!active?.circle) return null;
+    const grant = active.members.find((member) => member.userId === userId)?.circleChatGrantId;
+    if (!grant) return { items: [], nextCursor: null };
+    const scope = `circle-history:${active.circle.id}:${userId}`;
+    const cursor = cursorValue ? decodeScopedCursor(cursorValue, scope) : null;
+    const pageSize = 12;
+    const rows = await this.prisma.conversation.findMany({
+      where: {
+        circleId: active.circle.id, status: "CLOSED_UNMATCHED", closedAt: { not: null }, lastMessageSequence: { gt: 0 },
+        members: { some: { userId, circleChatGrantId: grant } },
+        ...(cursor ? { OR: [{ closedAt: { lt: cursor.createdAt } }, { closedAt: cursor.createdAt, id: { lt: cursor.id } }] } : {}),
+      },
+      select: { id: true, createdAt: true, closedAt: true, members: { select: { userId: true } } },
+      orderBy: [{ closedAt: "desc" }, { id: "desc" }], take: pageSize + 1,
+    });
+    const page = rows.slice(0, pageSize);
+    const items = await Promise.all(page.map(async ({ id, createdAt, closedAt, members }) =>
+      await circleChatRosterAllowed(this.prisma, members.map((member) => member.userId), active.circle!.intent) ?
+        { id, createdAt: createdAt.toISOString(), closedAt: closedAt!.toISOString() } : null));
+    const last = page.at(-1);
+    return {
+      items: items.filter((item) => item !== null),
+      nextCursor: last?.closedAt && rows.length > pageSize ? encodeScopedCursor({ id: last.id, createdAt: last.closedAt }, scope) : null,
+    };
+  }
+
+  private async isGroupAccessible(conversation: ConversationProjection, userId: string, db: ConversationExecutor): Promise<boolean> {
+    if (conversation.circle) return canReadActiveCircleChat(db, { ...conversation, circle: conversation.circle }, userId);
     if (!conversation.duoMatch) return true;
     const group = conversation.duoMatch;
     const members = conversation.members;

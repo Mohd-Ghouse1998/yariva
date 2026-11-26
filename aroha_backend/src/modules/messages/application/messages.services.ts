@@ -17,6 +17,7 @@ import { PrismaService } from "../../../database/prisma/prisma.service";
 import { ObjectStorageService } from "../../../integrations/object-storage/object-storage.service";
 import { BullmqProducer } from "../../../integrations/bullmq/bullmq.producer";
 import type { Message } from "../../../generated/prisma/client";
+import { SocialNoticeService } from "../../social/social-notice.service";
 import { UserReaderService } from "../../users/application/users.services";
 import { UserRepository } from "../../users/infrastructure/users.infrastructure";
 import type { MessageDto } from "../../conversations/dto/conversations.dto";
@@ -299,6 +300,7 @@ export class SendMessageService {
     private readonly messageReaderService: MessageReaderService,
     private readonly messageDispatchService: MessageDispatchService,
     private readonly auditLogService: AuditLogService,
+    private readonly socialNotices: SocialNoticeService,
   ) {}
 
   async execute(input: {
@@ -432,15 +434,20 @@ export class SendMessageService {
           tx,
         );
 
+        const notices = conversation.circleId ? await this.socialNotices.persist(tx, {
+          route: "circle-message", conversationId: conversation.id, messageId: message.id,
+        }, participantIds.filter((id) => id !== input.userId)) : [];
         return {
           message,
           participantIds,
+          notices,
           inAppOnly: Boolean(conversation.circleId),
           created: true,
         };
       });
 
       if (result.created) {
+        if (result.notices) await this.socialNotices.dispatch(result.notices);
         await this.messageDispatchService.emitCreated({
           ...(result.inAppOnly ? { inAppOnly: true } : {}),
           conversationId: result.message.conversationId,
@@ -494,6 +501,7 @@ export class FinalizeAttachmentMessageService {
     private readonly objectStorageService: ObjectStorageService,
     private readonly bullmqProducer: BullmqProducer,
     private readonly auditLogService: AuditLogService,
+    private readonly socialNotices: SocialNoticeService,
     @Inject(objectStorageConfig.KEY)
     private readonly storageConfig: ConfigType<typeof objectStorageConfig>,
   ) {}
@@ -670,9 +678,13 @@ export class FinalizeAttachmentMessageService {
           tx,
         );
 
+        const notices = conversation.circleId ? await this.socialNotices.persist(tx, {
+          route: "circle-message", conversationId: conversation.id, messageId: message.id,
+        }, participantIds.filter((id) => id !== input.userId)) : [];
         return {
           message,
           participantIds,
+          notices,
           inAppOnly: Boolean(conversation.circleId),
           created: true,
         };
@@ -681,6 +693,7 @@ export class FinalizeAttachmentMessageService {
       await this.attachmentUploadStateStore.delete(input.payload.uploadToken);
 
       if (result.created) {
+        if (result.notices) await this.socialNotices.dispatch(result.notices);
         await this.enqueueAttachmentModerationSafely(result.message.id);
         await this.messageDispatchService.emitCreated({
           ...(result.inAppOnly ? { inAppOnly: true } : {}),

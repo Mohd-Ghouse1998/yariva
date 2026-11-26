@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 import { decodeScopedCursor, encodeScopedCursor } from "../../common/utils/scoped-cursor.util";
 import { PrismaService } from "../../database/prisma/prisma.service";
 import type { PrismaTransactionalClient } from "../../database/prisma/prisma.transaction";
@@ -6,30 +7,30 @@ import type { CircleRequestStatus, Prisma } from "../../generated/prisma/client"
 import { mediaPairKey } from "../../integrations/object-storage/media-disclosure.service";
 import { isSocialIntent } from "../discovery/domain/discovery.domain";
 import { EvaluateFeatureFlagService } from "../feature-flags/application/feature-flags.services";
+import { findActiveMatchPartnerIds } from "../matches/infrastructure/matches.infrastructure";
+import { canViewProfileField } from "../profiles/domain/profile-field-audience";
 import {
-  acceptsIntent, CIRCLES_FLAG, conflict, DAY_MS, isEligible, isPublic, nearby,
+  acceptsIntent, CIRCLES_FLAG, conflict, DAY_MS, hasRosterBlock, isEligible, isPublic,
   type SocialUser, socialUser, unavailable,
 } from "./social-access";
 import type { ActivityContentDto, CircleListDto, CreateCircleActivityDto, CreateCircleDto, UpdateCircleActivityDto } from "./social.dto";
 
-const circleInclude = {
-  organizer: { select: socialUser },
-  memberships: { where: { status: "APPROVED" }, include: { user: { select: socialUser } } },
-} satisfies Prisma.CircleInclude;
+import { activityState, attendanceEligible, circleEligible, circleInclude, circleState, confirmedAttendees, type Circle } from "./circle-access";
+import { SocialNoticeService, type PersistedSocialNotices } from "./social-notice.service";
 
-type Circle = Prisma.CircleGetPayload<{ include: typeof circleInclude }>;
 const reviewedVenue = { reviewStatus: "REVIEWED", operationalStatus: { not: "CLOSED" }, deletedAt: null, isSynthetic: false } satisfies Prisma.ReviewedVenueWhereInput;
 
 const activityInclude = {
   venue: { select: { id: true, name: true, publicLocality: true, reviewStatus: true, operationalStatus: true, deletedAt: true, isSynthetic: true } },
-  responses: { where: { need: 0, status: "APPROVED" }, include: { user: { select: socialUser } } },
+  responses: confirmedAttendees,
 } satisfies Prisma.CircleActivityInclude;
 type Activity = Prisma.CircleActivityGetPayload<{ include: typeof activityInclude }>;
 const activeRequest = ["PENDING", "APPROVED"] as const;
 
 @Injectable()
 export class CirclesService {
-  constructor(private readonly prisma: PrismaService, private readonly flags: EvaluateFeatureFlagService) {}
+  constructor(private readonly prisma: PrismaService, private readonly flags: EvaluateFeatureFlagService,
+    private readonly notices: SocialNoticeService) {}
 
   async list(userId: string, query: CircleListDto) {
     const user = await this.requireUser(userId);
@@ -68,7 +69,7 @@ export class CirclesService {
     });
     const hasMore = circles.length > scanLimit;
     if (hasMore) circles.pop();
-    const [memberships, responses, blocked] = await Promise.all([
+    const [memberships, responses, blocked, matches] = await Promise.all([
       this.prisma.circleMembership.findMany({
         where: { userId, circleId: { in: circles.map((circle) => circle.id) } },
         select: { circleId: true, status: true },
@@ -78,28 +79,29 @@ export class CirclesService {
         ...circle.memberships.map((row) => row.userId),
         ...circle.activities.flatMap((activity) => activity.responses.map((row) => row.userId)),
       ])]),
+      findActiveMatchPartnerIds(this.prisma, userId, [...new Set(circles.map(circle => circle.organizerId))]),
     ]);
     const membershipByCircle = new Map(memberships.map((row) => [row.circleId, row.status]));
     const items = circles.map((circle) => {
       const own = membershipByCircle.get(circle.id) ?? null;
       const member = own === "APPROVED";
-      const visible = this.circleEligible(circle, user, member) && !blocked(this.circleAudience(circle, user.id));
+      const visible = circleEligible(circle, user, member) && !blocked(this.circleAudience(circle, user.id));
       const activities = circle.activities.flatMap((activity) => {
         const mine = responses.get(activity.id) ?? [];
-        const canView = visible && (member || (activity.openToNearby && this.activityState(circle, activity) === "OPEN")) &&
-          this.attendanceEligible(circle, activity, user) && !blocked(this.activityAudience(circle, activity, user.id));
+        const canView = visible && (member || (activity.openToNearby && activityState(circle, activity) === "OPEN")) &&
+          attendanceEligible(circle, activity, user) && !blocked(this.activityAudience(circle, activity, user.id));
         if (canView) return [this.activitySummary(circle, activity, mine, member)];
-        return mine.length ? [this.unavailableActivity(activity.id, mine, this.activityState(circle, activity))] : [];
+        return mine.length ? [this.unavailableActivity(activity.id, mine, activityState(circle, activity))] : [];
       });
       if (!visible) {
         return scope === "own" ? {
           id: circle.id, title: "Unavailable circle", description: "", locality: "",
           intent: null, capacity: 0, approvedCount: 0, ownStatus: own,
-          state: this.circleState(circle) === "OPEN" ? "UNAVAILABLE" as const : this.circleState(circle),
+          state: circleState(circle) === "OPEN" ? "UNAVAILABLE" as const : circleState(circle),
           organizer: circle.organizerId === userId, redacted: true, activities,
         } : null;
       }
-      return { ...this.circleSummary(circle, userId, own), activities };
+      return { ...this.circleSummary(circle, userId, own, matches.has(circle.organizerId)), activities };
     }).filter((circle) => circle !== null);
     const last = circles.at(-1);
     return { items, nextCursor: hasMore && last ? encodeScopedCursor(last, cursorScope) : null };
@@ -129,9 +131,9 @@ export class CirclesService {
       orderBy: { createdAt: "desc" }, take: 20,
     });
     const organizer = circle.organizerId === userId;
-    const canManage = organizer && this.circleState(circle) === "OPEN";
+    const canManage = organizer && circleState(circle) === "OPEN";
     const activityIds = activities.map((activity) => activity.id);
-    const [responses, activityRequests, pending] = await Promise.all([
+    const [responses, activityRequests, pending, matches] = await Promise.all([
       this.responsesFor(userId, activityIds),
       canManage ? this.prisma.circleActivityResponse.findMany({
         where: { activityId: { in: activityIds }, status: { in: [...activeRequest] } },
@@ -140,8 +142,9 @@ export class CirclesService {
       canManage ? this.prisma.circleMembership.findMany({
         where: { circleId, status: "PENDING" }, include: { user: { select: socialUser } }, take: 30,
       }) : [],
+      findActiveMatchPartnerIds(this.prisma, userId, organizer ? [] : [circle.organizerId]),
     ]);
-    if (!own && this.circleState(circle) !== "OPEN" && responses.size === 0) unavailable();
+    if (!own && circleState(circle) !== "OPEN" && responses.size === 0) unavailable();
     const blocked = await this.blockLookup([
       ...this.circleAudience(circle, userId), ...pending.map((request) => request.userId),
       ...activityRequests.map((request) => request.userId),
@@ -156,30 +159,30 @@ export class CirclesService {
     }
     const mapped = activities.map((activity) => {
       const mine = responses.get(activity.id) ?? [];
-      if (!member && !mine.length && this.activityState(circle, activity) !== "OPEN") return null;
-      if ((!member && (!activity.openToNearby || this.activityState(circle, activity) !== "OPEN")) || !this.attendanceEligible(circle, activity, user) ||
+      if (!member && !mine.length && activityState(circle, activity) !== "OPEN") return null;
+      if ((!member && (!activity.openToNearby || activityState(circle, activity) !== "OPEN")) || !attendanceEligible(circle, activity, user) ||
           blocked(this.activityAudience(circle, activity, userId))) {
         return canManage || mine.length
-          ? { ...this.unavailableActivity(activity.id, mine, this.activityState(circle, activity)), requests: [] } : null;
+          ? { ...this.unavailableActivity(activity.id, mine, activityState(circle, activity)), requests: [] } : null;
       }
       const requests = (requestsByActivity.get(activity.id) ?? []).flatMap(({ user: applicant, need, status }) => {
         const isMember = circle.memberships.some((row) => row.userId === applicant.id);
-        return this.circleEligible(circle, applicant, isMember) && this.attendanceEligible(circle, activity, applicant) &&
+        return circleEligible(circle, applicant, isMember) && attendanceEligible(circle, activity, applicant) &&
           !blocked(this.activityAudience(circle, activity, applicant.id))
           ? [{ ...this.memberLabel(applicant), need, status }] : [];
       });
       return { ...this.activitySummary(circle, activity, mine, member), requests };
     }).filter((activity) => activity !== null);
     const requests = pending.flatMap(({ user: applicant }) =>
-      isPublic(applicant.profile) && this.circleEligible(circle, applicant, false) && !blocked(this.circleAudience(circle, applicant.id))
+      isPublic(applicant.profile) && circleEligible(circle, applicant, false) && !blocked(this.circleAudience(circle, applicant.id))
         ? [this.memberLabel(applicant)] : []);
-    const openMember = member && this.circleState(circle) === "OPEN";
+    const openMember = member && circleState(circle) === "OPEN";
     const chat = openMember ? await this.prisma.conversation.findFirst({
       where: { circleId, status: "ACTIVE" }, select: { id: true },
     }) : null;
 
     return {
-      ...this.circleSummary(circle, userId, own),
+      ...this.circleSummary(circle, userId, own, matches.has(circle.organizerId)),
       members: openMember ? circle.memberships.map(({ user: person }) => this.memberLabel(person)) : [],
       requests, chatId: chat?.id ?? null,
       reportableOrganizerId: !organizer && isPublic(circle.organizer.profile) ? circle.organizerId : null,
@@ -202,7 +205,7 @@ export class CirclesService {
       const { id } = await tx.circle.create({ data: {
         ...input, organizerId: userId, city: profile.city!, region: profile.region!, countryCode: profile.countryCode!,
         expiresAt: new Date(Date.now() + 14 * DAY_MS),
-        memberships: { create: { userId, status: "APPROVED" } },
+        memberships: { create: { userId, status: "APPROVED", chatGrantId: randomUUID() } },
       } });
       await this.rotateChat(tx, id, [userId]);
       return { id };
@@ -211,7 +214,7 @@ export class CirclesService {
 
   async request(userId: string, circleId: string) {
     await this.requireUser(userId);
-    return this.locked(circleId, async (tx, circle) => {
+    return this.locked(circleId, async (tx, circle, notify) => {
       const own = await this.membership(tx, circleId, userId);
       const user = await this.requireUser(userId, tx);
       await this.lockPairs(tx, userId, circle.memberships.map((row) => row.userId));
@@ -222,31 +225,36 @@ export class CirclesService {
       if (circle.memberships.length >= circle.capacity) conflict("This circle is full");
       if (own === "REMOVED" || own === "DECLINED") conflict("This request can no longer be submitted");
       if (await tx.circleMembership.count({ where: { circleId, status: "PENDING" } }) >= 30) conflict("This circle has too many pending requests");
+      const requestId = randomUUID();
       await tx.circleMembership.upsert({
-        where: { circleId_userId: { circleId, userId } }, create: { circleId, userId },
-        update: { status: "PENDING" },
+        where: { circleId_userId: { circleId, userId } }, create: { circleId, userId, requestId },
+        update: { status: "PENDING", requestId },
       });
+      await notify({ route: "circle-membership", circleId, applicantId: userId, requestId, status: "PENDING" }, [circle.organizerId]);
       return { status: "PENDING" as const };
     });
   }
 
   async decide(userId: string, circleId: string, targetId: string, approve: boolean) {
     await this.requireUser(userId);
-    return this.locked(circleId, async (tx, circle) => {
+    return this.locked(circleId, async (tx, circle, notify) => {
       this.assertOrganizer(circle, userId);
       this.assertOpen(circle);
-      const current = await this.membership(tx, circleId, targetId);
+      const where = { circleId_userId: { circleId, userId: targetId } };
+      const current = await tx.circleMembership.findUnique({ where });
       const status = approve ? "APPROVED" : "DECLINED";
-      if (current === status && targetId !== userId) return { status };
-      if (current !== "PENDING") unavailable();
+      if (current?.status === status && targetId !== userId) return { status };
+      if (current?.status !== "PENDING") unavailable();
       if (approve) {
         const target = await this.requireUser(targetId, tx);
         await this.lockPairs(tx, targetId, circle.memberships.map((row) => row.userId));
         if (!isPublic(target.profile) || !await this.canSee(tx, circle, target, false)) unavailable();
         if (circle.memberships.length >= circle.capacity) conflict("This circle is full");
       }
-      await tx.circleMembership.update({ where: { circleId_userId: { circleId, userId: targetId } }, data: { status } });
+      const requestId = current.requestId ?? randomUUID();
+      await tx.circleMembership.update({ where, data: { status, requestId, chatGrantId: approve ? randomUUID() : null } });
       if (approve) await this.rotateChat(tx, circleId, [...circle.memberships.map((row) => row.userId), targetId]);
+      await notify({ route: "circle-membership", circleId, applicantId: targetId, requestId, status }, [targetId]);
       return { status };
     });
   }
@@ -260,12 +268,13 @@ export class CirclesService {
       const current = await this.membership(tx, circleId, targetId);
       if (current === status) return { status };
       if (current !== "APPROVED" && current !== "PENDING") unavailable();
-      await tx.circleMembership.update({ where: { circleId_userId: { circleId, userId: targetId } }, data: { status } });
+      await tx.circleMembership.update({ where: { circleId_userId: { circleId, userId: targetId } },
+        data: { status, chatGrantId: null } });
       await tx.circleActivityResponse.updateMany({
         where: { activity: { circleId }, userId: targetId, status: { in: [...activeRequest] } },
         data: { status },
       });
-      if (current === "APPROVED" && this.circleState(circle) === "OPEN") {
+      if (current === "APPROVED" && circleState(circle) === "OPEN") {
         await this.rotateChat(tx, circleId, circle.memberships.map((row) => row.userId).filter((id) => id !== targetId));
       }
       return { status };
@@ -276,7 +285,7 @@ export class CirclesService {
     await this.requireUser(userId);
     return this.locked(circleId, async (tx, circle) => {
       this.assertOrganizer(circle, userId);
-      const current = this.circleState(circle);
+      const current = circleState(circle);
       if (current !== "OPEN") return { status: current };
       const status = cancel ? "CANCELLED" : "CLOSED";
       await tx.circle.update({ where: { id: circleId }, data: { status } });
@@ -289,7 +298,7 @@ export class CirclesService {
     await this.requireUser(userId);
     return this.locked(circleId, async (tx, circle) => {
       this.assertOrganizer(circle, userId);
-      if (this.circleState(circle) !== "OPEN") return { recovered: false };
+      if (circleState(circle) !== "OPEN") return { recovered: false };
       const activities = await tx.circleActivity.findMany({
         where: { circleId, cancelledAt: null, expiresAt: { gt: new Date() } }, include: activityInclude,
       });
@@ -324,7 +333,8 @@ export class CirclesService {
       const continuing = members.filter((person) => !removedMembers.includes(person.id));
       if (removedMembers.length) {
         await tx.circleMembership.updateMany({
-          where: { circleId, userId: { in: removedMembers }, status: "APPROVED" }, data: { status: "REMOVED" },
+          where: { circleId, userId: { in: removedMembers }, status: "APPROVED" },
+          data: { status: "REMOVED", chatGrantId: null },
         });
         await tx.circleActivityResponse.updateMany({
           where: { activity: { circleId }, userId: { in: removedMembers }, status: { in: [...activeRequest] } },
@@ -364,12 +374,12 @@ export class CirclesService {
 
   async updateActivity(userId: string, circleId: string, activityId: string, input: UpdateCircleActivityDto | null) {
     await this.requireUser(userId);
-    return this.locked(circleId, async (tx, circle) => {
+    return this.locked(circleId, async (tx, circle, notify) => {
       this.assertOrganizer(circle, userId);
       const activity = await this.activity(tx, circleId, activityId);
       if (!input && activity.cancelledAt) return { version: activity.version };
       if (input && input.version !== activity.version) conflict("Refresh this activity and try again");
-      if (input && this.activityState(circle, activity) !== "OPEN") conflict("This activity is no longer open");
+      if (input && activityState(circle, activity) !== "OPEN") conflict("This activity is no longer open");
       if (input && !await this.canSee(tx, circle, circle.organizer, true)) unavailable();
       if (input && input.capacity < activity.responses.length) conflict("Capacity cannot be lower than confirmed attendance");
       const updated = await tx.circleActivity.update({
@@ -383,13 +393,19 @@ export class CirclesService {
           data: { status: "REMOVED" },
         });
       }
+      const recipients = await tx.circleActivityResponse.findMany({
+        where: { activityId, userId: { not: userId }, status: { in: [...activeRequest] } },
+        distinct: ["userId"], select: { userId: true },
+      });
+      await notify({ route: "circle-activity", circleId, activityId, status: input ? "UPDATED" : "CANCELLED", version: updated.version },
+        recipients.map((row) => row.userId));
       return updated;
     });
   }
 
   async respond(userId: string, circleId: string, activityId: string, need: number, withdraw: boolean) {
     await this.requireUser(userId);
-    return this.locked(circleId, async (tx, circle) => {
+    return this.locked(circleId, async (tx, circle, notify) => {
       const activity = await this.activity(tx, circleId, activityId);
       const key = { activityId, userId, need };
       const where = { activityId_userId_need: key };
@@ -411,17 +427,21 @@ export class CirclesService {
           !await this.canSeeActivity(tx, circle, activity, user)) unavailable();
       if (existing?.status === "PENDING" || existing?.status === "APPROVED") return { status: existing.status };
       if (existing?.status === "REMOVED" || existing?.status === "DECLINED") conflict("This response can no longer be submitted");
-      if (this.activityState(circle, activity) !== "OPEN") conflict("This activity is no longer open");
+      if (activityState(circle, activity) !== "OPEN") conflict("This activity is no longer open");
       if (need === 0 && activity.responses.length >= activity.capacity) conflict("This activity is full");
       if (await tx.circleActivityResponse.count({ where: { activityId, status: "PENDING" } }) >= 30) conflict("This activity has too many pending requests");
-      await tx.circleActivityResponse.upsert({ where, create: key, update: { status: "PENDING" } });
+      const requestId = randomUUID();
+      await tx.circleActivityResponse.upsert({ where, create: { ...key, requestId }, update: { status: "PENDING", requestId } });
+      if (userId !== circle.organizerId) {
+        await notify({ route: "circle-activity", circleId, activityId, applicantId: userId, need, requestId, status: "PENDING" }, [circle.organizerId]);
+      }
       return { status: "PENDING" as const };
     });
   }
 
   async decideActivity(userId: string, circleId: string, activityId: string, targetId: string, need: number, approve: boolean) {
     await this.requireUser(userId);
-    return this.locked(circleId, async (tx, circle) => {
+    return this.locked(circleId, async (tx, circle, notify) => {
       this.assertOrganizer(circle, userId);
       const activity = await this.activity(tx, circleId, activityId);
       const where = { activityId_userId_need: { activityId, userId: targetId, need } };
@@ -430,7 +450,7 @@ export class CirclesService {
       if (existing?.status === status) return { status };
       if (existing?.status !== "PENDING" && !(existing?.status === "APPROVED" && !approve)) unavailable();
       if (approve) {
-        if (this.activityState(circle, activity) !== "OPEN") conflict("This activity is no longer open");
+        if (activityState(circle, activity) !== "OPEN") conflict("This activity is no longer open");
         const target = await this.requireUser(targetId, tx);
         const membership = await this.membership(tx, circleId, targetId);
         if (membership === "REMOVED") unavailable();
@@ -440,7 +460,11 @@ export class CirclesService {
             !await this.canSeeActivity(tx, circle, activity, target)) unavailable();
         if (need === 0 && activity.responses.length >= activity.capacity) conflict("This activity is full");
       }
-      await tx.circleActivityResponse.update({ where, data: { status } });
+      const requestId = existing.requestId ?? randomUUID();
+      await tx.circleActivityResponse.update({ where, data: { status, requestId } });
+      if (userId !== targetId) {
+        await notify({ route: "circle-activity", circleId, activityId, applicantId: targetId, need, requestId, status }, [targetId]);
+      }
       return { status };
     });
   }
@@ -453,11 +477,17 @@ export class CirclesService {
     return user;
   }
 
-  private async locked<T>(id: string, fn: (tx: PrismaTransactionalClient, circle: Circle) => Promise<T>) {
-    return this.prisma.$transaction(async (tx) => {
+  private async locked<T>(id: string, fn: (tx: PrismaTransactionalClient, circle: Circle,
+    notify: (data: Parameters<SocialNoticeService["persist"]>[1], recipients: string[]) => Promise<void>) => Promise<T>) {
+    const notices: PersistedSocialNotices = [];
+    const result = await this.prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM "Circle" WHERE id = ${id}::uuid FOR UPDATE`;
-      return fn(tx, await this.load(tx, id));
+      return fn(tx, await this.load(tx, id), async (data, recipients) => {
+        notices.push(...await this.notices.persist(tx, data, recipients));
+      });
     });
+    await this.notices.dispatch(notices);
+    return result;
   }
 
   private async load(tx: PrismaTransactionalClient, id: string) {
@@ -491,26 +521,6 @@ export class CirclesService {
     return byActivity;
   }
 
-  private circleEligible(circle: Circle, user: SocialUser, member: boolean) {
-    if (!isEligible(user) || circle.memberships.some(({ user: person }) => !isEligible(person))) return false;
-    if (member) return this.rosterAcceptsIntent(circle);
-    return isPublic(circle.organizer.profile) && nearby(user, circle.organizer) &&
-      circle.memberships.every(({ user: other }) =>
-        acceptsIntent(user, other, circle.intent) && acceptsIntent(other, user, circle.intent));
-  }
-
-  private rosterAcceptsIntent(circle: Circle) {
-    return circle.memberships.every(({ user }, index) => circle.memberships.slice(index + 1).every(({ user: peer }) =>
-      acceptsIntent(user, peer, circle.intent) && acceptsIntent(peer, user, circle.intent)));
-  }
-
-  private attendanceEligible(circle: Circle, activity: Activity, user: SocialUser) {
-    const people = [...new Map([user, ...circle.memberships.map((row) => row.user),
-      ...activity.responses.map((row) => row.user)].map((person) => [person.id, person])).values()];
-    return people.every((person, index) => isEligible(person) && people.slice(index + 1).every((peer) =>
-      acceptsIntent(person, peer, circle.intent) && acceptsIntent(peer, person, circle.intent)));
-  }
-
   private circleAudience(circle: Circle, userId: string) {
     return [...new Set([userId, ...circle.memberships.map((row) => row.userId)])];
   }
@@ -520,13 +530,13 @@ export class CirclesService {
   }
 
   private async canSee(tx: PrismaTransactionalClient, circle: Circle, user: SocialUser, member: boolean) {
-    return this.circleEligible(circle, user, member) && !await this.hasBlock(tx, this.circleAudience(circle, user.id));
+    return circleEligible(circle, user, member) && !await hasRosterBlock(tx, this.circleAudience(circle, user.id));
   }
 
   private async canSeeActivity(tx: PrismaTransactionalClient, circle: Circle, activity: Activity, user: SocialUser) {
     const member = circle.memberships.some((row) => row.userId === user.id);
-    return this.circleEligible(circle, user, member) && this.attendanceEligible(circle, activity, user) &&
-      !await this.hasBlock(tx, this.activityAudience(circle, activity, user.id));
+    return circleEligible(circle, user, member) && attendanceEligible(circle, activity, user) &&
+      !await hasRosterBlock(tx, this.activityAudience(circle, activity, user.id));
   }
 
   private async blockLookup(ids: string[]) {
@@ -540,12 +550,6 @@ export class CirclesService {
       group.slice(index + 1).some((peer) => pairs.has(mediaPairKey(id, peer))));
   }
 
-  private async hasBlock(tx: PrismaTransactionalClient, ids: string[]) {
-    return ids.length > 1 && await tx.block.count({
-      where: { deletedAt: null, blockerId: { in: ids }, blockedId: { in: ids } },
-    }) > 0;
-  }
-
   private async lockPairs(tx: PrismaTransactionalClient, userId: string, others: string[]) {
     const keys = [...new Set(others.filter((id) => id !== userId).map((id) => mediaPairKey(userId, id)))].sort();
     for (const key of keys) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${key}, 0))`;
@@ -556,17 +560,7 @@ export class CirclesService {
   }
 
   private assertOpen(circle: Circle) {
-    if (this.circleState(circle) !== "OPEN") conflict("This circle is no longer open");
-  }
-
-  private circleState(circle: Circle) {
-    return circle.status !== "OPEN" ? circle.status : circle.expiresAt <= new Date() ? "EXPIRED" : "OPEN";
-  }
-
-  private activityState(circle: Circle, activity: Activity) {
-    if (activity.cancelledAt) return "CANCELLED";
-    const state = this.circleState(circle);
-    return state !== "OPEN" ? state : activity.expiresAt <= new Date() ? "EXPIRED" : "OPEN";
+    if (circleState(circle) !== "OPEN") conflict("This circle is no longer open");
   }
 
   private async activityData(tx: PrismaTransactionalClient, circle: Circle, input: ActivityContentDto) {
@@ -597,18 +591,20 @@ export class CirclesService {
     return { userId: user.id, name: isPublic(user.profile) ? user.profile?.displayName ?? "Circle member" : "Circle member" };
   }
 
-  private circleSummary(circle: Circle, userId: string, ownStatus: CircleRequestStatus | null) {
-    const state = this.circleState(circle);
+  private circleSummary(circle: Circle, userId: string, ownStatus: CircleRequestStatus | null, activeMatch: boolean) {
+    const state = circleState(circle);
+    const organizer = circle.organizerId === userId;
+    const showLocality = organizer || canViewProfileField(circle.organizer.profile, "location", activeMatch);
     return {
       id: circle.id, title: circle.title, description: circle.description, intent: circle.intent,
-      locality: `${circle.city}, ${circle.region}`, capacity: circle.capacity, approvedCount: circle.memberships.length,
+      locality: showLocality ? `${circle.city}, ${circle.region}` : "", capacity: circle.capacity, approvedCount: circle.memberships.length,
       state: state === "OPEN" && circle.memberships.length >= circle.capacity ? "FULL" as const : state,
-      organizer: circle.organizerId === userId, ownStatus, redacted: false,
+      organizer, ownStatus, redacted: false,
     };
   }
 
   private activitySummary(circle: Circle, activity: Activity, mine: { need: number; status: CircleRequestStatus }[], member: boolean) {
-    const state = this.activityState(circle, activity);
+    const state = activityState(circle, activity);
     const venue = activity.venue;
     return {
       id: activity.id, title: activity.title, description: activity.description,
@@ -634,8 +630,12 @@ export class CirclesService {
       where: { circleId, status: "ACTIVE" }, data: { status: "CLOSED_UNMATCHED", closedAt: new Date() },
     });
     if (!memberIds.length) return;
+    const grants = await tx.circleMembership.findMany({
+      where: { circleId, status: "APPROVED", userId: { in: memberIds } },
+      select: { userId: true, chatGrantId: true },
+    });
     await tx.conversation.create({ data: {
-      circleId, members: { create: memberIds.map((userId) => ({ userId })) },
+      circleId, members: { create: grants.map(({ userId, chatGrantId }) => ({ userId, circleChatGrantId: chatGrantId })) },
       reads: { create: memberIds.map((userId) => ({ userId })) },
     } });
   }

@@ -200,24 +200,16 @@ export class PushTokenReadRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async listDispatchableForUser(userId: string): Promise<PushToken[]> {
-    const now = new Date();
     return this.prisma.pushToken.findMany({
-      where: {
-        userId,
-        invalidatedAt: null,
-        deletedAt: null,
-        OR: [
-          { sessionId: null },
-          {
-            session: {
-              revokedAt: null,
-              deletedAt: null,
-              refreshTokenExpiresAt: { gt: now },
-            },
-          },
-        ],
-      },
+      where: this.dispatchableForUser(userId),
       orderBy: { updatedAt: "desc" },
+    });
+  }
+
+  async isDispatchableForUser(token: PushToken): Promise<boolean> {
+    return !!await this.prisma.pushToken.findFirst({
+      where: { ...this.dispatchableForUser(token.userId), id: token.id, sessionId: token.sessionId },
+      select: { id: true },
     });
   }
 
@@ -225,11 +217,21 @@ export class PushTokenReadRepository {
     return this.prisma.userCommunicationPreference.findUnique({ where: { userId } });
   }
 
-  async invalidate(tokenId: string, now: Date): Promise<void> {
+  async invalidate(token: PushToken, now: Date): Promise<void> {
     await this.prisma.pushToken.updateMany({
-      where: { id: tokenId, invalidatedAt: null },
+      where: { id: token.id, userId: token.userId, sessionId: token.sessionId, updatedAt: token.updatedAt, invalidatedAt: null },
       data: { invalidatedAt: now },
     });
+  }
+
+  private dispatchableForUser(userId: string): Prisma.PushTokenWhereInput {
+    return {
+      userId, invalidatedAt: null, deletedAt: null,
+      OR: [
+        { sessionId: null },
+        { session: { revokedAt: null, deletedAt: null, refreshTokenExpiresAt: { gt: new Date() } } },
+      ],
+    };
   }
 }
 

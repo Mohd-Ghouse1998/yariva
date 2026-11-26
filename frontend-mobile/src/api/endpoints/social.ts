@@ -91,6 +91,10 @@ export const socialApi = {
   decideActivity: (id: string, activityId: string, need: number, targetId: string, approve: boolean) =>
     http.put(`${activity(id, activityId)}/responses/${need}/${targetId}`, { approve }),
   currentCircleChat: (id: string) => http.get<{ conversationId: string }>(`social/conversations/${id}/current-circle-chat`),
+  circleChatHistory: (id: string, cursor?: string) => http.get<{
+    items: { id: string; createdAt: string; closedAt: string }[];
+    nextCursor: string | null;
+  }>(`social/conversations/${id}/circle-history`, { cursor }),
   checkIn: (id: string) => http.get<CheckIn>(checkIn(id)),
   setIntent: (id: string, intent: ConnectionIntent | null, version: number) =>
     http.put<CheckIn>(`${checkIn(id)}/intent`, { intent, version }),

@@ -16,6 +16,7 @@ import {
 } from "../domain/profile-prompts";
 import type { ProfileAggregateRecord } from "../infrastructure/profiles.infrastructure";
 import type { ObjectStorageService } from "../../../integrations/object-storage/object-storage.service";
+import { effectiveProfileAudiences } from "../domain/profile-field-audience";
 
 export function buildProfileCompletionInput(aggregate: ProfileAggregateRecord) {
   return {
@@ -167,6 +168,7 @@ export function mapCommunicationPreferenceDto(
     allowPushMessages:
       aggregate.communicationPreference?.allowPushMessages ?? true,
     allowPushCalls: aggregate.communicationPreference?.allowPushCalls ?? true,
+    allowPushSocial: aggregate.communicationPreference?.allowPushSocial ?? false,
     allowReadReceipts:
       aggregate.communicationPreference?.allowReadReceipts ?? true,
   };
@@ -213,6 +215,7 @@ export async function mapMyProfileDto(
       : null,
     hideAge: aggregate.profile?.hideAge ?? false,
     hideDistance: aggregate.profile?.hideDistance ?? false,
+    fieldAudiences: effectiveProfileAudiences(aggregate.profile ?? {}),
     isHidden: aggregate.profile?.isHidden ?? false,
     isIncognito: aggregate.profile?.isIncognito ?? false,
     hideFromContacts: aggregate.profile?.hideFromContacts ?? false,

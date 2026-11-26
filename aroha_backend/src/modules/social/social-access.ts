@@ -1,8 +1,10 @@
 import { ERROR_CODES } from "../../common/constants/error-codes";
 import { AppException } from "../../common/errors/app.exception";
 import { haversineDistanceKm } from "../../common/utils/distance.util";
+import type { PrismaTransactionalClient } from "../../database/prisma/prisma.transaction";
 import { type Prisma } from "../../generated/prisma/client";
 import { genderPreferenceMatches, isSocialIntent } from "../discovery/domain/discovery.domain";
+import { FeatureFlagRuleService } from "../feature-flags/domain/feature-flags.domain";
 
 export const CIRCLES_FLAG = "social.circles";
 export const CHECK_IN_FLAG = "social.connection_check_in";
@@ -15,13 +17,31 @@ export const socialUser = {
   profile: { select: {
     isComplete: true, deletedAt: true, displayName: true, isHidden: true, isPaused: true, isIncognito: true,
     dateOfBirth: true, gender: true, city: true, region: true, countryCode: true,
-    locationLat: true, locationLng: true, completedAt: true,
+    locationLat: true, locationLng: true, completedAt: true, fieldAudiences: true,
   } },
   intents: { where: { deletedAt: null }, select: { intent: true } },
   discoveryPreference: { select: { preferredGenders: true, minAge: true, maxAge: true, maxDistanceKm: true } },
 } satisfies Prisma.UserSelect;
 
 export type SocialUser = Prisma.UserGetPayload<{ select: typeof socialUser }>;
+
+const flagRules = new FeatureFlagRuleService();
+
+export async function socialEnabledFor(db: PrismaTransactionalClient, key: string, ids: string[]) {
+  const flag = await db.featureFlag.findUnique({ where: { key } });
+  return !!flag && ids.every((userId) => flagRules.evaluate(flag, { userId }));
+}
+
+export function rosterAcceptsIntent(people: SocialUser[], intent: string): boolean {
+  return people.every((person, index) => isEligible(person) && people.slice(index + 1).every((peer) =>
+    acceptsIntent(person, peer, intent) && acceptsIntent(peer, person, intent)));
+}
+
+export async function hasRosterBlock(db: PrismaTransactionalClient, ids: string[]): Promise<boolean> {
+  return ids.length > 1 && await db.block.count({
+    where: { deletedAt: null, blockerId: { in: ids }, blockedId: { in: ids } },
+  }) > 0;
+}
 
 export function ageInYears(birth: Date): number {
   const now = new Date();

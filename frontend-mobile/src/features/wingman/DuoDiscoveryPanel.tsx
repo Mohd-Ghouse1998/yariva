@@ -160,14 +160,16 @@ const CandidateCard: React.FC<{
           <Text variant="heading" numberOfLines={1}>
             {candidate.members.map((member) => member.displayName).join(" & ")}
           </Text>
-          <View style={styles.metaLine}>
-            <Icon name="location" size={14} color={palette.textMuted} />
-            <Text variant="caption" color="textSubdued">
-              {candidate.distance.roundedKm === 0
-                ? "Very close"
-                : `${candidate.distance.roundedKm} km away`}
-            </Text>
-          </View>
+          {candidate.distance.roundedKm != null ? (
+            <View style={styles.metaLine}>
+              <Icon name="location" size={14} color={palette.textMuted} />
+              <Text variant="caption" color="textSubdued">
+                {candidate.distance.roundedKm === 0
+                  ? "Very close"
+                  : `${candidate.distance.roundedKm} km away`}
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
 
@@ -176,7 +178,7 @@ const CandidateCard: React.FC<{
           <View key={member.userId} style={styles.sceneRow}>
             <View style={styles.sceneDot} />
             <Text variant="bodyStrong" numberOfLines={1} style={styles.memberName}>
-              {member.displayName}, {member.age}
+              {member.displayName}{member.age != null ? `, ${member.age}` : ""}
             </Text>
             <Text variant="body" color="textSubdued" numberOfLines={1} style={styles.activity}>
               {member.scene.activity}

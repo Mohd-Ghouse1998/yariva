@@ -18,6 +18,21 @@ import type {
 
 type MatchExecutor = PrismaService | PrismaTransactionalClient;
 
+export async function findActiveMatchPartnerIds(db: MatchExecutor, viewerId: string, partnerIds: string[]) {
+  if (!partnerIds.length) return new Set<string>();
+  const matches = await db.match.findMany({
+    where: {
+      status: "ACTIVE",
+      OR: [
+        { userLowId: viewerId, userHighId: { in: partnerIds } },
+        { userHighId: viewerId, userLowId: { in: partnerIds } },
+      ],
+    },
+    select: { userLowId: true, userHighId: true },
+  });
+  return new Set(matches.map(({ userLowId, userHighId }) => userLowId === viewerId ? userHighId : userLowId));
+}
+
 export interface MatchProjection extends Match {
   conversation: Pick<
     Conversation,

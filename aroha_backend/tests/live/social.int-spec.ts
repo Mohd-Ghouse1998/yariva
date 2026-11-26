@@ -8,10 +8,13 @@ import { io, type Socket } from "socket.io-client";
 import { AppModule } from "../../src/app.module";
 import { configureHttpServer } from "../../src/bootstrap/http.bootstrap";
 import { PrismaService } from "../../src/database/prisma/prisma.service";
+import { toBullmqSafeJobId } from "../../src/integrations/bullmq/bullmq.producer";
 import { ObjectStorageService } from "../../src/integrations/object-storage/object-storage.service";
 import { MessageAttachmentCleanupProcessor } from "../../src/jobs/messages/message-attachment-cleanup.processor";
 import type { InitiateMessageAttachmentUploadResponseDto } from "../../src/modules/messages/dto/messages.dto";
 import { ApplyAccountActionService } from "../../src/modules/moderation/application/moderation.services";
+import { NotificationDispatchService } from "../../src/modules/notifications/application/notifications.services";
+import { FcmPushTransport } from "../../src/modules/notifications/infrastructure/push-transports";
 import { CHECK_IN_FLAG, CIRCLES_FLAG, FIRST_CONNECTIONS_FLAG } from "../../src/modules/social/social-access";
 
 const describeLive = process.env.AROHA_RUN_LIVE_INTEGRATION === "1" ? describe : describe.skip;
@@ -53,7 +56,7 @@ describeLive("Circles and connection check-in through the live API", () => {
     }
   });
 
-  function api(index: number, method: "get" | "post" | "put" | "delete", path: string) {
+  function api(index: number, method: "get" | "post" | "put" | "patch" | "delete", path: string) {
     return request(app.getHttpServer())[method](`/api/v1/${path}`)
       .set("Authorization", `Bearer ${accounts[index]!.token}`).timeout(10000);
   }
@@ -72,6 +75,33 @@ describeLive("Circles and connection check-in through the live API", () => {
 
   function decide(group: string, index: number, approve = true) {
     return api(0, "put", `${group}/members/${accounts[index]!.id}`).send({ approve });
+  }
+
+  function notices(index: number, fields: Record<string, string | number>) {
+    return db.notification.findMany({ where: {
+      userId: accounts[index]!.id,
+      AND: Object.entries(fields).map(([key, value]) => ({ data: { path: [key], equals: value } })),
+    } });
+  }
+
+  async function completeSettingsProfile(index: number) {
+    const userId = accounts[index]!.id;
+    const discovery = { minAge: 18, maxAge: 99, maxDistanceKm: 100 };
+    await Promise.all([
+      db.userProfile.update({ where: { userId }, data: {
+        bio: "A complete synthetic profile for privacy and notification tests", locationGeohash: "tek9",
+      } }),
+      db.userIntent.upsert({ where: { userId_intent: { userId, intent: "FRIENDSHIP" } },
+        create: { userId, intent: "FRIENDSHIP" }, update: {} }),
+      db.userDiscoveryPreference.upsert({ where: { userId }, create: { userId, ...discovery }, update: discovery }),
+      db.userCommunicationPreference.upsert({ where: { userId }, create: { userId }, update: {} }),
+    ]);
+    if (!await db.profilePhoto.count({ where: { userId, isPrimary: true, moderationStatus: "APPROVED" } })) {
+      await db.profilePhoto.create({ data: {
+        userId, bucket: "profile-photos", objectKey: `social-verification/${run}/settings-${index}.jpg`,
+        mimeType: "image/jpeg", sizeBytes: 32, moderationStatus: "APPROVED", isPrimary: true,
+      } });
+    }
   }
 
   async function protectedStory() {
@@ -235,11 +265,28 @@ describeLive("Circles and connection check-in through the live API", () => {
     await api(2, "put", attendance).expect(404);
     await api(1, "put", volunteer).expect(200);
     await api(0, "put", `${volunteer}/${ids[1]}`).send({ approve: true }).expect(200);
+    const activityNotice = { route: "circle-activity", activityId: body.id as string };
+    expect(await notices(0, { ...activityNotice, need: 1, status: "PENDING" })).toHaveLength(1);
+    expect(await notices(1, { ...activityNotice, need: 1, status: "APPROVED" })).toHaveLength(1);
     expect((await api(1, "get", group).expect(200)).body.activities[0])
       .toMatchObject({ approvedCount: 0, mine: [{ need: 1, status: "APPROVED" }] });
     const { helpNeeds: _helpNeeds, ...mutable } = content;
     await api(0, "put", path).send({ ...mutable, openToNearby: true, version: 1 }).expect(200);
+    const profile = { userId: ids[0] };
+    await db.userProfile.update({ where: profile, data: { fieldAudiences: { location: "ONLY_ME" } } });
+    try {
+      expect((await api(0, "get", group).expect(200)).body.locality).toBe("Hyderabad, Telangana");
+      expect((await api(1, "get", group).expect(200)).body.locality).toBe("");
+      expect((await api(2, "get", group).expect(200)).body.locality).toBe("");
+      const nearby = (await api(2, "get", "social/circles?scope=nearby").expect(200)).body.items;
+      expect(nearby).toEqual(expect.arrayContaining([expect.objectContaining({
+        id: group.split("/").pop(), locality: "", activities: expect.arrayContaining([expect.objectContaining({ id: body.id })]),
+      })]));
+    } finally {
+      await db.userProfile.update({ where: profile, data: { fieldAudiences: {} } });
+    }
     await api(0, "put", path).send({ ...mutable, version: 1 }).expect(409);
+    expect(await notices(1, { ...activityNotice, status: "UPDATED" })).toHaveLength(1);
     await api(2, "put", volunteer).expect(404);
     await api(2, "put", attendance).expect(200);
     await api(3, "put", attendance).expect(200);
@@ -247,6 +294,9 @@ describeLive("Circles and connection check-in through the live API", () => {
     await api(3, "delete", attendance).expect(404);
     await api(3, "put", attendance).expect(409);
     await api(0, "put", `${attendance}/${ids[2]}`).send({ approve: true }).expect(200);
+    expect(await notices(0, { ...activityNotice, need: 0, status: "PENDING" })).toHaveLength(2);
+    expect(await notices(2, { ...activityNotice, need: 0, status: "APPROVED" })).toHaveLength(1);
+    expect(await notices(3, { ...activityNotice, need: 0, status: "DECLINED" })).toHaveLength(1);
     expect((await api(2, "get", group).expect(200)).body.activities[0]).toMatchObject({
       state: "FULL", helpNeeds: [], approvedCount: 1, mine: [{ need: 0, status: "APPROVED" }],
     });
@@ -262,6 +312,7 @@ describeLive("Circles and connection check-in through the live API", () => {
     await db.block.updateMany({ where: { blockerId: ids[2], blockedId: ids[0] }, data: { deletedAt: new Date() } });
     await api(4, "put", attendance).expect(200);
     await api(0, "delete", path).expect(200);
+    expect(await notices(4, { ...activityNotice, status: "CANCELLED" })).toHaveLength(1);
     expect((await api(4, "get", group).expect(200)).body.activities[0]).toMatchObject({
       state: "CANCELLED", redacted: true, venue: null, description: "", mine: [{ need: 0, status: "PENDING" }],
     });
@@ -422,6 +473,8 @@ describeLive("Circles and connection check-in through the live API", () => {
       const old = await currentChat();
       const baseline = await sendAndReceive(old, [0, 1, 2, 3]);
       expect((await message(0, old, baseline.key).expect(201)).body.message.id).toBe(baseline.id);
+      expect(await notices(2, { route: "circle-message", messageId: baseline.id })).toHaveLength(1);
+      expect(await notices(0, { route: "circle-message", messageId: baseline.id })).toHaveLength(0);
       const valid = await upload(old);
       const orphan = await upload(old);
       const uploadKey = randomUUID();
@@ -440,7 +493,19 @@ describeLive("Circles and connection check-in through the live API", () => {
       await handoff(1, old).expect(404);
       await handoff(4, old).expect(404);
       await api(0, "get", `conversations/${old}/messages`).expect(404);
-      await api(0, "get", `messages/${media.id}/attachment`).expect(404);
+      const archives = `social/conversations/${afterRemoval}/circle-history`;
+      const archivedChat = `conversations/${old}?history=1`;
+      const archivedMessages = `conversations/${old}/messages?history=1`;
+      const archivedAttachment = `messages/${media.id}/attachment`;
+      expect((await api(2, "get", archives).expect(200)).body).toMatchObject({ items: [{ id: old }], nextCursor: null });
+      await api(2, "get", archivedChat).expect(200).expect("Cache-Control", "private, no-store");
+      expect((await api(2, "get", archivedMessages).expect(200)).body.items).toEqual(
+        expect.arrayContaining([expect.objectContaining({ id: baseline.id }), expect.objectContaining({ id: media.id })]),
+      );
+      await api(2, "get", archivedAttachment).expect(200).expect("Cache-Control", "private, no-store");
+      for (const index of [1, 4]) {
+        for (const path of [archives, archivedChat, archivedMessages, archivedAttachment]) await api(index, "get", path).expect(404);
+      }
       await message(0, old, baseline.key).expect(404);
       await initiate(old).expect(404);
       await finalize(old, valid, uploadKey).expect(404);
@@ -449,11 +514,14 @@ describeLive("Circles and connection check-in through the live API", () => {
 
       await flag(CIRCLES_FLAG, true, accounts.filter((_, index) => index !== 3));
       await handoff(3, old).expect(404);
+      await api(3, "get", archivedMessages).expect(404);
       const disabled = await sendAndReceive(afterRemoval, [0, 2]);
       await flag(CIRCLES_FLAG, true);
       await api(0, "post", "blocks").send({ blockedUserId: ids[2] }).expect(200);
       await api(0, "put", `${group}/recovery`).expect(200);
       await handoff(2, afterRemoval).expect(404);
+      await api(0, "get", archivedMessages).expect(404);
+      await api(0, "get", archivedAttachment).expect(404);
       const afterBlock = await currentChat();
       const blocked = await sendAndReceive(afterBlock, [0, 3]);
 
@@ -495,6 +563,119 @@ describeLive("Circles and connection check-in through the live API", () => {
     }
   });
 
+  it("grants history only for the latest uninterrupted Circle membership", async () => {
+    const group = await createCircle("Circle history");
+    const currentChat = async (): Promise<string> => (await api(0, "get", group).expect(200)).body.chatId;
+    const join = async (index: number) => {
+      await api(index, "put", `${group}/membership`).expect(200);
+      await decide(group, index).expect(200);
+    };
+    const send = (chat: string) => api(0, "post", `conversations/${chat}/messages`).send({
+      clientMessageId: randomUUID(), textBody: "Message from an earlier roster",
+    }).expect(201);
+    const history = (chat: string) => `conversations/${chat}/messages?history=1`;
+    await join(1);
+    const original = await currentChat();
+    await send(original);
+    await join(2);
+    await api(1, "get", history(original)).expect(200);
+    await api(2, "get", history(original)).expect(404);
+    await api(1, "delete", `${group}/membership`).expect(200);
+    await api(1, "get", history(original)).expect(404);
+    await join(1);
+    const afterRejoin = await currentChat();
+    await api(1, "get", history(original)).expect(404);
+    await api(1, "get", `social/conversations/${original}/current-circle-chat`).expect(404);
+    expect((await api(1, "get", `social/conversations/${afterRejoin}/circle-history`).expect(200)).body.items).toEqual([]);
+    await send(afterRejoin);
+    await join(3);
+    await api(1, "get", history(afterRejoin)).expect(200);
+    expect((await api(1, "get", `social/conversations/${afterRejoin}/circle-history`).expect(200)).body.items)
+      .toEqual([expect.objectContaining({ id: afterRejoin })]);
+    await api(3, "get", history(afterRejoin)).expect(404);
+    await api(0, "put", `${group}/close`).send({ cancel: false }).expect(200);
+  });
+
+  it("dispatches generic opt-in push once, rechecks access, and isolates a reused device across accounts", async () => {
+    await completeSettingsProfile(0);
+    const group = await createCircle("Push club");
+    const circleId = group.split("/").at(-1)!;
+    const notice = { route: "circle-membership", circleId };
+    const token = `social-fcm-${run}`;
+    const register = (index: number, value = token) => api(index, "post", "push-tokens")
+      .send({ token: value, platform: "ANDROID", provider: "FCM" }).expect(200);
+    const notifier = app.get(NotificationDispatchService);
+    const dispatch = (id: string) => notifier.execute({ notificationId: id });
+    const fcm = jest.spyOn(app.get(FcmPushTransport), "send").mockResolvedValue({
+      outcome: "DELIVERED", providerMessageId: "synthetic",
+    });
+    const requestMembership = (index: number) => api(index, "put", `${group}/membership`).expect(200);
+    const queuedRequest = async (index: number) => {
+      const fields = { ...notice, status: "PENDING", applicantId: accounts[index]!.id };
+      const rows = await notices(0, fields);
+      expect(rows).toHaveLength(1);
+      const id = rows[0]!.id;
+      const job = await app.get<Queue>(getQueueToken("default"))
+        .getJob(toBullmqSafeJobId(`notification.dispatch:${id}`));
+      expect(job?.data).toEqual({ notificationId: id });
+      return id;
+    };
+    try {
+      await register(0);
+      await requestMembership(3);
+      await requestMembership(3);
+      const disabled = await queuedRequest(3);
+      await dispatch(disabled);
+      expect((await db.notification.findUniqueOrThrow({ where: { id: disabled } })).status).toBe("CANCELED");
+      expect(fcm).not.toHaveBeenCalled();
+
+      await api(0, "put", "profiles/me/communication-preference").send({
+        allowVoiceCalls: true, allowVideoCalls: true, allowReadReceipts: true,
+        allowPushMatches: true, allowPushMessages: true, allowPushCalls: true, allowPushSocial: true,
+      }).expect(200);
+      await requestMembership(2);
+      const enabled = await queuedRequest(2);
+      await dispatch(enabled);
+      await dispatch(enabled);
+      expect(fcm.mock.calls).toEqual([[{
+        token, title: "Yariva", body: "You have a new update.",
+        data: { route: "social-notification", notificationId: enabled },
+      }]]);
+      const read = `notifications/${enabled}/read`;
+      await api(3, "post", read).expect(404);
+      expect((await api(0, "post", read).expect(200)).body.notification).toMatchObject({
+        data: notice, actor: null,
+      });
+      await decide(group, 2).expect(200);
+      const approvals = await notices(2, { ...notice, status: "APPROVED" });
+      expect(approvals).toHaveLength(1);
+      await api(0, "delete", `${group}/members/${accounts[2]!.id}`).expect(200);
+      await api(2, "post", `notifications/${approvals[0]!.id}/read`).expect(404);
+      await api(0, "post", read).expect(404);
+
+      const newerToken = `social-fcm-newer-${run}`;
+      await register(0, newerToken);
+      await requestMembership(4);
+      const switched = await queuedRequest(4);
+      fcm.mockImplementationOnce(async () => {
+        await register(3);
+        return { outcome: "DELIVERED", providerMessageId: "synthetic" };
+      });
+      await dispatch(switched);
+      expect(fcm).toHaveBeenCalledTimes(2);
+      expect(fcm.mock.lastCall?.[0].token).toBe(newerToken);
+      await api(3, "post", `notifications/${switched}/read`).expect(404);
+
+      await decide(group, 3, false).expect(200);
+      const declines = await notices(3, { ...notice, status: "DECLINED" });
+      expect(declines).toHaveLength(1);
+      await api(3, "post", `notifications/${declines[0]!.id}/read`).expect(200);
+      await api(0, "put", `${group}/close`).send({ cancel: false }).expect(200);
+    } finally {
+      fcm.mockRestore();
+    }
+  });
+
   it("seals unilateral intentions and prompt answers and uses transactional versions", async () => {
     const [userLowId, userHighId] = [accounts[0]!.id, accounts[1]!.id].sort() as [string, string];
     const match = await db.match.create({ data: { userLowId, userHighId, conversation: { create: {} } }, include: { conversation: true } });
@@ -508,8 +689,14 @@ describeLive("Circles and connection check-in through the live API", () => {
     const changes = await Promise.all([0, 1].map(index => api(index, "put", `${path}/intent`).send({ intent: "FRIENDSHIP", version: 0 })));
     expect(changes.map(result => result.status).sort()).toEqual([200, 409]);
     const other = changes[0]!.status === 409 ? 0 : 1;
+    const checkInNotice = { route: "connection-check-in", conversationId: match.conversation!.id };
+    const intentInvites = await notices(other, { ...checkInNotice, kind: "intent-invite", version: 1 });
+    expect(intentInvites).toHaveLength(1);
+    const invite = await api(other, "post", `notifications/${intentInvites[0]!.id}/read`).expect(200);
+    expect(invite.body.notification.data).toEqual(checkInNotice);
     expect((await api(other, "get", path).expect(200)).body.intent).toEqual({ version: 1, mine: null, common: null, pending: true });
     expect((await api(other, "put", `${path}/intent`).send({ intent: "FRIENDSHIP", version: 1 }).expect(200)).body.intent.common).toBe("FRIENDSHIP");
+    expect(await notices(1 - other, { ...checkInNotice, kind: "intent-update", version: 2 })).toHaveLength(1);
     await api(other, "put", `${path}/intent`).send({ intent: "SHARED_INTERESTS", version: 2 }).expect(200);
     expect((await api(1 - other, "get", path).expect(200)).body.intent).toEqual({ version: 3, mine: null, common: null, pending: true });
     await api(other, "put", `${path}/intent`).send({ intent: null, version: 3 }).expect(200);
@@ -555,6 +742,7 @@ describeLive("Circles and connection check-in through the live API", () => {
 
     const vibe = `${path}/vibe`;
     await api(0, "put", vibe).send({ action: "START", version: 0 }).expect(200);
+    expect(await notices(1, { ...checkInNotice, kind: "vibe-invite", version: 1 })).toHaveLength(1);
     await api(0, "put", vibe).send({ action: "ACCEPT", version: 1 }).expect(409);
     await api(1, "put", vibe).send({ action: "ACCEPT", version: 1 }).expect(200);
     const submissions = [["Read a book", "Bouldering"], ["Bake a cake", "Cycling"]];
@@ -567,6 +755,10 @@ describeLive("Circles and connection check-in through the live API", () => {
     expect((await api(1, "get", path).expect(200)).body.vibe).toMatchObject({ state: "ANSWER", theirs: [] });
     expect((await api(1, "put", vibe).send({ action: "ANSWER", version: 3, answers: ["Go for a walk", "Drawing"] }).expect(200)).body.vibe)
       .toMatchObject({ state: "SHARED", theirs: submissions[accepted] });
+    const completions = await notices(0, { ...checkInNotice, kind: "vibe-complete", version: 4 });
+    expect(completions).toHaveLength(1);
+    expect((await api(0, "post", `notifications/${completions[0]!.id}/read`).expect(200)).body.notification.data)
+      .toEqual(checkInNotice);
     await api(1, "get", story).expect(404);
     await api(0, "put", vibe).send({ action: "SKIP", version: 4 }).expect(200);
     await api(0, "put", vibe).send({ action: "START", version: 5 }).expect(200);
@@ -629,5 +821,62 @@ describeLive("Circles and connection check-in through the live API", () => {
     await reply(dating!.id).expect(200);
     await db.scene.update({ where: { id: dating!.id }, data: { expiresAt: new Date(Date.now() - 1000) } });
     await reply(dating!.id).expect(404);
+  });
+
+  it("enforces grouped and individual privacy for saved settings, eligibility, live matches, and like retries", async () => {
+    await completeSettingsProfile(4);
+    const target = accounts[4]!.id;
+    const viewer = accounts[5]!.id;
+    const profile = `profiles/${target}`;
+    const me = "profiles/me";
+    const headline = "Visible after matching";
+    const careerPriority = "Private career plans shared with matches";
+    await api(4, "patch", me).send({ headline, pronouns: "he/him", careerPriority,
+      fieldAudiences: { intro: "MATCHES", location: "ONLY_ME" } }).expect(200);
+    await Promise.all([
+      api(4, "patch", me).send({ fieldAudiences: { careerPriority: "MATCHES", pronouns: "ONLY_ME" } }).expect(200),
+      api(4, "patch", me).send({ fieldAudiences: { religionSpirituality: "ONLY_ME" } }).expect(200),
+    ]);
+    await api(4, "patch", me).send({ fieldAudiences: { dateOfBirth: "ALL_ELIGIBLE" } }).expect(400);
+    const owner = (await api(4, "get", me).expect(200)).body.profile;
+    expect(owner).toMatchObject({
+      headline, careerPriority, isComplete: true,
+      fieldAudiences: {
+        age: "ONLY_ME", distance: "ONLY_ME", work: "ONLY_ME", intro: "MATCHES", location: "ONLY_ME",
+        pronouns: "ONLY_ME", careerPriority: "MATCHES", religionSpirituality: "ONLY_ME",
+      },
+    });
+    const hidden = { headline: null, age: null, pronouns: null, occupation: null,
+      location: { city: null, region: null, countryCode: null, distanceBand: null }, sensitiveCompatibility: null };
+    expect((await api(5, "get", profile).expect(200)).body.profile).toMatchObject(hidden);
+    const received = (await api(5, "get", "likes/received").expect(200)).body.items;
+    expect(received.find((item: { actorUserId: string }) => item.actorUserId === target))
+      .toMatchObject({ headline: null, age: null, city: null, region: null });
+    const candidate = (await api(3, "get", "discovery/feed?limit=8").expect(200)).body.items
+      .find((item: { userId: string }) => item.userId === target);
+    expect(candidate).toMatchObject(hidden);
+
+    await db.like.delete({ where: { actorId_targetId: { actorId: viewer, targetId: target } } });
+    const like = (targetUserId = target) => api(5, "post", "likes")
+      .set("Idempotency-Key", `social-privacy-${run}`).send({ targetUserId });
+    const { body } = await like().expect(200);
+    const visible = { ...hidden, headline, sensitiveCompatibility: { careerPriority, religionSpirituality: null } };
+    expect(body).toMatchObject({ outcome: "MATCH_CREATED", match: { otherUser: visible }, conversation: { otherUser: visible } });
+    const match = `matches/${body.match.id}`;
+    const conversation = `conversations/${body.conversation.id}`;
+    expect((await api(5, "get", profile).expect(200)).body.profile).toMatchObject(visible);
+    expect((await api(5, "get", match).expect(200)).body.match.otherUser).toMatchObject(visible);
+    expect((await api(5, "get", conversation).expect(200)).body.conversation.otherUser).toMatchObject(visible);
+    await api(3, "get", match).expect(404);
+    await api(3, "get", conversation).expect(404);
+    expect((await api(3, "get", profile).expect(200)).body.profile).toMatchObject(hidden);
+    await like(accounts[3]!.id).expect(409);
+
+    await api(4, "patch", me).send({ fieldAudiences: { intro: "ONLY_ME", careerPriority: "ONLY_ME" } }).expect(200);
+    expect((await like().expect(200)).body).toMatchObject({
+      match: { id: body.match.id, otherUser: hidden }, conversation: { id: body.conversation.id, otherUser: hidden },
+    });
+    await api(4, "post", "blocks").send({ blockedUserId: viewer }).expect(200);
+    await like().expect(409);
   });
 });

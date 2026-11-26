@@ -79,7 +79,7 @@ export function CircleDetailScreen() {
       {circle ? <>
         <SocialCard>
           <Text>{circle.description}</Text>
-          <Text color="textSubdued">{CONNECTION_INTENT_LABELS[circle.intent]} · {circle.locality}</Text>
+          <Text color="textSubdued">{CONNECTION_INTENT_LABELS[circle.intent]}{circle.locality ? ` · ${circle.locality}` : ""}</Text>
           <Text color="textSubdued">{circle.approvedCount}/{circle.capacity} members · {stateLabel(circle.state)}</Text>
           {circle.ownStatus ? <Text accessibilityLiveRegion="polite">Membership · {stateLabel(circle.ownStatus)}</Text> : null}
           {circle.state === "OPEN" && (!circle.ownStatus || circle.ownStatus === "WITHDRAWN") ? (
@@ -89,7 +89,6 @@ export function CircleDetailScreen() {
             pathname: "/(app)/conversation/[conversationId]",
             params: { conversationId: circle.chatId! },
           })} /> : null}
-          {circle.chatId ? <Text color="textSubdued">Chat history resets when the roster changes.</Text> : null}
           {!circle.chatId && circle.reportableOrganizerId ? (
             <Button label="Report organizer" variant="secondary" onPress={() => router.push({
               pathname: "/(app)/report",
@@ -155,7 +154,9 @@ export function CircleDetailScreen() {
           return <SocialCard key={activity.id}>
             <Text variant="bodyStrong" accessibilityRole="header">{activity.title}</Text>
             <Text>{activity.description}</Text>
-            <Text color="textSubdued">{activity.venue ? `${activity.venue.name} · ${activity.venue.publicLocality}` : circle.locality}</Text>
+            {activity.venue || circle.locality ? (
+              <Text color="textSubdued">{activity.venue ? `${activity.venue.name} · ${activity.venue.publicLocality}` : circle.locality}</Text>
+            ) : null}
             <Text color="textSubdued">{activity.startsAt ? formatDateTime(activity.startsAt) : "Time to be decided"} · {stateLabel(activity.state)}</Text>
             <Text color="textSubdued">{activity.approvedCount}/{activity.capacity} attendance seats confirmed</Text>
             {["Attendance", ...activity.helpNeeds].map((label, need) => {

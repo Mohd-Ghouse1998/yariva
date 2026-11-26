@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { canViewProfileField } from "../../profiles/domain/profile-field-audience";
 import { ConfigType } from "@nestjs/config";
 import authConfig from "../../../config/auth.config";
 import { ERROR_CODES } from "../../../common/constants/error-codes";
@@ -161,6 +162,10 @@ export class CandidateEligibilityService {
     // Rechecked for freshly loaded cached candidates as well as new recommendations.
     // Never search private occupation data: matching itself could disclose it.
     const interests = filters?.interestTagIds ?? [];
+    const visibleInterests = canViewProfileField(candidate.profile, "interests") ? candidate.interests : [];
+    const visibleLanguages = canViewProfileField(candidate.profile, "interests") ? candidate.profile.languages : [];
+    const showWork = canViewProfileField(candidate.profile, "work");
+    const lifestyle = canViewProfileField(candidate.profile, "lifestyle") ? candidate.lifestyle : null;
     const languages = (filters?.languageFilter ?? [])
       .map(normalize)
       .filter(Boolean);
@@ -168,31 +173,31 @@ export class CandidateEligibilityService {
     const occupation = normalize(filters?.occupationFilter ?? "");
     if (
       (interests.length > 0 &&
-        !candidate.interests.some((item) =>
+        !visibleInterests.some((item) =>
           interests.includes(item.interestTagId),
         )) ||
       (languages.length > 0 &&
-        !candidate.profile.languages.some((value) =>
+        !visibleLanguages.some((value) =>
           languages.includes(normalize(value)),
         )) ||
       (workCategories.length > 0 &&
-        (!candidate.profile.shareWorkDetails ||
+        (!showWork ||
           !candidate.profile.occupationCategory ||
           !workCategories.includes(candidate.profile.occupationCategory))) ||
       (occupation &&
-        (!candidate.profile.shareWorkDetails ||
+        (!showWork ||
           !normalize(candidate.profile.occupation ?? "").includes(
             occupation,
           ))) ||
       ((filters?.smokingFilter?.length ?? 0) > 0 &&
-        (!candidate.lifestyle?.smoking ||
-          !filters!.smokingFilter.includes(candidate.lifestyle.smoking))) ||
+        (!lifestyle?.smoking ||
+          !filters!.smokingFilter.includes(lifestyle.smoking))) ||
       ((filters?.drinkingFilter?.length ?? 0) > 0 &&
-        (!candidate.lifestyle?.drinking ||
-          !filters!.drinkingFilter.includes(candidate.lifestyle.drinking))) ||
+        (!lifestyle?.drinking ||
+          !filters!.drinkingFilter.includes(lifestyle.drinking))) ||
       ((filters?.exerciseFilter?.length ?? 0) > 0 &&
-        (!candidate.lifestyle?.exercise ||
-          !filters!.exerciseFilter.includes(candidate.lifestyle.exercise))) ||
+        (!lifestyle?.exercise ||
+          !filters!.exerciseFilter.includes(lifestyle.exercise))) ||
       (filters?.includeRecentlyActiveOnly &&
         (!candidate.lastActiveAt ||
           candidate.lastActiveAt.getTime() <
@@ -239,15 +244,15 @@ export class DiscoveryRankingService {
     const selectedIntents = resolveSelectedIntents(viewer);
     const candidateIntents = candidate.intents.map((intent) => intent.intent);
     const intentScore = 30 * overlapRatio(selectedIntents, candidateIntents);
-    const interestScore =
+    const interestScore = canViewProfileField(candidate.profile, "interests") ?
       20 *
       jaccardIndex(
         viewer.interests.map((interest) => interest.interestTagId),
         candidate.interests.map((interest) => interest.interestTagId),
-      );
-    const lifestyleScore =
+      ) : 0;
+    const lifestyleScore = canViewProfileField(candidate.profile, "lifestyle") ?
       15 *
-      normalizedLifestyleCompatibility(viewer.lifestyle, candidate.lifestyle);
+      normalizedLifestyleCompatibility(viewer.lifestyle, candidate.lifestyle) : 0;
     const scheduleScore =
       10 *
       normalizedScheduleOverlap(
@@ -256,8 +261,8 @@ export class DiscoveryRankingService {
       );
     const maxDistanceKm =
       viewer.discoveryPreference?.maxDistanceKm ?? input.distanceKm;
-    const distanceScore =
-      10 * resolveDistanceBandScore(input.distanceKm, maxDistanceKm);
+    const distanceScore = canViewProfileField(candidate.profile, "distance") ?
+      10 * resolveDistanceBandScore(input.distanceKm, maxDistanceKm) : 0;
     const freshnessScore =
       10 * recentActivityScore(candidate.lastActiveAt);
     const trustRaw = candidate.trustScore?.score ?? 70;
@@ -281,14 +286,13 @@ export class DiscoveryRankingService {
       trustScore: trustRaw,
       lastActiveAtMs: candidate.lastActiveAt?.getTime() ?? 0,
       primaryIntentBucket: input.primaryIntentBucket,
-      cityBucket:
-        [
+      cityBucket: canViewProfileField(candidate.profile, "location") ? [
           candidate.profile?.city,
           candidate.profile?.region,
           candidate.profile?.countryCode,
         ]
           .filter(Boolean)
-          .join("|") || "UNKNOWN",
+          .join("|") || "UNKNOWN" : "UNKNOWN",
       recentlyServed: input.recentlyServed,
     };
   }

@@ -16,6 +16,8 @@ import { decodeDateIdCursor, encodeDateIdCursor } from "../../../common/utils/cu
 import { PrismaService } from "../../../database/prisma/prisma.service";
 import type { PrismaTransactionalClient } from "../../../database/prisma/prisma.transaction";
 import { Prisma, type Notification, type PrivateStory } from "../../../generated/prisma/client";
+import { findActiveMatchPartnerIds } from "../../matches/infrastructure/matches.infrastructure";
+import { canViewProfileField } from "../../profiles/domain/profile-field-audience";
 import { activeStory, PRIVATE_STORY_POLICY } from "../domain/private-story.policy";
 import { probeMedia, runMediaTool } from "../../../jobs/vibes/vibe-media.processor";
 import type { AudienceDto, CreatePrivateStoryDto, InitiatePrivateStoryMediaDto, PrivateCommunityDto, PrivateStoryMediaDto, UpdatePrivateStoryDto } from "../dto/private-stories.dto";
@@ -24,6 +26,7 @@ type Db = PrismaService | PrismaTransactionalClient;
 type ReviewActor = Pick<AuditLogInput, "actorUserId" | "actorSessionId" | "ipAddress" | "userAgent">;
 const missing = () => new AppException(404, ERROR_CODES.RESOURCE_NOT_FOUND, "Private Story not found");
 const invalid = (message: string) => new AppException(400, ERROR_CODES.VALIDATION_FAILED, message);
+const followProfileFields = { displayName: true, city: true, fieldAudiences: true } satisfies Prisma.UserProfileSelect;
 
 @Injectable()
 export class PrivateStoriesService {
@@ -545,15 +548,17 @@ export class PrivateStoriesService {
         ...(parsed ? { OR: [{ createdAt: { lt: new Date(parsed.createdAt) } }, { createdAt: new Date(parsed.createdAt), [idKey]: { lt: parsed.id } }] } : {}) },
       orderBy: [{ createdAt: "desc" }, { [idKey]: "desc" }], take: PRIVATE_STORY_POLICY.pageSize + 1,
       select: { requesterId: true, ownerId: true, createdAt: true,
-        requester: { select: { profile: { select: { displayName: true, city: true } }, photos: { where: { deletedAt: null, moderationStatus: "APPROVED", purpose: "PROFILE" }, orderBy: [{ isPrimary: "desc" }, { position: "asc" }], take: 1, select: { bucket: true, objectKey: true } } } },
-        owner: { select: { profile: { select: { displayName: true, city: true } }, photos: { where: { deletedAt: null, moderationStatus: "APPROVED", purpose: "PROFILE" }, orderBy: [{ isPrimary: "desc" }, { position: "asc" }], take: 1, select: { bucket: true, objectKey: true } } } } },
+        requester: { select: { profile: { select: followProfileFields }, photos: { where: { deletedAt: null, moderationStatus: "APPROVED", purpose: "PROFILE" }, orderBy: [{ isPrimary: "desc" }, { position: "asc" }], take: 1, select: { bucket: true, objectKey: true } } } },
+        owner: { select: { profile: { select: followProfileFields }, photos: { where: { deletedAt: null, moderationStatus: "APPROVED", purpose: "PROFILE" }, orderBy: [{ isPrimary: "desc" }, { position: "asc" }], take: 1, select: { bucket: true, objectKey: true } } } } },
     });
     const page = rows.slice(0, PRIVATE_STORY_POLICY.pageSize);
+    const matches = await findActiveMatchPartnerIds(this.prisma, userId, page.map(row => row[idKey]));
     const items = await Promise.all(page.map(async (row) => {
-      const otherId = incoming ? row.requesterId : row.ownerId;
+      const otherId = row[idKey];
       const other = incoming ? row.requester : row.owner;
       const photo = other.photos[0];
-      return { userId: otherId, displayName: other.profile?.displayName ?? "Connection", city: other.profile?.city ?? null,
+      return { userId: otherId, displayName: other.profile?.displayName ?? "Connection",
+        city: canViewProfileField(other.profile, "location", matches.has(otherId)) ? other.profile?.city ?? null : null,
         photoUrl: photo ? await this.storage.createPresignedGetObject({ disclosure: { viewerId: userId, ownerId: otherId }, bucket: photo.bucket, objectKey: photo.objectKey }) : null };
     }));
     const last = page.at(-1);
@@ -569,11 +574,13 @@ export class PrivateStoriesService {
     const rows = await this.prisma.privateFollow.findMany({ where: { ownerId, status: "PENDING", requester: this.eligibleFollowPeer(ownerId),
       ...(parsed ? { OR: [{ createdAt: { lt: new Date(parsed.createdAt) } }, { createdAt: new Date(parsed.createdAt), requesterId: { lt: parsed.id } }] } : {}) },
       orderBy: [{ createdAt: "desc" }, { requesterId: "desc" }], take: PRIVATE_STORY_POLICY.pageSize + 1,
-      select: { requesterId: true, createdAt: true, requester: { select: { profile: { select: { displayName: true, city: true } }, photos: { where: { deletedAt: null, moderationStatus: "APPROVED", purpose: "PROFILE" }, orderBy: [{ isPrimary: "desc" }, { position: "asc" }], take: 1, select: { bucket: true, objectKey: true } } } } } });
+      select: { requesterId: true, createdAt: true, requester: { select: { profile: { select: followProfileFields }, photos: { where: { deletedAt: null, moderationStatus: "APPROVED", purpose: "PROFILE" }, orderBy: [{ isPrimary: "desc" }, { position: "asc" }], take: 1, select: { bucket: true, objectKey: true } } } } } });
     const page = rows.slice(0, PRIVATE_STORY_POLICY.pageSize);
+    const matches = await findActiveMatchPartnerIds(this.prisma, ownerId, page.map(row => row.requesterId));
     const items = await Promise.all(page.map(async (row) => {
-      const photo = row.requester.photos[0];
-      return { requesterId: row.requesterId, displayName: row.requester.profile?.displayName ?? "Connection", city: row.requester.profile?.city ?? null, createdAt: row.createdAt,
+      const { profile, photos: [photo] } = row.requester;
+      return { requesterId: row.requesterId, displayName: profile?.displayName ?? "Connection", createdAt: row.createdAt,
+        city: canViewProfileField(profile, "location", matches.has(row.requesterId)) ? profile?.city ?? null : null,
         photoUrl: photo ? await this.storage.createPresignedGetObject({ disclosure: { viewerId: ownerId, ownerId: row.requesterId }, bucket: photo.bucket, objectKey: photo.objectKey }) : null };
     }));
     const last = page.at(-1);

@@ -131,6 +131,7 @@ export class LikeRepository {
           region: string | null;
           isHidden: boolean;
           hideAge: boolean;
+          fieldAudiences: UserProfile["fieldAudiences"];
           isComplete: boolean;
           deletedAt: Date | null;
         } | null;
@@ -146,6 +147,8 @@ export class LikeRepository {
         deletedAt: Date | null;
         isShadowBanned: boolean;
         isDiscoveryFrozen: boolean;
+        matchesLow: Array<{ id: string }>;
+        matchesHigh: Array<{ id: string }>;
       };
     }>
   > {
@@ -197,10 +200,13 @@ export class LikeRepository {
                 region: true,
                 isHidden: true,
                 hideAge: true,
+                fieldAudiences: true,
                 isComplete: true,
                 deletedAt: true,
               },
             },
+            matchesLow: { where: { userHighId: input.targetUserId, status: "ACTIVE" }, select: { id: true } },
+            matchesHigh: { where: { userLowId: input.targetUserId, status: "ACTIVE" }, select: { id: true } },
             intents: { select: { intent: true } },
             photos: {
               where: { deletedAt: null, purpose: "PROFILE", moderationStatus: "APPROVED" },

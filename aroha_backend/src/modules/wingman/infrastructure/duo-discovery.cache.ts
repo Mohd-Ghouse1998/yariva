@@ -49,7 +49,7 @@ export class DuoDiscoveryCache {
     limit: number;
   }): string {
     return [
-      "duo-discovery:feed:v1",
+      "duo-discovery:feed:v2",
       input.viewerId,
       input.partyId,
       input.membershipVersion,

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { BackHandler, View } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { WorkCategoryPicker } from "./WorkCategoryPicker";
 import { profilesApi } from "../../api/endpoints/profiles";
 import { Header } from "../../components/layout/Header";
@@ -8,7 +8,6 @@ import { Screen } from "../../components/layout/Screen";
 import { Button } from "../../components/ui/Button";
 import { CenterDialog } from "../../components/ui/CenterDialog";
 import { Chip } from "../../components/ui/Chip";
-import { ToggleRow } from "../../components/ui/ToggleRow";
 import { Input } from "../../components/ui/Input";
 import { NavigationListRow, NavigationListSection } from "../../components/ui/NavigationList";
 import { Text } from "../../components/ui/Text";
@@ -35,6 +34,7 @@ const OPTIONAL_FIELDS = [
   ["religionSpirituality", "Religion & spirituality", 120],
 ] as const;
 export function ProfileExtrasScreen({ prompts = false }: { prompts?: boolean }) {
+  const router = useRouter();
   const hydration = useProfileHydration(),
     back = useSafeBack("/(app)/settings/edit-profile"),
     toast = useToast(),
@@ -226,12 +226,13 @@ export function ProfileExtrasScreen({ prompts = false }: { prompts?: boolean }) 
             onChange={(values) => update("occupationCategory", values[0] ?? null)}
             disabled={saving}
           />
-          <ToggleRow
-            label="Show work on my profile"
-            sub="Also allows people to find you by work or study."
-            value={form.shareWorkDetails}
+          <NavigationListRow
+            first
+            label="Profile privacy"
+            meta="Choose who can see work and personal details"
+            metaLines={2}
             disabled={saving}
-            onValueChange={(v) => update("shareWorkDetails", v)}
+            onPress={() => router.push("/(app)/settings/privacy")}
           />
           <Input
             label="Languages"

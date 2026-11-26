@@ -1,5 +1,6 @@
 import type { OccupationCategory } from "../../../generated/prisma/client";
 import { WORK_CATEGORY_VALUES } from "../domain/work-categories";
+import type { ProfileAudience, ProfileAudiences, ProfileField } from "../domain/profile-field-audience";
 import { Type } from "class-transformer";
 import {
   ArrayUnique,
@@ -212,6 +213,10 @@ export class UpdateMyProfileDto {
   @IsOptional()
   @IsBoolean()
   readonly hideDistance?: boolean;
+
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsObject()
+  readonly fieldAudiences?: ProfileAudiences;
 
   @IsOptional()
   @IsBoolean()
@@ -469,6 +474,10 @@ export class UpdateCommunicationPreferenceDto {
   @IsBoolean()
   readonly allowPushCalls!: boolean;
 
+  @IsOptional()
+  @IsBoolean()
+  readonly allowPushSocial?: boolean;
+
   @IsBoolean()
   readonly allowReadReceipts!: boolean;
 }
@@ -595,6 +604,7 @@ export interface CommunicationPreferenceDto {
   allowPushMatches: boolean;
   allowPushMessages: boolean;
   allowPushCalls: boolean;
+  allowPushSocial: boolean;
   allowReadReceipts: boolean;
 }
 
@@ -631,6 +641,7 @@ export interface MyProfileDto {
   locationLng: number | null;
   hideAge: boolean;
   hideDistance: boolean;
+  fieldAudiences: Record<ProfileField, ProfileAudience>;
   isHidden: boolean;
   isIncognito: boolean;
   hideFromContacts: boolean;

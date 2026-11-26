@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
   Param,
@@ -19,6 +20,7 @@ import {
   MarkConversationReadService,
 } from "../application/conversations.services";
 import {
+  ConversationDetailQueryDto,
   ConversationMessagePageQueryDto,
   ConversationReadRequestDto,
   type ConversationDetailResponseDto,
@@ -49,17 +51,21 @@ export class ConversationsController {
   }
 
   @Get(":conversationId")
+  @Header("Cache-Control", "private, no-store")
   async getById(
     @CurrentUser() user: AuthContext["user"],
     @Param("conversationId", new ParseUUIDPipe()) conversationId: string,
+    @Query() query: ConversationDetailQueryDto,
   ): Promise<ConversationDetailResponseDto> {
     return this.getConversationService.execute({
       userId: user.id,
       conversationId,
+      history: query.history === "1",
     });
   }
 
   @Get(":conversationId/messages")
+  @Header("Cache-Control", "private, no-store")
   async listMessages(
     @CurrentUser() user: AuthContext["user"],
     @Param("conversationId", new ParseUUIDPipe()) conversationId: string,
@@ -68,6 +74,7 @@ export class ConversationsController {
     return this.listConversationMessagesService.execute({
       userId: user.id,
       conversationId,
+      history: query.history === "1",
       cursor: query.cursor,
       limit: query.limit ? Math.min(query.limit, 100) : 50,
     });

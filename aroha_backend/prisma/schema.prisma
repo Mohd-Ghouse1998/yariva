@@ -618,6 +618,7 @@ model UserProfile {
   locationPoint               Unsupported("geography(Point, 4326)")?
   hideAge                     Boolean                                @default(false)
   hideDistance                Boolean                                @default(false)
+  fieldAudiences              Json                                   @default("{}")
   isHidden                    Boolean                                @default(false)
   isIncognito                 Boolean                                @default(false)
   hideFromContacts            Boolean                                @default(false)
@@ -1054,6 +1055,7 @@ model UserCommunicationPreference {
   allowPushMatches  Boolean  @default(true)
   allowPushMessages Boolean  @default(true)
   allowPushCalls    Boolean  @default(true)
+  allowPushSocial   Boolean  @default(false)
   allowReadReceipts Boolean  @default(true)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -1373,6 +1375,7 @@ model Conversation {
 model ConversationMember {
   conversationId String @db.Uuid
   userId String @db.Uuid
+  circleChatGrantId String? @db.Uuid
   createdAt DateTime @default(now())
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Restrict)
   user User @relation(fields: [userId], references: [id], onDelete: Restrict)
@@ -1914,6 +1917,8 @@ model CircleMembership {
   circleId  String              @db.Uuid
   userId    String              @db.Uuid
   status    CircleRequestStatus @default(PENDING)
+  chatGrantId String?           @db.Uuid
+  requestId   String?           @db.Uuid
   createdAt DateTime            @default(now())
   circle    Circle              @relation(fields: [circleId], references: [id], onDelete: Restrict)
   user      User                @relation(fields: [userId], references: [id], onDelete: Restrict)
@@ -1951,6 +1956,7 @@ model CircleActivityResponse {
   /// 0 = participation, 1..3 = the corresponding voluntary help need.
   need       Int
   status     CircleRequestStatus @default(PENDING)
+  requestId  String?             @db.Uuid
   activity   CircleActivity      @relation(fields: [activityId], references: [id], onDelete: Restrict)
   user       User                @relation(fields: [userId], references: [id], onDelete: Restrict)
 

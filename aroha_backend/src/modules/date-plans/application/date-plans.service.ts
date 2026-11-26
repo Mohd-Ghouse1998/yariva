@@ -16,6 +16,7 @@ import { Prisma, type ReviewedVenue } from "../../../generated/prisma/client";
 import { BullmqProducer } from "../../../integrations/bullmq/bullmq.producer";
 import { AnalyticsEventWriterService } from "../../analytics/application/analytics.services";
 import { CreateNotificationService } from "../../notifications/application/notifications.services";
+import { canViewProfileField } from "../../profiles/domain/profile-field-audience";
 import { DatePlanPolicy } from "../domain/date-plans.policy";
 import { resolveMutualMeetAgain } from "../domain/date-plans.privacy";
 import { calculateMidpoint } from "../domain/venue-geography";
@@ -75,7 +76,9 @@ export class DatePlansService {
         searchPoint = { latitude: Number(mine.locationLat), longitude: Number(mine.locationLng) };
       }
     } else if (locationMode === "MIDPOINT") {
-      if (low?.locationLat != null && low.locationLng != null && high?.locationLat != null && high.locationLng != null) {
+      const peer = match.userLowId === userId ? high : low;
+      if (canViewProfileField(peer, "location", true) && canViewProfileField(peer, "distance", true) &&
+          low?.locationLat != null && low.locationLng != null && high?.locationLat != null && high.locationLng != null) {
         searchPoint = calculateMidpoint(
           { latitude: Number(low.locationLat), longitude: Number(low.locationLng) },
           { latitude: Number(high.locationLat), longitude: Number(high.locationLng) },

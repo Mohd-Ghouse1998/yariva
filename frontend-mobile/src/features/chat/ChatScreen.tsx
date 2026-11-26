@@ -115,9 +115,10 @@ export const ChatScreen: React.FC = () => {
   const { palette, resolved } = useTheme();
   const styles = useStyles();
   const router = useRouter();
-  const params = useLocalSearchParams<{ conversationId: string; helloEnded?: string; members?: string }>();
+  const params = useLocalSearchParams<{ conversationId: string; helloEnded?: string; members?: string; history?: "1" }>();
   const { t } = useLocalization();
   const conversationId = params.conversationId;
+  const history = params.history;
   const { user, tokens } = useAuth();
   const realtime = useRealtime();
   const callManager = useCallManager();
@@ -130,6 +131,8 @@ export const ChatScreen: React.FC = () => {
     "loading",
   );
   const [messages, setMessages] = useState<MessageDto[]>([]);
+  const [earlierCursor, setEarlierCursor] = useState<string | null>(null);
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [text, setText] = useState("");
@@ -186,16 +189,18 @@ export const ChatScreen: React.FC = () => {
     setFailedMessageIds(new Set());
     setMemberReads({});
     setLoadError("This conversation is no longer available.");
+    if (history) return;
     const next = await socialApi.currentCircleChat(id).catch(() => null);
     if (next && currentChatId.current === id && unavailableChat.current === id) {
       router.replace({ pathname: "/(app)/conversation/[conversationId]", params: { conversationId: next.conversationId } });
     }
-  }, [router]);
+  }, [history, router]);
 
   const load = useCallback(async (retryUnavailable = false) => {
     const generation = ++loadGeneration.current;
     const isCurrentLoad = () => currentChatId.current === conversationId && loadGeneration.current === generation;
     setLoading(true);
+    setLoadingEarlier(false);
     setLoadError(null);
     setMatchDetail(null);
     setCallSettingsStatus("loading");
@@ -207,8 +212,8 @@ export const ChatScreen: React.FC = () => {
     }
     try {
       const [c, m] = await Promise.all([
-        conversationsApi.get(conversationId),
-        conversationsApi.messages(conversationId, { limit: 50 }),
+        conversationsApi.get(conversationId, history),
+        conversationsApi.messages(conversationId, { limit: 50, history }),
       ]);
       const helloEnabled = c.kind === "SOLO" && (await callsApi.capabilities().catch(() => ({ voiceIntroductionsEnabled: false }))).voiceIntroductionsEnabled;
       if (!isCurrentLoad()) return;
@@ -226,6 +231,7 @@ export const ChatScreen: React.FC = () => {
       setHelloEnabled(helloEnabled);
       setMemberReads(Object.fromEntries((c.readStates ?? []).map(read => [read.userId, read.lastReadSequence])));
       setMessages(m.items);
+      setEarlierCursor(m.nextCursor);
       try {
         const match = c.matchId ? await matchesApi.get(c.matchId) : null;
         if (!isCurrentLoad()) return;
@@ -238,7 +244,7 @@ export const ChatScreen: React.FC = () => {
       }
       setFailedMessageIds(new Set());
       const latest = m.items.reduce((acc, msg) => Math.max(acc, msg.sequence), 0);
-      if (latest > 0) {
+      if (!history && latest > 0) {
         await conversationsApi
           .read(conversationId, { lastReadSequence: latest })
           .catch(() => undefined);
@@ -255,21 +261,40 @@ export const ChatScreen: React.FC = () => {
     } finally {
       if (isCurrentLoad()) setLoading(false);
     }
-  }, [conversationId, handleUnavailableChat]);
+  }, [conversationId, handleUnavailableChat, history]);
+
+  const loadEarlier = async () => {
+    if (!history || !earlierCursor || loadingEarlier) return;
+    const generation = loadGeneration.current;
+    setLoadingEarlier(true);
+    try {
+      const page = await conversationsApi.messages(conversationId, { history, limit: 50, cursor: earlierCursor });
+      if (loadGeneration.current !== generation) return;
+      setMessages(current => [...new Map([...page.items, ...current].map(message => [message.id, message])).values()]);
+      setEarlierCursor(page.nextCursor);
+    } catch (error) {
+      if (loadGeneration.current !== generation) return;
+      if (isConversationUnavailable(error)) void handleUnavailableChat(conversationId);
+      else toast.show("Earlier messages couldn’t load.", "error");
+    } finally {
+      if (loadGeneration.current === generation) setLoadingEarlier(false);
+    }
+  };
 
   useFocusEffect(useCallback(() => {
     void load();
+    return () => { loadGeneration.current++; };
   }, [load]));
   const circleChat = conversation?.kind === "CIRCLE";
   useFocusEffect(useCallback(() => {
     if (!circleChat || !conversationId) return;
     const timer = setInterval(() => {
-      void conversationsApi.get(conversationId).catch((err: unknown) => {
+      void conversationsApi.get(conversationId, history).catch((err: unknown) => {
         if (isConversationUnavailable(err)) void handleUnavailableChat(conversationId);
       });
     }, 15000);
     return () => clearInterval(timer);
-  }, [circleChat, conversationId, handleUnavailableChat]));
+  }, [circleChat, conversationId, handleUnavailableChat, history]));
   useEffect(() => {
     if (params.helloEnded === "1") { setHelloReturn(true); router.setParams({ helloEnded: undefined }); }
   }, [params.helloEnded, router]);
@@ -279,14 +304,16 @@ export const ChatScreen: React.FC = () => {
     previousRealtimeStatus.current = realtime.status;
     if (
       !isFixturesEnabled() &&
+      !history &&
       realtime.status === "connected" &&
       (previous === "reconnecting" || previous === "disconnected")
     ) {
       void load();
     }
-  }, [load, realtime.status]);
+  }, [history, load, realtime.status]);
 
   useEffect(() => {
+    if (history) return;
     const offCreated = realtime.onMessageCreated(({ message, conversationId: cid }) => {
       if (cid === unavailableChat.current || cid !== conversationId || message.conversationId !== conversationId) return;
       setMessages((prev) => upsertMessage(prev, message));
@@ -334,9 +361,10 @@ export const ChatScreen: React.FC = () => {
       setPartnerTyping(false);
       setPartnerPresence(null);
     };
-  }, [conversation?.otherUser.userId, conversationId, handleUnavailableChat, realtime, user?.id]);
+  }, [conversation?.otherUser.userId, conversationId, handleUnavailableChat, history, realtime, user?.id]);
 
   useEffect(() => {
+    if (history) return;
     if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
     scrollTimeout.current = setTimeout(
       () => scrollRef.current?.scrollToEnd({ animated: true }),
@@ -345,16 +373,16 @@ export const ChatScreen: React.FC = () => {
     return () => {
       if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
     };
-  }, [sortedMessages.length, partnerTyping]);
+  }, [history, sortedMessages.length, partnerTyping]);
 
   useEffect(
     () => () => {
       if (typingTimeout.current) clearTimeout(typingTimeout.current);
-      if (conversationId) {
+      if (conversationId && !history) {
         realtime.emit("conversation.typing.stop", { conversationId });
       }
     },
-    [conversationId, realtime],
+    [conversationId, history, realtime],
   );
 
   const onTextChange = (next: string) => {
@@ -768,7 +796,7 @@ export const ChatScreen: React.FC = () => {
               />
             </View>
           ) : null}
-          {isEmpty ? (
+          {isEmpty && !history ? (
             <ChatEmptyBody
               isDuo={isDuo}
               isCircle={circleChat}
@@ -781,13 +809,16 @@ export const ChatScreen: React.FC = () => {
             <ScrollView
               ref={scrollRef}
               keyboardShouldPersistTaps="handled"
+              maintainVisibleContentPosition={history ? { minIndexForVisible: earlierCursor ? 1 : 0 } : undefined}
               contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 16, gap: 4 }}
             >
-              <View style={styles.matchedChip}>
+              {history && earlierCursor ? <Button label={loadingEarlier ? "Loading…" : "Load earlier messages"} variant="secondary" disabled={loadingEarlier} onPress={() => void loadEarlier()} /> : null}
+              {history && isEmpty ? <Text align="center" color="textSubdued">There are no messages in this chat.</Text> : null}
+              {!history ? <View style={styles.matchedChip}>
                 <Text variant="caption" style={{ color: palette.textBrand, fontSize: 11 }}>
                   {matchedAtChip}
                 </Text>
-              </View>
+              </View> : null}
               {sortedMessages.map((m) => (
                 <MessageBubble
                   key={m.id}
@@ -803,7 +834,7 @@ export const ChatScreen: React.FC = () => {
                         ? "sending"
                         : undefined
                   }
-                  onRetry={() => void deliverMessage(m, false)}
+                  onRetry={history ? undefined : () => void deliverMessage(m, false)}
                   showRead={
                     !isGroup && m.senderId === user?.id &&
                     m.sequence === lastMineSeq &&
@@ -815,7 +846,11 @@ export const ChatScreen: React.FC = () => {
             </ScrollView>
           )}
 
-          {closed ? (
+          {history ? (
+            <View style={styles.closed}>
+              <Text variant="caption" color="textSubdued" align="center">Earlier Circle chat · Read only</Text>
+            </View>
+          ) : closed ? (
             <View style={styles.closed}>
               <Text variant="caption" color="textSubdued" align="center">
                 This conversation is closed
@@ -918,6 +953,10 @@ export const ChatScreen: React.FC = () => {
         </View>
         <View>
           {isGroup ? <>
+            {circleChat && !history ? <ConversationOption icon="clock" label="Earlier chats" onPress={() => {
+              setMenuOpen(false);
+              router.push({ pathname: "/(app)/circle-chat-history/[conversationId]", params: { conversationId } });
+            }} /> : null}
             {isDuo ? <>
               <ConversationOption icon="calendar" label="Duo meetup" accent onPress={() => { setMenuOpen(false); openDatePlanner(); }} />
               <View style={styles.optionDivider} />

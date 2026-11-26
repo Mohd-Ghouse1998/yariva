@@ -8,6 +8,7 @@ import { PrismaService } from "../../src/database/prisma/prisma.service";
 import { ensureDuoConversation } from "../../src/modules/conversations/infrastructure/conversations.infrastructure";
 import { ObjectStorageService } from "../../src/integrations/object-storage/object-storage.service";
 import { DuoPlanService } from "../../src/modules/wingman/application/duo-plan.service";
+import type { DuoCandidateDto } from "../../src/modules/wingman/dto/duo-discovery.dto";
 import { io, type Socket } from "socket.io-client";
 
 const describeLive = process.env.AROHA_RUN_LIVE_INTEGRATION === "1" ? describe : describe.skip;
@@ -94,7 +95,21 @@ describeLive("Duo chat authorization and transactional consent", () => {
       }
     }
     const discovered = await api(0, "get", "wingman/discovery").expect(200);
-    expect(discovered.body.items.some((item: any) => item.partyId === parties[1])).toBe(true);
+    expect(discovered.body.items.find((item: DuoCandidateDto) => item.partyId === parties[1])).toMatchObject({
+      distance: { roundedKm: 0, band: "LOCAL" },
+      members: expect.arrayContaining([expect.objectContaining({ userId: accounts[2]!.id, age: expect.any(Number) })]),
+    });
+    await prisma.userProfile.update({ where: { userId: accounts[2]!.id },
+      data: { fieldAudiences: { age: "ONLY_ME", distance: "ONLY_ME" } } });
+    try {
+      const refreshed = await api(0, "get", "wingman/discovery").expect(200);
+      expect(refreshed.body.items.find((item: DuoCandidateDto) => item.partyId === parties[1])).toMatchObject({
+        distance: { roundedKm: null, band: null },
+        members: expect.arrayContaining([expect.objectContaining({ userId: accounts[2]!.id, age: null })]),
+      });
+    } finally {
+      await prisma.userProfile.update({ where: { userId: accounts[2]!.id }, data: { fieldAudiences: {} } });
+    }
     const votes = await Promise.all([0, 1, 2, 3].map(i => api(i, "post", `wingman/discovery/${parties[i < 2 ? 1 : 0]}/vote`).send({ decision: "APPROVE" }).expect(200)));
     expect(votes.filter(r => r.body.outcome === "PAIR_MATCH_CREATED")).toHaveLength(1);
     const matched = await api(0, "get", "wingman/discovery").expect(200);
@@ -221,6 +236,13 @@ describeLive("Duo chat authorization and transactional consent", () => {
     expect(page.items.map(item => item.id)).not.toContain(pending.id);
     expect(page.items.every(item => item.distanceKm === null)).toBe(true);
     expect(JSON.stringify(page)).not.toMatch(/latitude|longitude|locationLat|locationLng/);
+    await prisma.userProfile.update({ where: { userId: accounts[3]!.id }, data: { fieldAudiences: { location: "ONLY_ME" } } });
+    try {
+      expect((await plans.venueSuggestions(accounts[0]!.id, c.id, { query: runId, locationMode: "MIDPOINT" })).items).toHaveLength(0);
+      expect((await plans.venueSuggestions(accounts[0]!.id, c.id, { locationMode: "AREA", area: runId })).items).toHaveLength(2);
+    } finally {
+      await prisma.userProfile.update({ where: { userId: accounts[3]!.id }, data: { fieldAudiences: {} } });
+    }
     await prisma.userProfile.update({ where: { userId: accounts[3]!.id }, data: { locationUpdatedAt: new Date("2020-01-01") } });
     expect((await plans.venueSuggestions(accounts[0]!.id, c.id, { query: runId })).items).toHaveLength(0);
     expect((await plans.venueSuggestions(accounts[0]!.id, c.id, { locationMode: "AREA", area: runId })).items).toHaveLength(2);

@@ -55,7 +55,8 @@ import {
 import { UserReaderService } from "../../users/application/users.services";
 import { UserRepository } from "../../users/infrastructure/users.infrastructure";
 import type { PublicProfileDto } from "../../discovery/dto/discovery.dto";
-import { mapDatingProfileFields } from "../../discovery/application/public-profile-fields";
+import { mapDatingProfileFields, mapProfileLocality } from "../../discovery/application/public-profile-fields";
+import { canViewProfileField, readProfileAudiences, validateProfileAudiences } from "../domain/profile-field-audience";
 
 export interface ProfileActionMetadata {
   ipAddress: string | null;
@@ -269,6 +270,7 @@ export class GetPublicProfileService {
         target,
         approvedPhotos,
         this.objectStorageService,
+        match?.status === "ACTIVE",
       ),
     };
   }
@@ -320,9 +322,17 @@ export class UpdateProfileService {
     const normalizedCountryCode = this.locationPrivacyService.normalizeCountryCode(
       input.payload.countryCode,
     );
+    const audiencePatch = input.payload.fieldAudiences === undefined ? undefined : validateProfileAudiences(input.payload.fieldAudiences);
 
     const result = await this.prisma.$transaction(async (tx) => {
+      let fieldAudiences;
+      if (audiencePatch && Object.keys(audiencePatch).length) {
+        const [current] = await tx.$queryRaw<{ fieldAudiences: unknown }[]>`
+          SELECT "fieldAudiences" FROM "UserProfile" WHERE "userId" = ${input.userId}::uuid FOR UPDATE`;
+        fieldAudiences = { ...readProfileAudiences(current?.fieldAudiences), ...audiencePatch };
+      }
       await this.userProfileRepository.updateProfile(tx, input.userId, {
+        ...(fieldAudiences ? { fieldAudiences } : {}),
         ...(input.payload.displayName !== undefined
           ? { displayName: input.payload.displayName }
           : {}),
@@ -761,6 +771,7 @@ export class UpdateCommunicationPreferenceService {
           allowPushMatches: input.payload.allowPushMatches,
           allowPushMessages: input.payload.allowPushMessages,
           allowPushCalls: input.payload.allowPushCalls,
+          ...(typeof input.payload.allowPushSocial === "boolean" ? { allowPushSocial: input.payload.allowPushSocial } : {}),
           allowReadReceipts: input.payload.allowReadReceipts,
         },
       );
@@ -798,6 +809,7 @@ async function mapAuthorizedPublicProfile(
   target: ProfileAggregateRecord,
   approvedPhotos: ProfileAggregateRecord["photos"],
   objectStorageService: ObjectStorageService,
+  activeMatch: boolean,
 ): Promise<PublicProfileDto> {
   const profile = target.profile;
   if (!profile) {
@@ -808,11 +820,12 @@ async function mapAuthorizedPublicProfile(
     );
   }
 
-  const location = resolvePublicLocation(viewer, target);
+  const location = resolvePublicLocation(viewer, target, activeMatch);
   const viewerInterestIds = new Set(
     viewer.interests.map((interest) => interest.interestTagId),
   );
-  const sharedInterests = target.interests
+  const visibleInterests = canViewProfileField(profile, "interests", activeMatch) ? target.interests : [];
+  const sharedInterests = visibleInterests
     .filter((interest) => viewerInterestIds.has(interest.interestTagId))
     .map((interest) => interest.interestTag.displayName);
   const viewerIntents = new Set(viewer.intents.map((intent) => intent.intent));
@@ -871,35 +884,15 @@ async function mapAuthorizedPublicProfile(
   return {
     userId: target.id,
     displayName: profile.displayName ?? "Unknown",
-    headline: profile.headline ?? null,
-    bio: profile.bio ?? null,
-    age: profile.hideAge
-      ? null
-      : profile.dateOfBirth
-        ? calculatePublicAge(profile.dateOfBirth)
-        : null,
-    gender: profile.gender ?? null,
-    pronouns: profile.pronouns ?? null,
-    ...mapDatingProfileFields(profile, compatibility),
+    ...mapDatingProfileFields(target.profile, {
+      activeMatch, compatibility,
+      lifestyle: target.lifestyle,
+      interests: target.interests.map(({ interestTag }) => ({
+        id: interestTag.id, slug: interestTag.slug, displayName: interestTag.displayName, category: interestTag.category,
+      })),
+    }),
     location,
-    intents: target.intents.map(
-      (intent) => intent.intent as PublicProfileDto["intents"][number],
-    ),
-    interests: target.interests.map((interest) => ({
-      id: interest.interestTag.id,
-      slug: interest.interestTag.slug,
-      displayName: interest.interestTag.displayName,
-      category: interest.interestTag.category,
-    })),
-    lifestyle: {
-      smoking: target.lifestyle?.smoking ?? null,
-      drinking: target.lifestyle?.drinking ?? null,
-      exercise: target.lifestyle?.exercise ?? null,
-      diet: target.lifestyle?.diet ?? null,
-      petPreference: target.lifestyle?.petPreference ?? null,
-      sleepPattern: target.lifestyle?.sleepPattern ?? null,
-      socialEnergy: target.lifestyle?.socialEnergy ?? null,
-    },
+    intents: target.intents.map((intent) => intent.intent as PublicProfileDto["intents"][number]),
     photos,
   };
 }
@@ -907,21 +900,20 @@ async function mapAuthorizedPublicProfile(
 function resolvePublicLocation(
   viewer: ProfileAggregateRecord,
   target: ProfileAggregateRecord,
+  activeMatch: boolean,
 ): PublicProfileDto["location"] {
   const targetProfile = target.profile;
   const viewerProfile = viewer.profile;
   if (
     !targetProfile ||
-    targetProfile.hideDistance ||
+    !canViewProfileField(targetProfile, "distance", activeMatch) ||
     !viewerProfile?.locationLat ||
     !viewerProfile.locationLng ||
     !targetProfile.locationLat ||
     !targetProfile.locationLng
   ) {
     return {
-      city: targetProfile?.city ?? null,
-      region: targetProfile?.region ?? null,
-      countryCode: targetProfile?.countryCode ?? null,
+      ...mapProfileLocality(targetProfile, activeMatch),
       distanceKmRounded: 0,
       distanceBand: null,
     };
@@ -934,23 +926,8 @@ function resolvePublicLocation(
     Number(targetProfile.locationLng.toString()),
   );
   return {
-    city: targetProfile.city ?? null,
-    region: targetProfile.region ?? null,
-    countryCode: targetProfile.countryCode ?? null,
+    ...mapProfileLocality(targetProfile, activeMatch),
     distanceKmRounded: roundDistanceKm(distanceKm),
     distanceBand: resolveDistanceBand(distanceKm),
   };
-}
-
-function calculatePublicAge(dateOfBirth: Date): number {
-  const now = new Date();
-  let age = now.getUTCFullYear() - dateOfBirth.getUTCFullYear();
-  const month = now.getUTCMonth() - dateOfBirth.getUTCMonth();
-  if (
-    month < 0 ||
-    (month === 0 && now.getUTCDate() < dateOfBirth.getUTCDate())
-  ) {
-    age -= 1;
-  }
-  return age;
 }

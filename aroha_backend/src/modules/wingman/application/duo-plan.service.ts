@@ -12,6 +12,7 @@ import type { PrismaTransactionalClient } from "../../../database/prisma/prisma.
 import type { DuoPlan, DuoPlanResponse } from "../../../generated/prisma/client";
 import { conversationParticipantIds, conversationUsers } from "../../conversations/domain/conversation-context";
 import { ConversationRepository } from "../../conversations/infrastructure/conversations.infrastructure";
+import { canViewProfileField } from "../../profiles/domain/profile-field-audience";
 import type { CounterDuoPlanDto, CreateDuoPlanDto, DuoPlanDto, RespondDuoPlanDto } from "../dto/duo-plan.dto";
 
 const OPEN_STATES = ["PROPOSED", "COUNTERED", "ACCEPTED"] as const;
@@ -26,8 +27,11 @@ export class DuoPlanService {
 
   async venueSuggestions(userId: string, conversationId: string, query: VenueSearchQueryDto) {
     const group = await this.requireGroup(userId, conversationId);
+    if (query.locationMode === "AREA") return this.venues.reviewedVenues(query, null);
     const users = group.members.map(member => member.user);
-    const profiles = query.locationMode === "ME" ? users.filter(user => user.id === userId).map(user => user.profile) : users.map(user => user.profile);
+    const profiles = users.filter(user => query.locationMode === "ME" ? user.id === userId :
+      user.id === userId || (canViewProfileField(user.profile, "location") && canViewProfileField(user.profile, "distance")))
+      .map(user => user.profile);
     const points = profiles.flatMap(profile => profile?.locationLat != null && profile.locationLng != null && profile.locationUpdatedAt && Date.now() - profile.locationUpdatedAt.getTime() <= this.config.locationMaxAgeHours * 3600000
       ? [{ latitude: Number(profile.locationLat), longitude: Number(profile.locationLng) }] : []);
     const center = query.locationMode === "ME" ? points[0] ?? null : points.length === 4 ? calculateGroupCenter(points) : null;

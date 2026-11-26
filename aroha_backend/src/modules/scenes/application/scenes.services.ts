@@ -4,6 +4,8 @@ import { ConfigType } from "@nestjs/config";
 import { randomUUID } from "node:crypto";
 import { ERROR_CODES } from "../../../common/constants/error-codes";
 import { AppException } from "../../../common/errors/app.exception";
+import { openPrivateCursor, sealPrivateCursor } from "../../../common/utils/private-cursor.util";
+import authConfig from "../../../config/auth.config";
 import scenesConfig from "../../../config/scenes.config";
 import { PrismaService } from "../../../database/prisma/prisma.service";
 import type { PrismaTransactionalClient } from "../../../database/prisma/prisma.transaction";
@@ -46,6 +48,7 @@ export class ScenesService {
     @Inject(scenesConfig.KEY)
     private readonly config: ConfigType<typeof scenesConfig>,
     private readonly activity: ActivityService,
+    @Inject(authConfig.KEY) private readonly auth: ConfigType<typeof authConfig>,
   ) {}
 
   async capabilities(userId: string): Promise<SceneCapabilitiesDto> {
@@ -300,14 +303,16 @@ export class ScenesService {
     }
 
     const limit = Math.max(1, Math.min(input.limit ?? 10, 20));
-    const cursor = decodeCursor(input.cursor);
+    const scope = `scenes:${input.userId}:${viewerScene.id}`;
+    const secret = this.auth.jwtAccessSecret;
+    const cursor = decodeCursor(input.cursor, secret, scope);
     const generation = await this.cache.getGeneration();
     const cacheKey = this.cache.key({
       viewerId: input.userId,
       sceneId: viewerScene.id,
       sceneVersion: viewerScene.version,
       generation,
-      cursor: input.cursor ?? null,
+      cursor: cursor ? JSON.stringify(cursor) : null,
       limit,
     });
     const cached = await this.cache.get(cacheKey);
@@ -339,10 +344,10 @@ export class ScenesService {
         .map((id) => byId.get(id))
         .filter((row): row is SceneCandidateRow => Boolean(row));
       const last = validRows.at(-1);
-      if (!cached.nextCursor || (last && encodeCursor(last) === cached.nextCursor)) {
+      if (!cached.nextCursor || (last && serializeCursor(last) === cached.nextCursor)) {
         return {
           items: await this.mapCandidates(validRows, input.userId),
-          nextCursor: cached.nextCursor,
+          nextCursor: cached.nextCursor ? sealPrivateCursor(cached.nextCursor, secret, scope) : null,
         };
       }
     }
@@ -355,13 +360,16 @@ export class ScenesService {
     const hasMore = rows.length > limit;
     const page = hasMore ? rows.slice(0, limit) : rows;
     const last = page.at(-1);
-    const nextCursor = hasMore && last ? encodeCursor(last) : null;
+    const nextCursor = hasMore && last ? serializeCursor(last) : null;
     await this.cache.set(
       cacheKey,
       { sceneIds: page.map((row) => row.sceneId), nextCursor },
       this.config.discoveryCacheSeconds,
     );
-    return { items: await this.mapCandidates(page, input.userId), nextCursor };
+    return {
+      items: await this.mapCandidates(page, input.userId),
+      nextCursor: nextCursor ? sealPrivateCursor(nextCursor, secret, scope) : null,
+    };
   }
 
   private async assertEnabled(userId: string): Promise<void> {
@@ -642,16 +650,14 @@ interface SceneCursor {
   sceneId: string;
 }
 
-function encodeCursor({ distanceMeters, sceneCreatedAt, sceneId }: SceneCandidateRow): string {
-  return Buffer.from(JSON.stringify({ distanceMeters, createdAt: sceneCreatedAt.toISOString(), sceneId })).toString("base64url");
+function serializeCursor({ distanceMeters, sceneCreatedAt, sceneId }: SceneCandidateRow): string {
+  return JSON.stringify({ distanceMeters, createdAt: sceneCreatedAt.toISOString(), sceneId });
 }
 
-function decodeCursor(value?: string): SceneCursor | null {
+function decodeCursor(value: string | undefined, secret: string, scope: string): SceneCursor | null {
   if (!value) return null;
   try {
-    const parsed = JSON.parse(
-      Buffer.from(value, "base64url").toString("utf8"),
-    ) as {
+    const parsed = JSON.parse(openPrivateCursor(value, secret, scope)) as {
       distanceMeters?: unknown;
       createdAt?: unknown;
       sceneId?: unknown;
@@ -675,7 +681,7 @@ function decodeCursor(value?: string): SceneCursor | null {
     throw new AppException(
       400,
       ERROR_CODES.INVALID_CURSOR,
-      "Invalid Scene cursor",
+      "Invalid Scene cursor; refresh Scenes",
     );
   }
 }

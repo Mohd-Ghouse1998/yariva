@@ -4,6 +4,8 @@ import { ConfigType } from "@nestjs/config";
 import { ERROR_CODES } from "../../../common/constants/error-codes";
 import { AppException } from "../../../common/errors/app.exception";
 import { AuditLogService } from "../../../common/services/audit-log.service";
+import { openPrivateCursor, sealPrivateCursor } from "../../../common/utils/private-cursor.util";
+import authConfig from "../../../config/auth.config";
 import wingmanConfig from "../../../config/wingman.config";
 import { PrismaService } from "../../../database/prisma/prisma.service";
 import type { PrismaTransactionalClient } from "../../../database/prisma/prisma.transaction";
@@ -11,6 +13,7 @@ import { Prisma } from "../../../generated/prisma/client";
 import { ObjectStorageService } from "../../../integrations/object-storage/object-storage.service";
 import { EvaluateFeatureFlagService } from "../../feature-flags/application/feature-flags.services";
 import { CreateNotificationService } from "../../notifications/application/notifications.services";
+import { canViewProfileField } from "../../profiles/domain/profile-field-audience";
 import type {
   DuoCandidateDto,
   DuoDiscoveryMemberDto,
@@ -83,6 +86,7 @@ export class DuoDiscoveryService {
     private readonly cache: DuoDiscoveryCache,
     @Inject(wingmanConfig.KEY)
     private readonly config: ConfigType<typeof wingmanConfig>,
+    @Inject(authConfig.KEY) private readonly auth: ConfigType<typeof authConfig>,
   ) {}
 
   async discover(input: {
@@ -104,7 +108,9 @@ export class DuoDiscoveryService {
     }
 
     const limit = Math.max(1, Math.min(input.limit ?? 10, 20));
-    const cursor = decodeCursor(input.cursor);
+    const scope = `duo:${input.userId}:${source.party.id}:${source.party.membershipVersion}`;
+    const secret = this.auth.jwtAccessSecret;
+    const cursor = decodeCursor(input.cursor, secret, scope);
     const generation = await this.cache.generation();
     const cacheKey = this.cache.key({
       viewerId: input.userId,
@@ -112,7 +118,7 @@ export class DuoDiscoveryService {
       membershipVersion: source.party.membershipVersion,
       sceneFingerprint: sceneFingerprint(source.party),
       generation,
-      cursor: input.cursor ?? null,
+      cursor: cursor ? JSON.stringify(cursor) : null,
       limit,
     });
     const cached = await this.cache.get(cacheKey);
@@ -126,7 +132,7 @@ export class DuoDiscoveryService {
       );
       return {
         items: await Promise.all(candidates.map((item) => this.mapCandidate(item, input.userId))),
-        nextCursor: cached.nextCursor,
+        nextCursor: cached.nextCursor ? sealPrivateCursor(cached.nextCursor, secret, scope) : null,
         waiting,
         match: null,
       };
@@ -155,7 +161,7 @@ export class DuoDiscoveryService {
       : rows.at(-1);
     const nextCursor =
       hasMore && rowForLast
-        ? encodeCursor({
+        ? JSON.stringify({
             distanceMeters: rowForLast.maxDistanceMeters,
             createdAt: rowForLast.createdAt.toISOString(),
             partyId: rowForLast.partyId,
@@ -174,7 +180,7 @@ export class DuoDiscoveryService {
     );
     return {
       items: await Promise.all(page.map((item) => this.mapCandidate(item, input.userId))),
-      nextCursor,
+      nextCursor: nextCursor ? sealPrivateCursor(nextCursor, secret, scope) : null,
       waiting,
       match: null,
     };
@@ -663,7 +669,8 @@ export class DuoDiscoveryService {
       partyId: input.party.id,
       membershipVersion: input.party.membershipVersion,
       members: await Promise.all(input.party.members.map((member) => this.mapMember(member, viewerId))),
-      distance: distanceSummary(input.distanceMeters),
+      distance: input.party.members.every((member) => canViewProfileField(member.user.profile, "distance"))
+        ? distanceSummary(input.distanceMeters) : { roundedKm: null, band: null },
       ownApprovalCount: input.approvals,
       ownMemberCount: 2,
     };
@@ -696,10 +703,11 @@ export class DuoDiscoveryService {
   private async mapMember(member: DiscoveryMember, viewerId: string): Promise<DuoDiscoveryMemberDto> {
     const profilePhoto = member.user.photos[0] ?? null;
     const scene = member.consentedScene!;
+    const profile = member.user.profile;
     return {
       userId: member.userId,
-      displayName: member.user.profile?.displayName?.trim() || "Yariva member",
-      age: calculateAge(member.user.profile!.dateOfBirth!, new Date()),
+      displayName: profile?.displayName?.trim() || "Yariva member",
+      age: profile?.dateOfBirth && canViewProfileField(profile, "age") ? calculateAge(profile.dateOfBirth, new Date()) : null,
       photoUrl: profilePhoto
         ? await this.objectStorage.createPresignedGetObject({
             disclosure: { viewerId, ownerId: member.userId },
@@ -932,16 +940,10 @@ function distanceSummary(distanceMeters: number): DuoCandidateDto["distance"] {
   };
 }
 
-function encodeCursor(cursor: DiscoveryCursor): string {
-  return Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url");
-}
-
-function decodeCursor(value?: string): DiscoveryCursor | null {
+function decodeCursor(value: string | undefined, secret: string, scope: string): DiscoveryCursor | null {
   if (!value) return null;
   try {
-    const parsed = JSON.parse(
-      Buffer.from(value, "base64url").toString("utf8"),
-    ) as DiscoveryCursor;
+    const parsed = JSON.parse(openPrivateCursor(value, secret, scope)) as DiscoveryCursor;
     if (
       typeof parsed.distanceMeters !== "number" ||
       !Number.isFinite(parsed.distanceMeters) ||
@@ -952,6 +954,6 @@ function decodeCursor(value?: string): DiscoveryCursor | null {
     }
     return parsed;
   } catch {
-    throw new AppException(400, ERROR_CODES.INVALID_CURSOR, "Invalid cursor");
+    throw new AppException(400, ERROR_CODES.INVALID_CURSOR, "Invalid cursor; refresh Duo Discover");
   }
 }

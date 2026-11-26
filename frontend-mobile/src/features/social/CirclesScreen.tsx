@@ -107,7 +107,7 @@ export function CirclesScreen() {
             disabled={saving} onPress={() => void resolveUnavailable(() => socialApi.leave(item.id))} />
         ) : null)}
       </> : <>
-        {item.intent ? <Text color="textSubdued">{CONNECTION_INTENT_LABELS[item.intent]} · {item.locality}</Text> : null}
+        {item.intent ? <Text color="textSubdued">{CONNECTION_INTENT_LABELS[item.intent]}{item.locality ? ` · ${item.locality}` : ""}</Text> : null}
         <Text color="textSubdued">{item.approvedCount}/{item.capacity} members · {stateLabel(item.state)}{item.ownStatus ? ` · ${stateLabel(item.ownStatus)}` : ""}</Text>
         <Button label={`View ${item.title}`} variant="secondary" onPress={() => open(item.id)} />
       </>}
@@ -119,7 +119,7 @@ export function CirclesScreen() {
   ) : (
     <SocialCard key={activity.id}>
       <Text variant="bodyStrong">{activity.title}</Text>
-      {circle.intent ? <Text color="textSubdued">{CONNECTION_INTENT_LABELS[circle.intent]} · {circle.locality}</Text> : null}
+      {circle.intent ? <Text color="textSubdued">{CONNECTION_INTENT_LABELS[circle.intent]}{circle.locality ? ` · ${circle.locality}` : ""}</Text> : null}
       <Text color="textSubdued">{activity.startsAt ? formatDateTime(activity.startsAt) : "Time to be decided"} · {stateLabel(activity.state)}</Text>
       <Button label={`View ${activity.title}`} variant="secondary" onPress={() => open(circle.id, activity.id)} />
     </SocialCard>

@@ -4,6 +4,7 @@ import { AuditLogService } from "../../common/services/audit-log.service";
 import { DomainEventPublisher } from "../../common/services/domain-event.publisher";
 import { UsersModule } from "../users/users.module";
 import { ConversationsModule } from "../conversations/conversations.module";
+import { NotificationIntentModule } from "../notifications/notification-intent.module";
 import { MessagesController } from "./controllers/messages.controller";
 import {
   ConversationMessageSummaryService,
@@ -31,7 +32,7 @@ import { MessageSenderPolicy } from "./policies/message-sender.policy";
 import { ReadMessageAttachmentService } from "./application/read-message-attachment.service";
 
 @Module({
-  imports: [UsersModule, ConversationsModule],
+  imports: [UsersModule, ConversationsModule, NotificationIntentModule],
   controllers: [MessagesController],
   providers: [
     AppLogger,

@@ -85,6 +85,7 @@ export interface CommunicationPreferenceDto {
   allowVideoCalls: boolean;
   allowPushMatches: boolean;
   allowPushMessages: boolean;
+  allowPushSocial: boolean;
   allowPushCalls: boolean;
   allowReadReceipts: boolean;
 }
@@ -150,6 +151,14 @@ export interface PublicPhotoDto {
   position: number;
 }
 
+export type ProfileField =
+  | "intro" | "interests" | "lifestyle" | "location" | "age" | "distance" | "gender" | "pronouns" | "work"
+  | "relocationOpenness" | "careerPriority" | "familyInvolvementComfort"
+  | "marriageTimeline" | "childrenPreference" | "religionSpirituality";
+
+export type ProfileAudience = "ALL_ELIGIBLE" | "MATCHES" | "ONLY_ME";
+export type ProfileAudiences = Partial<Record<ProfileField, ProfileAudience>>;
+
 export interface MyProfileDto {
   userId: string;
   displayName: string | null;
@@ -183,6 +192,7 @@ export interface MyProfileDto {
   religionSpirituality: string | null;
   shareWorkDetails?: boolean;
   shareSensitiveCompatibility: boolean;
+  fieldAudiences?: ProfileAudiences;
   promptResponses: Array<{ promptId: ProfilePromptId; answer: string }>;
   isComplete: boolean;
   completedAt: string | null;
@@ -231,6 +241,7 @@ export interface UpdateMyProfileRequest {
   childrenPreference?: string | null;
   religionSpirituality?: string | null;
   shareSensitiveCompatibility?: boolean;
+  fieldAudiences?: ProfileAudiences;
   promptResponses?: Array<{ promptId: ProfilePromptId; answer: string }>;
 }
 

@@ -3,7 +3,7 @@ import { useToast } from "../../components/ui/Toast";
 
 interface SerializedSettingsOptions<T extends object> {
   load: () => Promise<T>;
-  save: (next: T) => Promise<T>;
+  save: (next: T, previous: T) => Promise<T>;
   saveErrorMessage?: string;
 }
 
@@ -56,7 +56,7 @@ export const useSerializedSettings = <T extends object>({
       setSaving(true);
       setValue(next);
       try {
-        const reconciled = await save(next);
+        const reconciled = await save(next, previous);
         committedRef.current = reconciled;
         setValue(reconciled);
         return true;

@@ -78,6 +78,7 @@ describe("CreateLikeService", () => {
     const matchReaderService = {
       getRequiredMatch: jest.fn().mockResolvedValue({
         id: "match-1",
+        status: "ACTIVE",
       }),
       mapSummary: jest.fn().mockReturnValue({
         id: "match-1",
@@ -242,6 +243,7 @@ describe("CreateLikeService", () => {
       {
         getRequiredMatch: jest.fn().mockResolvedValue({
           id: "match-1",
+          status: "ACTIVE",
         }),
         mapSummary: jest.fn().mockReturnValue({
           id: "match-1",
@@ -416,7 +418,7 @@ describe("CreateLikeService post-commit safety", () => {
         }),
       } as any,
       {
-        getRequiredMatch: jest.fn().mockResolvedValue({ id: "match-1" }),
+        getRequiredMatch: jest.fn().mockResolvedValue({ id: "match-1", status: "ACTIVE" }),
         mapSummary: jest
           .fn()
           .mockReturnValue({ id: "match-1", status: "ACTIVE" }),

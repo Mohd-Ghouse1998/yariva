@@ -16,7 +16,7 @@ import { useLocalization } from "../../localization/LocalizationContext";
 import { createThemeStyleHook, useTheme } from "../../theme/ThemeContext";
 import type { NotificationDto, NotificationType } from "../../types/notifications";
 import { formatRelativeTime } from "../../utils/format";
-import { actorInitials, notificationDisplayCopy, resolveNotificationHref } from "./notificationNavigation";
+import { actorInitials, isSocialNotificationRoute, notificationDisplayCopy, resolveNotificationHref } from "./notificationNavigation";
 
 const SYSTEM_ICONS: Partial<Record<NotificationType, IconName>> = {
   REPORT_UPDATE: "shield",
@@ -37,6 +37,9 @@ const mergeUnique = (current: NotificationDto[], incoming: NotificationDto[]) =>
   return [...current, ...incoming.filter((item) => !known.has(item.id))];
 };
 
+const needsRefresh = (route: unknown) =>
+  isSocialNotificationRoute(route) || route === "private-story" || route === "event-plan-change";
+
 export const NotificationsScreen: React.FC = () => {
   const router = useRouter();
   const goBack = useSafeBack("/(app)/(tabs)/discover");
@@ -56,6 +59,7 @@ export const NotificationsScreen: React.FC = () => {
   const focusedRef = useRef(false);
   const activeRef = useRef(AppState.currentState === "active");
   const requestVersion = useRef(0);
+  const pendingOpen = useRef<string | null>(null);
 
   const load = useCallback(
     async (mode: "initial" | "refresh" | "more") => {
@@ -99,11 +103,12 @@ export const NotificationsScreen: React.FC = () => {
       // Invalidate in-flight reads as well as removing already displayed rows.
       requestVersion.current++;
       requestBusyRef.current = false;
-      setItems(current => current.filter(item => !["private-story", "event-plan-change"].includes(String(item.data?.route))));
+      pendingOpen.current = null;
+      setItems(current => current.filter(item => !needsRefresh(item.data?.route)));
     };
     const unsubscribe = realtime.onNotification(({ notification }) => {
         if (!activeRef.current) return;
-        if (["private-story", "event-plan-change"].includes(String(notification.data?.route))) {
+        if (needsRefresh(notification.data?.route)) {
           // Recheck the server policy instead of trusting an earlier event.
           void load("refresh");
           return;
@@ -127,6 +132,25 @@ export const NotificationsScreen: React.FC = () => {
   }, [load, realtime]));
 
   const handlePress = (notification: NotificationDto) => {
+    if (isSocialNotificationRoute(notification.data?.route)) {
+      if (pendingOpen.current) return;
+      pendingOpen.current = notification.id;
+      void notificationsApi.read(notification.id).then(fresh => {
+        if (pendingOpen.current !== notification.id) return;
+        setItems(current => current.map(item => item.id === fresh.id ? fresh : item));
+        const href = resolveNotificationHref(fresh);
+        if (href) router.push(href);
+      }).catch((error: unknown) => {
+        if (pendingOpen.current !== notification.id) return;
+        if (error instanceof ApiError && error.status === 404) {
+          setItems(current => current.filter(item => item.id !== notification.id));
+          toast.show("This activity is no longer available.", "info");
+        } else toast.show("This activity couldn’t open. Try again.", "error");
+      }).finally(() => {
+        if (pendingOpen.current === notification.id) pendingOpen.current = null;
+      });
+      return;
+    }
     const href = resolveNotificationHref(notification);
     if (href) router.push(href);
     else toast.show("This activity has no page to open.", "info");

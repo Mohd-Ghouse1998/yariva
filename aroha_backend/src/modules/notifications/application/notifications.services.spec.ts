@@ -207,7 +207,7 @@ describe("PushDispatcherService", () => {
     expect(fcm.send).toHaveBeenCalledTimes(1);
     expect(apns.send).toHaveBeenCalledTimes(1);
     expect(tokens.invalidate).toHaveBeenCalledWith(
-      "bad-token",
+      expect.objectContaining({ id: "bad-token" }),
       expect.any(Date),
     );
     expect(deliveries.record).toHaveBeenCalledWith(

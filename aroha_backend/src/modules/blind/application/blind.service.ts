@@ -10,6 +10,7 @@ import { EvaluateFeatureFlagService } from "../../feature-flags/application/feat
 import { CreateNotificationService } from "../../notifications/application/notifications.services";
 import { BLIND_POLICY, effectiveEventState, nextThursday } from "../domain/blind-policy";
 import { CreateMatchArtifactsService } from "../../matches/application/matches.services";
+import { canViewProfileField } from "../../profiles/domain/profile-field-audience";
 import { haversineDistanceKm } from "../../../common/utils/distance.util";
 import type { JoinBlindEventDto, ScheduleBlindEventDto } from "../dto/blind.dto";
 
@@ -120,7 +121,11 @@ export class BlindService {
       const other = await this.eligibleUser(candidate.userId, event, this.prisma);
       if (!other || !(await this.capabilities(other.id)).enabled || !(await this.eligiblePair(viewer, other, this.prisma))) continue;
       const interest = await this.prisma.blindEventInterest.findUnique({ where: { occurrenceId_actorId_targetId: { occurrenceId, actorId: userId, targetId: other.id } } });
-      items.push({ userId: other.id, displayName: other.profile!.displayName ?? "Yariva member", headline: other.profile!.headline, interestSent: Boolean(interest) });
+      items.push({
+        userId: other.id, displayName: other.profile?.displayName ?? "Yariva member",
+        headline: canViewProfileField(other.profile, "intro") ? other.profile?.headline ?? null : null,
+        interestSent: Boolean(interest),
+      });
     }
     return { items };
   }

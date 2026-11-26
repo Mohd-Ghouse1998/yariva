@@ -104,8 +104,18 @@ live("Blind introductions: real persisted privacy, consent and time", () => {
   });
   it("never retroactively hides issued images and serializes exposure against introduction", async () => {
     const e = await event([4, 5]);
+    const candidate = accounts[5]!.id;
+    const people = () => api(4, "get", `blind/events/${e.id}/people`).expect(200);
+    await db.userProfile.update({ where: { userId: candidate }, data: { headline: "Event introduction" } });
+    expect((await people()).body.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ userId: candidate, headline: "Event introduction" }),
+    ]));
+    await db.userProfile.update({ where: { userId: candidate }, data: { fieldAudiences: { intro: "MATCHES" } } });
+    expect((await people()).body.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ userId: candidate, headline: null }),
+    ]));
     await app.get(ObjectStorageService).canDiscloseMedia({ viewerId: accounts[4]!.id, ownerId: accounts[5]!.id });
-    const candidates = await api(4, "get", `blind/events/${e.id}/people`).expect(200);
+    const candidates = await people();
     expect(candidates.body.items.some((p: any) => p.userId === accounts[5]!.id)).toBe(false);
     await api(4, "post", `blind/events/${e.id}/interest/${accounts[5]!.id}`).expect(409);
     const fresh = await event([6, 7]);

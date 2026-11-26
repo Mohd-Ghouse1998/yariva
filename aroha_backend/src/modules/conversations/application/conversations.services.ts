@@ -17,7 +17,8 @@ import { ObjectStorageService } from "../../../integrations/object-storage/objec
 import type { PrismaTransactionalClient } from "../../../database/prisma/prisma.transaction";
 import type { UserProfile } from "../../../generated/prisma/client";
 import type { PublicProfileDto } from "../../discovery/dto/discovery.dto";
-import { mapDatingProfileFields } from "../../discovery/application/public-profile-fields";
+import { mapDatingProfileFields, mapProfileLocality } from "../../discovery/application/public-profile-fields";
+import { canViewProfileField } from "../../profiles/domain/profile-field-audience";
 import type {
   ConnectionIntentValue,
   DietPreferenceValue,
@@ -90,7 +91,9 @@ export class ConversationReaderService {
     const readState = conversation.reads.find(read => read.userId === viewerUserId);
 
     const project = async (user: (typeof users)[number]) => {
-      if (!conversation.circle) return mapPublicProfile(viewerProfile, user, this.objectStorageService, viewerUserId);
+      if (!conversation.circle) return mapPublicProfile(
+        viewerProfile, user, this.objectStorageService, viewerUserId, conversation.match?.status === "ACTIVE",
+      );
       const publicFields = await mapPublicProfile(null, {
         id: user.id, profile: null, photos: [], lifestyle: null, interests: [], intents: [],
       }, this.objectStorageService, viewerUserId);
@@ -221,11 +224,11 @@ export class GetConversationService {
   async execute(input: {
     userId: string;
     conversationId: string;
+    history?: boolean;
   }): Promise<ConversationDetailResponseDto> {
-    const conversation = await this.conversationRepository.findByIdForUser(
-      input.conversationId,
-      input.userId,
-    );
+    const conversation = input.history
+      ? await this.conversationRepository.findRetiredCircleChatForUser(input.conversationId, input.userId)
+      : await this.conversationRepository.findByIdForUser(input.conversationId, input.userId);
 
     this.conversationAccessPolicyService.assertReadable(conversation);
     this.conversationAccessPolicyService.assertParticipant(
@@ -254,13 +257,13 @@ export class ListConversationMessagesService {
   async execute(input: {
     userId: string;
     conversationId: string;
+    history?: boolean;
     cursor?: string;
     limit?: number;
   }): Promise<MessagePageDto> {
-    const conversation = await this.conversationRepository.findByIdForUser(
-      input.conversationId,
-      input.userId,
-    );
+    const conversation = input.history
+      ? await this.conversationRepository.findRetiredCircleChatForUser(input.conversationId, input.userId)
+      : await this.conversationRepository.findByIdForUser(input.conversationId, input.userId);
     this.conversationAccessPolicyService.assertReadable(conversation);
     this.conversationAccessPolicyService.assertParticipant(
       input.userId,
@@ -459,10 +462,11 @@ async function mapPublicProfile(
   },
   objectStorageService: ObjectStorageService,
   viewerId: string,
+  activeMatch = false,
 ): Promise<PublicProfileDto> {
   const profile = user.profile;
   const distanceKm =
-    !profile?.hideDistance &&
+    canViewProfileField(profile, "distance", activeMatch) &&
     viewerProfile?.locationLat &&
     viewerProfile.locationLng &&
     profile?.locationLat &&
@@ -493,54 +497,19 @@ async function mapPublicProfile(
   return {
     userId: user.id,
     displayName: profile?.displayName ?? "Unknown",
-    headline: profile?.headline ?? null,
-    bio: profile?.bio ?? null,
-    age:
-      profile?.hideAge === true
-        ? null
-        : profile?.dateOfBirth
-          ? calculateAge(profile.dateOfBirth)
-          : null,
-    gender: profile?.gender ?? null,
-    pronouns: profile?.pronouns ?? null,
-    ...mapDatingProfileFields(profile),
+    ...mapDatingProfileFields(user.profile, {
+      activeMatch,
+      lifestyle: user.lifestyle,
+      interests: user.interests.map(({ interestTag }) => ({
+        id: interestTag.id, slug: interestTag.slug, displayName: interestTag.displayName, category: interestTag.category,
+      })),
+    }),
     location: {
-      city: profile?.city ?? null,
-      region: profile?.region ?? null,
-      countryCode: profile?.countryCode ?? null,
+      ...mapProfileLocality(profile, activeMatch),
       distanceKmRounded: distanceKm === null ? 0 : Math.round(distanceKm),
       distanceBand: distanceKm === null ? null : resolveDistanceBand(distanceKm),
     },
     intents: user.intents.map((intent) => intent.intent),
-    interests: user.interests.map((interest) => ({
-      id: interest.interestTag.id,
-      slug: interest.interestTag.slug,
-      displayName: interest.interestTag.displayName,
-      category: interest.interestTag.category,
-    })),
-    lifestyle: {
-      smoking: user.lifestyle?.smoking ?? null,
-      drinking: user.lifestyle?.drinking ?? null,
-      exercise: user.lifestyle?.exercise ?? null,
-      diet: user.lifestyle?.diet ?? null,
-      petPreference: user.lifestyle?.petPreference ?? null,
-      sleepPattern: user.lifestyle?.sleepPattern ?? null,
-      socialEnergy: user.lifestyle?.socialEnergy ?? null,
-    },
     photos,
   };
-}
-
-
-function calculateAge(dateOfBirth: Date): number {
-  const today = new Date();
-  let age = today.getUTCFullYear() - dateOfBirth.getUTCFullYear();
-  const monthDifference = today.getUTCMonth() - dateOfBirth.getUTCMonth();
-  const dayDifference = today.getUTCDate() - dateOfBirth.getUTCDate();
-
-  if (monthDifference < 0 || (monthDifference === 0 && dayDifference < 0)) {
-    age -= 1;
-  }
-
-  return age;
 }

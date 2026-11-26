@@ -17,16 +17,18 @@ export const conversationsApi = {
       cursor: query.cursor ?? undefined,
       limit: query.limit,
     }),
-  get: (conversationId: string) =>
+  get: (conversationId: string, history?: "1") =>
     http
       .get<{ conversation: ConversationDetailDto }>(
         `conversations/${conversationId}`,
+        { history },
       )
       .then((response) => response.conversation),
   messages: (conversationId: string, query: ConversationMessagePageQuery = {}) =>
     http.get<MessagePageDto>(`conversations/${conversationId}/messages`, {
       cursor: query.cursor,
       limit: query.limit,
+      history: query.history,
     }),
   send: (conversationId: string, body: CreateMessageRequest) =>
     http

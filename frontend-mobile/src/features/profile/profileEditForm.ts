@@ -7,7 +7,6 @@ export interface ProfileEditFormValue {
   bio: string;
   occupation: string;
   occupationCategory: OccupationCategory | null;
-  shareWorkDetails: boolean;
   languages: string;
   foodPreferences: string;
   relationshipPace: RelationshipPace | null;
@@ -17,7 +16,6 @@ export interface ProfileEditFormValue {
   marriageTimeline: string;
   childrenPreference: string;
   religionSpirituality: string;
-  shareSensitiveCompatibility: boolean;
   promptResponses: Record<string, string>;
 }
 
@@ -40,7 +38,6 @@ export const profileToEditForm = (profile: MyProfileDto): ProfileEditFormValue =
   bio: profile.bio ?? "",
   occupation: profile.occupation ?? "",
   occupationCategory: profile.occupationCategory ?? null,
-  shareWorkDetails: profile.shareWorkDetails ?? false,
   languages: profile.languages.join(", "),
   foodPreferences: profile.foodPreferences.join(", "),
   relationshipPace: profile.preferredRelationshipPace,
@@ -50,7 +47,6 @@ export const profileToEditForm = (profile: MyProfileDto): ProfileEditFormValue =
   marriageTimeline: profile.marriageTimeline ?? "",
   childrenPreference: profile.childrenPreference ?? "",
   religionSpirituality: profile.religionSpirituality ?? "",
-  shareSensitiveCompatibility: profile.shareSensitiveCompatibility,
   promptResponses: Object.fromEntries(
     profile.promptResponses.map((prompt) => [prompt.promptId, prompt.answer]),
   ),
@@ -61,7 +57,6 @@ export const editFormToProfileUpdate = (form: ProfileEditFormValue): UpdateMyPro
   bio: form.bio.trim(),
   occupation: form.occupation.trim() || null,
   occupationCategory: form.occupationCategory,
-  shareWorkDetails: form.shareWorkDetails,
   languages: splitUniqueList(form.languages),
   foodPreferences: splitUniqueList(form.foodPreferences),
   preferredRelationshipPace: form.relationshipPace,
@@ -71,7 +66,6 @@ export const editFormToProfileUpdate = (form: ProfileEditFormValue): UpdateMyPro
   marriageTimeline: form.marriageTimeline.trim() || null,
   childrenPreference: form.childrenPreference.trim() || null,
   religionSpirituality: form.religionSpirituality.trim() || null,
-  shareSensitiveCompatibility: form.shareSensitiveCompatibility,
   promptResponses: PROFILE_PROMPTS.slice(0, 3)
     .map((prompt) => ({
       promptId: prompt.id,
@@ -93,7 +87,6 @@ export const profileExtrasUpdate = (
   return {
     occupation: all.occupation,
     occupationCategory: all.occupationCategory,
-    shareWorkDetails: all.shareWorkDetails,
     languages: all.languages,
     foodPreferences: all.foodPreferences,
     preferredRelationshipPace: all.preferredRelationshipPace,

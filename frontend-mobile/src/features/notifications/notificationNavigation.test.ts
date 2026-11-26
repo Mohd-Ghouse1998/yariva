@@ -46,4 +46,17 @@ describe("notification navigation", () => {
     expect(actorInitials("Asha Rao")).toBe("AR");
     expect(actorInitials(null)).toBe("·");
   });
+
+  it("opens each social destination from its authorized inbox response", () => {
+    expect(resolveNotificationHref({ type: "NEW_MESSAGE", data: { route: "circle-message", conversationId: "chat" } }))
+      .toEqual({ pathname: "/(app)/conversation/[conversationId]", params: { conversationId: "chat" } });
+    expect(resolveNotificationHref({ type: "SYSTEM", data: { route: "circle-membership", circleId: "circle" } }))
+      .toEqual({ pathname: "/(app)/circles/[circleId]", params: { circleId: "circle" } });
+    expect(resolveNotificationHref({ type: "SYSTEM", data: { route: "circle-activity", circleId: "circle", activityId: "activity" } }))
+      .toEqual({ pathname: "/(app)/circles/[circleId]", params: { circleId: "circle", activityId: "activity" } });
+    expect(resolveNotificationHref({ type: "SYSTEM", data: { route: "connection-check-in", conversationId: "chat" } }))
+      .toEqual({ pathname: "/(app)/connection-check-in/[conversationId]", params: { conversationId: "chat" } });
+    expect(resolveNotificationHref({ type: "SYSTEM", data: { route: "circle-activity", circleId: "circle" } })).toBeNull();
+    expect(resolveNotificationHref({ type: "SYSTEM", data: { route: "social-notification", notificationId: "notice" } })).toBeNull();
+  });
 });

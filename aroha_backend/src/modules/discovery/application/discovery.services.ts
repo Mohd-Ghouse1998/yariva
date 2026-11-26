@@ -8,11 +8,9 @@ import { hashWithPepper, safeEqualHex } from "../../../common/utils/crypto.util"
 import {
   haversineDistanceKm,
   roundDistanceKm,
-  type DistanceBandValue,
   resolveDistanceBand,
 } from "../../../common/utils/distance.util";
 import { ObjectStorageService } from "../../../integrations/object-storage/object-storage.service";
-import type { InterestTagDto, LifestyleDto } from "../../profiles/dto/profiles.dto";
 import type {
   DiscoveryFeedResponseDto,
   LocationSummaryDto,
@@ -36,7 +34,8 @@ import {
 } from "../infrastructure/discovery.infrastructure";
 import { EvaluateFeatureFlagService } from "../../feature-flags/application/feature-flags.services";
 import { FIRST_CONNECTIONS_FLAG, isFirstConnectionsEligible } from "../../social/social-access";
-import { mapDatingProfileFields } from "./public-profile-fields";
+import { mapDatingProfileFields, mapProfileLocality } from "./public-profile-fields";
+import { canViewProfileField } from "../../profiles/domain/profile-field-audience";
 
 export const DAILY_CURATED_PROFILE_LIMIT = 8;
 const SNAPSHOT_TTL_SECONDS = 24 * 60 * 60;
@@ -341,6 +340,7 @@ function isSameCity(
   candidate: CandidateDiscoveryRecord,
 ): boolean {
   return (
+    canViewProfileField(candidate.profile, "location") &&
     normalize(viewer.profile?.city) === normalize(candidate.profile.city) &&
     normalize(viewer.profile?.region) === normalize(candidate.profile.region)
   );
@@ -376,38 +376,15 @@ async function mapPublicProfile(
   return {
     userId: candidate.id,
     displayName: candidate.profile.displayName ?? "Unknown",
-    headline: candidate.profile.headline ?? null,
-    bio: candidate.profile.bio ?? null,
-    age: candidate.profile.hideAge
-      ? null
-      : candidate.profile.dateOfBirth
-      ? calculateAge(candidate.profile.dateOfBirth)
-      : 0,
-    gender: candidate.profile.gender ?? null,
-    pronouns: candidate.profile.pronouns ?? null,
-    ...mapDatingProfileFields(
-      candidate.profile,
-      buildCompatibilitySummary(viewer, candidate, distance),
-    ),
+    ...mapDatingProfileFields(candidate.profile, {
+      compatibility: buildCompatibilitySummary(viewer, candidate, distance),
+      lifestyle: candidate.lifestyle,
+      interests: candidate.interests.map(({ interestTag }) => ({
+        id: interestTag.id, slug: interestTag.slug, displayName: interestTag.displayName, category: interestTag.category,
+      })),
+    }),
     location: distance,
     intents: candidate.intents.map((intent) => intent.intent as PublicProfileDto["intents"][number]),
-    interests: candidate.interests.map(
-      (interest): InterestTagDto => ({
-        id: interest.interestTag.id,
-        slug: interest.interestTag.slug,
-        displayName: interest.interestTag.displayName,
-        category: interest.interestTag.category,
-      }),
-    ),
-    lifestyle: {
-      smoking: candidate.lifestyle?.smoking ?? null,
-      drinking: candidate.lifestyle?.drinking ?? null,
-      exercise: candidate.lifestyle?.exercise ?? null,
-      diet: candidate.lifestyle?.diet ?? null,
-      petPreference: candidate.lifestyle?.petPreference ?? null,
-      sleepPattern: candidate.lifestyle?.sleepPattern ?? null,
-      socialEnergy: candidate.lifestyle?.socialEnergy ?? null,
-    } satisfies LifestyleDto,
     photos,
   };
 }
@@ -420,16 +397,18 @@ function buildCompatibilitySummary(
   const viewerIntents = new Set(viewer.intents.map((entry) => entry.intent));
   const sharedIntentCount = candidate.intents.filter((entry) => viewerIntents.has(entry.intent)).length;
   const viewerInterests = new Set(viewer.interests.map((entry) => entry.interestTagId));
-  const sharedInterests = candidate.interests
+  const visibleInterests = canViewProfileField(candidate.profile, "interests") ? candidate.interests : [];
+  const sharedInterests = visibleInterests
     .filter((entry) => viewerInterests.has(entry.interestTagId))
     .map((entry) => entry.interestTag.displayName);
   const scheduleOverlap = describePublicScheduleOverlap(viewer, candidate);
+  const lifestyle = canViewProfileField(candidate.profile, "lifestyle") ? candidate.lifestyle : null;
   const lifestylePairs = [
-    [viewer.lifestyle?.smoking, candidate.lifestyle?.smoking],
-    [viewer.lifestyle?.drinking, candidate.lifestyle?.drinking],
-    [viewer.lifestyle?.exercise, candidate.lifestyle?.exercise],
-    [viewer.lifestyle?.diet, candidate.lifestyle?.diet],
-    [viewer.lifestyle?.sleepPattern, candidate.lifestyle?.sleepPattern],
+    [viewer.lifestyle?.smoking, lifestyle?.smoking],
+    [viewer.lifestyle?.drinking, lifestyle?.drinking],
+    [viewer.lifestyle?.exercise, lifestyle?.exercise],
+    [viewer.lifestyle?.diet, lifestyle?.diet],
+    [viewer.lifestyle?.sleepPattern, lifestyle?.sleepPattern],
   ];
   const matchingLifestyle = lifestylePairs.filter(
     ([left, right]) => left !== null && left !== undefined && left === right,
@@ -479,16 +458,14 @@ function resolveDistance(
   candidate: CandidateDiscoveryRecord,
 ): LocationSummaryDto {
   if (
-    candidate.profile.hideDistance ||
+    !canViewProfileField(candidate.profile, "distance") ||
     !viewer.profile?.locationLat ||
     !viewer.profile?.locationLng ||
     candidate.profile.locationLat === null ||
     candidate.profile.locationLng === null
   ) {
     return {
-      city: candidate.profile.city ?? null,
-      region: candidate.profile.region ?? null,
-      countryCode: candidate.profile.countryCode ?? null,
+      ...mapProfileLocality(candidate.profile),
       distanceKmRounded: 0,
       distanceBand: null,
     };
@@ -507,25 +484,10 @@ function resolveDistance(
   );
 
   return {
-    city: candidate.profile.city ?? null,
-    region: candidate.profile.region ?? null,
-    countryCode: candidate.profile.countryCode ?? null,
+    ...mapProfileLocality(candidate.profile),
     distanceKmRounded: distanceKm,
-    distanceBand: resolveDistanceBand(distanceKm) as DistanceBandValue,
+    distanceBand: resolveDistanceBand(distanceKm),
   };
-}
-
-function calculateAge(dateOfBirth: Date): number {
-  const today = new Date();
-  let age = today.getUTCFullYear() - dateOfBirth.getUTCFullYear();
-  const monthDifference = today.getUTCMonth() - dateOfBirth.getUTCMonth();
-  const dayDifference = today.getUTCDate() - dateOfBirth.getUTCDate();
-
-  if (monthDifference < 0 || (monthDifference === 0 && dayDifference < 0)) {
-    age -= 1;
-  }
-
-  return age;
 }
 
 function signCursor(

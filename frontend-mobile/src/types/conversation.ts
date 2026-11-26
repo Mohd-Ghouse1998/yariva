@@ -127,6 +127,7 @@ export interface ConversationReadResponse {
 }
 
 export interface ConversationMessagePageQuery {
+  history?: "1";
   cursor?: string;
   limit?: number;
 }

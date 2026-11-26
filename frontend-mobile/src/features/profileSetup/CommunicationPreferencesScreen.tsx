@@ -21,6 +21,7 @@ const defaults: CommunicationPreferenceDto = {
   allowVideoCalls: false,
   allowPushMatches: true,
   allowPushMessages: true,
+  allowPushSocial: false,
   allowPushCalls: true,
   allowReadReceipts: true,
 };

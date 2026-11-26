@@ -24,19 +24,19 @@ export async function syncPushRegistration(
     return "NOT_SUPPORTED";
   }
 
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "Yariva updates",
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 180, 120, 180],
+    });
+  }
+
   let permission = await Notifications.getPermissionsAsync();
   if (permission.status !== "granted" && requestPermission) {
     permission = await Notifications.requestPermissionsAsync();
   }
   if (permission.status !== "granted") return "PERMISSION_DENIED";
-
-  if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("default", {
-      name: "Matches and messages",
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 180, 120, 180],
-    });
-  }
 
   const nativeToken = await Notifications.getDevicePushTokenAsync();
   const token = typeof nativeToken.data === "string" ? nativeToken.data : JSON.stringify(nativeToken.data);

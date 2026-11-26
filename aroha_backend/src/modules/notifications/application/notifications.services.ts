@@ -1,5 +1,7 @@
 import { canReadEventPlanNotice } from "../../events/event-notices.service";
 import { NotificationIntentService, mapNotification, normalizeJsonObject, type CreateNotificationInput } from "./notification-intent.service";
+import { isSocialNoticeRoute } from "../../social/social-notice-data";
+import { canReadSocialNotice } from "../../social/social-notice-policy";
 export { mapNotification, type CreateNotificationInput } from "./notification-intent.service";
 import { resolveMutualMeetAgain } from "../../date-plans/domain/date-plans.privacy";
 import type { PrismaTransactionalClient } from "../../../database/prisma/prisma.transaction";
@@ -165,28 +167,43 @@ export class PushDispatcherService {
       this.pushTokenRepository.findPreferences(notification.userId),
       this.pushDeliveryRepository.sentTokenIds(notification.id),
     ]);
-    if (!isPushAllowed(notification.type, preferences)) return "SUPPRESSED";
+    const data = normalizeJsonObject(notification.data);
+    const social = isSocialNoticeRoute(data.route);
+    const requiresSocialOptIn = social && data.route !== "circle-message";
+    if (!isPushAllowed(notification.type, preferences, requiresSocialOptIn)) return "SUPPRESSED";
     const pending = tokens.filter((token) => !sentTokenIds.has(token.id));
     if (pending.length === 0)
       return sentTokenIds.size > 0 ? "DELIVERED" : "SUPPRESSED";
 
     let delivered = sentTokenIds.size > 0;
+    let attempted = false;
     let firstFailure: unknown = null;
     for (const token of pending) {
-      // A relationship can be revoked while another token/provider is pending.
-      if (!await canReadNotification(this.stories, this.prisma, notification)) return "SUPPRESSED";
+      // Access or device ownership can change while a previous token is pending.
+      if (!await canReadNotification(this.stories, this.prisma, notification)) return social && delivered ? "DELIVERED" : "SUPPRESSED";
+      if (social) {
+        const [registered, currentPreferences] = await Promise.all([
+          this.pushTokenRepository.isDispatchableForUser(token),
+          this.pushTokenRepository.findPreferences(notification.userId),
+        ]);
+        if (!isPushAllowed(notification.type, currentPreferences, requiresSocialOptIn)) {
+          return delivered ? "DELIVERED" : "SUPPRESSED";
+        }
+        if (!registered) continue;
+      }
       const transport = token.provider === "FCM" ? this.fcm : this.apns;
       const now = new Date();
       try {
+        attempted = true;
         const result = await transport.send({
           token: token.token,
-          title: notification.title,
-          body: notification.body,
-          data: normalizeJsonObject(notification.data),
+          title: social ? "Yariva" : notification.title,
+          body: social ? "You have a new update." : notification.body,
+          data: social ? { route: "social-notification", notificationId: notification.id } : data,
         });
         if (result.outcome === "INVALID_TOKEN") {
           await Promise.all([
-            this.pushTokenRepository.invalidate(token.id, now),
+            this.pushTokenRepository.invalidate(token, now),
             this.pushDeliveryRepository.record({
               notificationId: notification.id,
               pushTokenId: token.id,
@@ -228,7 +245,8 @@ export class PushDispatcherService {
     }
 
     if (firstFailure) throw firstFailure;
-    return delivered ? "DELIVERED" : "UNDELIVERABLE";
+    if (delivered) return "DELIVERED";
+    return attempted ? "UNDELIVERABLE" : "SUPPRESSED";
   }
 }
 
@@ -372,6 +390,7 @@ async function canReadNotification(
   notification: { userId: string; type?: NotificationType; data?: unknown },
 ): Promise<boolean> {
   const data = normalizeJsonObject(notification.data as Prisma.JsonValue | null);
+  if (isSocialNoticeRoute(data.route)) return canReadSocialNotice(db, notification.userId, data);
   if (data.route === "event-plan-change") return canReadEventPlanNotice(db, notification);
   if (data.route === "private-story") {
     return typeof data.storyId === "string" && await stories.canAccess(notification.userId, data.storyId, db);
@@ -404,8 +423,11 @@ function isPushAllowed(
     allowPushMatches: boolean;
     allowPushMessages: boolean;
     allowPushCalls: boolean;
+    allowPushSocial: boolean;
   } | null,
+  requiresSocialOptIn: boolean,
 ): boolean {
+  if (requiresSocialOptIn) return preferences?.allowPushSocial === true;
   if (!preferences) return true;
   if (type === "NEW_LIKE" || type === "NEW_MATCH")
     return preferences.allowPushMatches;

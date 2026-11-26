@@ -1,4 +1,3 @@
-import { FeatureFlagsModule } from "../feature-flags/feature-flags.module";
 import { Module } from "@nestjs/common";
 import { DuoRevocationService } from "./application/duo-revocation.service";
 import { AppLogger } from "../../common/logger/app-logger.service";
@@ -25,7 +24,6 @@ import {
 } from "./infrastructure/conversations.infrastructure";
 
 @Module({
-  imports: [FeatureFlagsModule],
   controllers: [ConversationsController],
   providers: [
     DuoRevocationService,

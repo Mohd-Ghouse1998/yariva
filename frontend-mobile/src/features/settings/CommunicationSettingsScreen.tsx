@@ -33,7 +33,7 @@ export const CommunicationSettingsScreen: React.FC = () => {
   const value = settings.value;
 
   const updatePush = async (
-    field: "allowPushMatches" | "allowPushMessages" | "allowPushCalls",
+    field: "allowPushMatches" | "allowPushMessages" | "allowPushCalls" | "allowPushSocial",
     enabled: boolean,
   ) => {
     if (!value) return;
@@ -123,6 +123,13 @@ export const CommunicationSettingsScreen: React.FC = () => {
                 onValueChange={(allowPushMessages) =>
                   void updatePush("allowPushMessages", allowPushMessages)
                 }
+              />
+              <ToggleRow
+                grouped
+                label="Circles and check-ins"
+                value={value.allowPushSocial ?? false}
+                disabled={settings.saving}
+                onValueChange={(enabled) => void updatePush("allowPushSocial", enabled)}
               />
               <ToggleRow
                 grouped

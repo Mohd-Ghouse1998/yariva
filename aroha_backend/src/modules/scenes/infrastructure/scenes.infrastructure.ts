@@ -225,6 +225,7 @@ export class SceneRepository {
         )`
       : Prisma.empty;
 
+    const showDistance = Prisma.sql`COALESCE(p."fieldAudiences"->>'distance' = 'ALL_ELIGIBLE', NOT p."hideDistance")`;
     return this.prisma.$queryRaw<SceneCandidateRow[]>(Prisma.sql`
       WITH eligible AS (
         SELECT
@@ -240,9 +241,9 @@ export class SceneRepository {
           s."expiresAt",
           s."createdAt" AS "sceneCreatedAt",
           p."displayName",
-          p."headline",
-          p."city",
-          p."region",
+          CASE WHEN COALESCE(p."fieldAudiences"->>'intro', 'ALL_ELIGIBLE') = 'ALL_ELIGIBLE' THEN p."headline" END AS "headline",
+          CASE WHEN COALESCE(p."fieldAudiences"->>'location', 'ALL_ELIGIBLE') = 'ALL_ELIGIBLE' THEN p."city" END AS "city",
+          CASE WHEN COALESCE(p."fieldAudiences"->>'location', 'ALL_ELIGIBLE') = 'ALL_ELIGIBLE' THEN p."region" END AS "region",
           p."verificationStatus"::text AS "verificationStatus",
           scene_photo."id" AS "scenePhotoId",
           scene_photo."bucket" AS "scenePhotoBucket",
@@ -251,8 +252,8 @@ export class SceneRepository {
           scene_photo."height" AS "scenePhotoHeight",
           photo."bucket" AS "photoBucket",
           photo."objectKey" AS "photoObjectKey",
-          p."hideDistance",
-          CASE WHEN p."hideDistance" THEN 2147483647::double precision
+          NOT (${showDistance}) AS "hideDistance",
+          CASE WHEN NOT (${showDistance}) THEN 2147483647::double precision
             ELSE ROUND(ST_Distance(viewer_profile."locationPoint", p."locationPoint") / 500) * 500
           END AS "distanceMeters",
           CASE
@@ -384,7 +385,7 @@ export class SceneDiscoveryCacheRepository {
     limit: number;
   }): string {
     return [
-      "scenes:feed:v2",
+      "scenes:feed:v3",
       input.viewerId,
       input.sceneId,
       input.sceneVersion,

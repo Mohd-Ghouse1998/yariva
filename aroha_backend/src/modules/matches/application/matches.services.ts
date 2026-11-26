@@ -21,7 +21,8 @@ import type {
 } from "../../../generated/prisma/client";
 import { InvalidateDiscoverySnapshotService } from "../../discovery/application/discovery.services";
 import type { PublicProfileDto } from "../../discovery/dto/discovery.dto";
-import { mapDatingProfileFields } from "../../discovery/application/public-profile-fields";
+import { mapDatingProfileFields, mapProfileLocality } from "../../discovery/application/public-profile-fields";
+import { canViewProfileField } from "../../profiles/domain/profile-field-audience";
 import {
   ConversationArtifactService,
   ConversationCloserService,
@@ -120,6 +121,7 @@ export class MatchReaderService {
         otherUser,
         this.objectStorageService,
         viewerUserId,
+        match.status === "ACTIVE",
       ),
       conversationId: match.conversation?.id ?? null,
       myCommunicationSetting: mapMatchCommunicationSettingDto(mySetting),
@@ -491,9 +493,10 @@ async function mapPublicProfile(
   otherUser: MatchUserProjection,
   objectStorageService: ObjectStorageService,
   viewerId: string,
+  activeMatch: boolean,
 ): Promise<PublicProfileDto> {
   const otherProfile = otherUser.profile;
-  const distance = resolveLocationSummary(viewerProfile, otherProfile);
+  const distance = resolveLocationSummary(viewerProfile, otherProfile, activeMatch);
   const photos = await Promise.all(
     otherUser.photos.map(async (photo) => ({
       id: photo.id,
@@ -512,34 +515,15 @@ async function mapPublicProfile(
   return {
     userId: otherUser.id,
     displayName: otherProfile?.displayName ?? "Unknown",
-    headline: otherProfile?.headline ?? null,
-    bio: otherProfile?.bio ?? null,
-    age:
-      otherProfile?.hideAge === true
-        ? null
-        : otherProfile?.dateOfBirth
-          ? calculateAge(otherProfile.dateOfBirth)
-          : null,
-    gender: otherProfile?.gender ?? null,
-    pronouns: otherProfile?.pronouns ?? null,
-    ...mapDatingProfileFields(otherProfile),
+    ...mapDatingProfileFields(otherUser.profile, {
+      activeMatch,
+      lifestyle: otherUser.lifestyle,
+      interests: otherUser.interests.map(({ interestTag }) => ({
+        id: interestTag.id, slug: interestTag.slug, displayName: interestTag.displayName, category: interestTag.category,
+      })),
+    }),
     location: distance,
     intents: otherUser.intents.map((intent) => intent.intent),
-    interests: otherUser.interests.map((interest) => ({
-      id: interest.interestTag.id,
-      slug: interest.interestTag.slug,
-      displayName: interest.interestTag.displayName,
-      category: interest.interestTag.category,
-    })),
-    lifestyle: {
-      smoking: otherUser.lifestyle?.smoking ?? null,
-      drinking: otherUser.lifestyle?.drinking ?? null,
-      exercise: otherUser.lifestyle?.exercise ?? null,
-      diet: otherUser.lifestyle?.diet ?? null,
-      petPreference: otherUser.lifestyle?.petPreference ?? null,
-      sleepPattern: otherUser.lifestyle?.sleepPattern ?? null,
-      socialEnergy: otherUser.lifestyle?.socialEnergy ?? null,
-    },
     photos,
   };
 }
@@ -547,19 +531,18 @@ async function mapPublicProfile(
 function resolveLocationSummary(
   viewerProfile: UserProfile | null,
   otherProfile: UserProfile | null,
+  activeMatch: boolean,
 ): PublicProfileDto["location"] {
   if (
     !otherProfile ||
-    otherProfile.hideDistance ||
+    !canViewProfileField(otherProfile, "distance", activeMatch) ||
     !viewerProfile?.locationLat ||
     !viewerProfile.locationLng ||
     otherProfile.locationLat === null ||
     otherProfile.locationLng === null
   ) {
     return {
-      city: otherProfile?.city ?? null,
-      region: otherProfile?.region ?? null,
-      countryCode: otherProfile?.countryCode ?? null,
+      ...mapProfileLocality(otherProfile, activeMatch),
       distanceKmRounded: 0,
       distanceBand: null,
     };
@@ -575,23 +558,8 @@ function resolveLocationSummary(
   );
 
   return {
-    city: otherProfile.city ?? null,
-    region: otherProfile.region ?? null,
-    countryCode: otherProfile.countryCode ?? null,
+    ...mapProfileLocality(otherProfile, activeMatch),
     distanceKmRounded: distanceKm,
     distanceBand: resolveDistanceBand(distanceKm),
   };
-}
-
-function calculateAge(dateOfBirth: Date): number {
-  const today = new Date();
-  let age = today.getUTCFullYear() - dateOfBirth.getUTCFullYear();
-  const monthDifference = today.getUTCMonth() - dateOfBirth.getUTCMonth();
-  const dayDifference = today.getUTCDate() - dateOfBirth.getUTCDate();
-
-  if (monthDifference < 0 || (monthDifference === 0 && dayDifference < 0)) {
-    age -= 1;
-  }
-
-  return age;
 }

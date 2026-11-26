@@ -16,7 +16,8 @@ export class ReadMessageAttachmentService {
 
   async execute(userId: string, messageId: string, range?: string) {
     const message = await this.messages.findById(messageId);
-    if (!message || !await this.conversations.findByIdForUser(message.conversationId, userId)) {
+    if (!message || (!await this.conversations.findByIdForUser(message.conversationId, userId) &&
+        !await this.conversations.findRetiredCircleChatForUser(message.conversationId, userId))) {
       throw new AppException(404, ERROR_CODES.MESSAGE_NOT_FOUND, "Attachment is not available");
     }
     const visible = resolveVisibleAttachment(message, userId, () => "");

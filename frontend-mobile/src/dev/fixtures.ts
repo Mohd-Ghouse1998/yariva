@@ -197,6 +197,7 @@ export const fixtureMyProfile: MyProfileDto = {
     allowVideoCalls: true,
     allowPushMatches: true,
     allowPushMessages: true,
+    allowPushSocial: false,
     allowPushCalls: true,
     allowReadReceipts: true,
   },

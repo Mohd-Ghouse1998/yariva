@@ -30,7 +30,7 @@ export class DuoVoteDto {
 export interface DuoDiscoveryMemberDto {
   userId: string;
   displayName: string;
-  age: number;
+  age: number | null;
   photoUrl: string | null;
   scene: {
     id: string;
@@ -47,8 +47,8 @@ export interface DuoCandidateDto {
   membershipVersion: number;
   members: DuoDiscoveryMemberDto[];
   distance: {
-    roundedKm: number;
-    band: "LOCAL" | "NEARBY" | "FARTHER";
+    roundedKm: number | null;
+    band: "LOCAL" | "NEARBY" | "FARTHER" | null;
   };
   ownApprovalCount: number;
   ownMemberCount: number;

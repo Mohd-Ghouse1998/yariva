@@ -3,11 +3,13 @@ import {
 } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
+import { CursorPageQueryDto } from "../../common/dto/cursor-page-query.dto";
 import type { AuthContext } from "../../common/types/auth-context.type";
 import { ConversationsModule } from "../conversations/conversations.module";
 import { ConversationRepository } from "../conversations/infrastructure/conversations.infrastructure";
 import { unavailable } from "./social-access";
 import { FeatureFlagsModule } from "../feature-flags/feature-flags.module";
+import { NotificationIntentModule } from "../notifications/notification-intent.module";
 import { CirclesService } from "./circles.service";
 import { ConnectionCheckInService } from "./connection-check-in.service";
 import {
@@ -117,6 +119,13 @@ class SocialController {
     return { conversationId };
   }
 
+  @Get("conversations/:id/circle-history") @Header("Cache-Control", "private, no-store")
+  async circleHistory(@CurrentUser() user: User, @Param("id", uuid) id: string, @Query() query: CursorPageQueryDto) {
+    const page = await this.conversations.listCircleChatHistory(id, user.id, query.cursor);
+    if (!page) unavailable();
+    return page;
+  }
+
   @Get("conversations/:id/check-in") @Header("Cache-Control", "private, no-store")
   getCheckIn(@CurrentUser() user: User, @Param("id", uuid) id: string) { return this.checkIn.get(user.id, id); }
 
@@ -132,7 +141,7 @@ class SocialController {
 }
 
 @Module({
-  imports: [FeatureFlagsModule, ConversationsModule],
+  imports: [FeatureFlagsModule, ConversationsModule, NotificationIntentModule],
   controllers: [SocialController],
   providers: [CirclesService, ConnectionCheckInService],
 })

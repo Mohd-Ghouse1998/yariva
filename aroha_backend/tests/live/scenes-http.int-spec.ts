@@ -1,9 +1,11 @@
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
+import { io, type Socket } from "socket.io-client";
 import request from "supertest";
 import { AppModule } from "../../src/app.module";
 import { configureHttpServer } from "../../src/bootstrap/http.bootstrap";
 import { PrismaService } from "../../src/database/prisma/prisma.service";
+import type { MatchSummaryDto } from "../../src/modules/matches/dto/matches.dto";
 
 const describeLive =
   process.env.AROHA_RUN_LIVE_INTEGRATION === "1" ? describe : describe.skip;
@@ -17,7 +19,8 @@ describeLive("Scene HTTP vertical slice", () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication<NestExpressApplication>();
     await configureHttpServer(app);
-    await app.init();
+    app.useLogger(false);
+    await app.listen(0, "127.0.0.1");
     prisma = app.get(PrismaService);
     await prisma.featureFlag.update({
       where: { key: "scenes.v1" },
@@ -29,7 +32,7 @@ describeLive("Scene HTTP vertical slice", () => {
     await app?.close();
   });
 
-  it("publishes, discovers, revalidates privacy cache, and mutually matches two accounts", async () => {
+  it("publishes, revalidates discovery and delivers the mutual Scene match to both sockets", async () => {
     const first = await signup(`scene-http-a-${runId}@example.com`);
     const second = await signup(`scene-http-b-${runId}@example.com`);
     const [firstPhotoId, secondPhotoId] = await Promise.all([
@@ -98,17 +101,34 @@ describeLive("Scene HTTP vertical slice", () => {
       data: { locationUpdatedAt: new Date() },
     });
 
+    const third = await signup(`scene-http-c-${runId}@example.com`);
+    const thirdPhoto = await prepare(third.userId, "Tara", 17.389, 78.4867);
+    await postScene(third.accessToken, "Coffee and books", thirdPhoto);
+    const firstTwo = await request(app.getHttpServer())
+      .get("/api/v1/scenes/discover?limit=2")
+      .set("Authorization", `Bearer ${first.accessToken}`)
+      .expect(200);
+    const expectedIds = firstTwo.body.items.map(({ scene }: { scene: { id: string } }) => scene.id);
+    expect(new Set(expectedIds).size).toBe(2);
     const firstPage = await request(app.getHttpServer())
       .get("/api/v1/scenes/discover?limit=1")
       .set("Authorization", `Bearer ${first.accessToken}`)
       .expect(200);
-    if (firstPage.body.nextCursor) {
-      const secondPage = await request(app.getHttpServer())
-        .get(`/api/v1/scenes/discover?limit=1&cursor=${encodeURIComponent(firstPage.body.nextCursor)}`)
-        .set("Authorization", `Bearer ${first.accessToken}`)
-        .expect(200);
-      expect(secondPage.body.items[0]?.scene.id).not.toBe(firstPage.body.items[0]?.scene.id);
-    }
+    const cursor: string = firstPage.body.nextCursor;
+    expect(typeof cursor).toBe("string");
+    expect(() => JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"))).toThrow();
+    const cursorPath = (value: string) => `/api/v1/scenes/discover?limit=1&cursor=${encodeURIComponent(value)}`;
+    const secondPage = await request(app.getHttpServer())
+      .get(cursorPath(cursor))
+      .set("Authorization", `Bearer ${first.accessToken}`)
+      .expect(200);
+    expect([firstPage.body.items[0].scene.id, secondPage.body.items[0].scene.id])
+      .toEqual(expectedIds);
+    const changedCursor = (cursor[0] === "A" ? "B" : "A") + cursor.slice(1);
+    await request(app.getHttpServer()).get(cursorPath(changedCursor))
+      .set("Authorization", `Bearer ${first.accessToken}`).expect(400);
+    await request(app.getHttpServer()).get(cursorPath(cursor))
+      .set("Authorization", `Bearer ${second.accessToken}`).expect(400);
 
     await request(app.getHttpServer())
       .patch(`/api/v1/scenes/${secondScene.id}`)
@@ -134,16 +154,34 @@ describeLive("Scene HTTP vertical slice", () => {
       .post("/api/v1/likes")
       .set("Authorization", `Bearer ${first.accessToken}`)
       .set("Idempotency-Key", `scene-like-a-${runId}`)
-      .send({ targetUserId: second.userId })
+      .send({ targetUserId: second.userId, sceneId: secondScene.id })
       .expect(200)
       .expect((response) => expect(response.body.outcome).toBe("LIKE_RECORDED"));
-    await request(app.getHttpServer())
-      .post("/api/v1/likes")
-      .set("Authorization", `Bearer ${second.accessToken}`)
-      .set("Idempotency-Key", `scene-like-b-${runId}`)
-      .send({ targetUserId: first.userId })
-      .expect(200)
-      .expect((response) => expect(response.body.outcome).toBe("MATCH_CREATED"));
+    const address = app.getHttpServer().address();
+    if (!address || typeof address === "string") throw new Error("HTTP test server is not listening");
+    const sockets = [first, second].map(({ accessToken, sessionId }) => io(`http://127.0.0.1:${address.port}/ws`, {
+      autoConnect: false, reconnection: false, transports: ["websocket"], auth: { accessToken, sessionId },
+    }));
+    try {
+      const ready = Promise.all(sockets.map((socket) => nextSocketEvent(socket, "system.ready")));
+      sockets.forEach((socket) => socket.connect());
+      await ready;
+      const [response, firstEvent, secondEvent] = await Promise.all([
+        request(app.getHttpServer())
+          .post("/api/v1/likes")
+          .set("Authorization", `Bearer ${second.accessToken}`)
+          .set("Idempotency-Key", `scene-like-b-${runId}`)
+          .send({ targetUserId: first.userId, sceneId: firstScene.id })
+          .expect(200),
+        ...sockets.map((socket) => nextSocketEvent<{ match: MatchSummaryDto }>(socket, "match.created")),
+      ]);
+      expect(response.body.outcome).toBe("MATCH_CREATED");
+      const match = { id: response.body.match.id, conversationId: response.body.conversation.id };
+      expect(firstEvent?.match).toMatchObject({ ...match, otherUser: { userId: second.userId } });
+      expect(secondEvent?.match).toMatchObject({ ...match, otherUser: { userId: first.userId } });
+    } finally {
+      sockets.forEach((socket) => socket.disconnect());
+    }
 
     const endedSecond = await request(app.getHttpServer())
       .post(`/api/v1/scenes/${secondScene.id}/end`)
@@ -172,7 +210,7 @@ describeLive("Scene HTTP vertical slice", () => {
     });
   });
 
-  async function signup(email: string): Promise<{ userId: string; accessToken: string }> {
+  async function signup(email: string): Promise<{ userId: string; accessToken: string; sessionId: string }> {
     const response = await request(app.getHttpServer())
       .post("/api/v1/auth/signup")
       .send({
@@ -181,7 +219,11 @@ describeLive("Scene HTTP vertical slice", () => {
         device: { deviceId: `device-${email}`, platform: "ANDROID", appVersion: "test" },
       })
       .expect(201);
-    return { userId: response.body.user.id, accessToken: response.body.tokens.accessToken };
+    return {
+      userId: response.body.user.id,
+      accessToken: response.body.tokens.accessToken,
+      sessionId: response.body.tokens.session.id,
+    };
   }
 
   async function prepare(
@@ -251,3 +293,17 @@ describeLive("Scene HTTP vertical slice", () => {
       );
   }
 });
+
+function nextSocketEvent<T>(socket: Socket, event: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const listener = (payload: T) => {
+      clearTimeout(timer);
+      resolve(payload);
+    };
+    const timer = setTimeout(() => {
+      socket.off(event, listener);
+      reject(new Error(`Missing socket event: ${event}`));
+    }, 6_000);
+    socket.once(event, listener);
+  });
+}

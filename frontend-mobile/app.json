@@ -61,7 +61,12 @@
       "expo-secure-store",
       "expo-image-picker",
       "expo-location",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "default"
+        }
+      ],
       [
         "@config-plugins/react-native-webrtc",
         {

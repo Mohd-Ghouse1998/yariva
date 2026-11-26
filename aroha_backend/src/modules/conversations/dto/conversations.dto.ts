@@ -1,5 +1,5 @@
 import { Transform } from "class-transformer";
-import { IsInt, IsOptional, IsString, Max, Min } from "class-validator";
+import { Equals, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
 import type { PublicProfileDto } from "../../discovery/dto/discovery.dto";
 
 export interface ConversationSummaryDto {
@@ -90,7 +90,13 @@ export interface ConversationReadResponseDto {
   readState: ConversationReadDto;
 }
 
-export class ConversationMessagePageQueryDto {
+export class ConversationDetailQueryDto {
+  @IsOptional()
+  @Equals("1")
+  readonly history?: "1";
+}
+
+export class ConversationMessagePageQueryDto extends ConversationDetailQueryDto {
   @IsOptional()
   @IsString()
   readonly cursor?: string;

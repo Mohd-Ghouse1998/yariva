@@ -5,6 +5,7 @@ import request from "supertest";
 import { AppModule } from "../../src/app.module";
 import { configureHttpServer } from "../../src/bootstrap/http.bootstrap";
 import { PrismaService } from "../../src/database/prisma/prisma.service";
+import type { FeatureFlag } from "../../src/generated/prisma/client";
 import { ActivityService } from "../../src/modules/activity/application/activity.service";
 import { ScenesService } from "../../src/modules/scenes/application/scenes.services";
 import { closedRecapPeriod, istDay } from "../../src/modules/activity/domain/activity.domain";
@@ -13,7 +14,8 @@ const live =
   process.env.AROHA_RUN_LIVE_INTEGRATION === "1" ? describe : describe.skip;
 live("Trusted activity: real database rewards and private recaps", () => {
   let app: NestExpressApplication, db: PrismaService, activity: ActivityService;
-  let previousFlag: { enabled: boolean; scope: "GLOBAL" | "USER_ALLOWLIST" | "USER_PERCENTAGE"; rolloutPercentage: number | null } | null;
+  const flagKeys = ["activity.v1", "scenes.v1"];
+  let previousFlags: Pick<FeatureFlag, "key" | "enabled" | "scope" | "rolloutPercentage">[] | undefined;
   const users: Array<{ id: string; token: string }> = [],
     run = randomUUID();
   beforeAll(async () => {
@@ -26,17 +28,14 @@ live("Trusted activity: real database rewards and private recaps", () => {
     await app.init();
     db = app.get(PrismaService);
     activity = app.get(ActivityService);
-    previousFlag = await db.featureFlag.findUnique({ where: { key: "activity.v1" }, select: { enabled: true, scope: true, rolloutPercentage: true } });
-    await db.featureFlag.upsert({
-      where: { key: "activity.v1" },
-      create: { key: "activity.v1", enabled: true, scope: "GLOBAL" },
-      update: { enabled: true, scope: "GLOBAL", rolloutPercentage: null },
+    previousFlags = await db.featureFlag.findMany({
+      where: { key: { in: flagKeys } },
+      select: { key: true, enabled: true, scope: true, rolloutPercentage: true },
     });
-    await db.featureFlag.upsert({
-      where: { key: "scenes.v1" },
-      create: { key: "scenes.v1", enabled: true },
-      update: { enabled: true },
-    });
+    const testRollout = { enabled: true, scope: "GLOBAL", rolloutPercentage: null } as const;
+    for (const key of flagKeys) {
+      await db.featureFlag.upsert({ where: { key }, create: { key, ...testRollout }, update: testRollout });
+    }
     for (let i = 0; i < 10; i++) {
       const r = await request(app.getHttpServer())
         .post("/api/v1/auth/signup")
@@ -66,9 +65,21 @@ live("Trusted activity: real database rewards and private recaps", () => {
     }
   });
   afterAll(async () => {
-    if (db && previousFlag) await db.featureFlag.update({ where: { key: "activity.v1" }, data: previousFlag });
-    else if (db) await db.featureFlag.deleteMany({ where: { key: "activity.v1" } });
-    await app?.close();
+    try {
+      if (previousFlags) {
+        for (const key of flagKeys) {
+          const previous = previousFlags.find((flag) => flag.key === key);
+          if (previous) {
+            const { enabled, scope, rolloutPercentage } = previous;
+            await db.featureFlag.update({ where: { key }, data: { enabled, scope, rolloutPercentage } });
+          } else {
+            await db.featureFlag.deleteMany({ where: { key } });
+          }
+        }
+      }
+    } finally {
+      await app?.close();
+    }
   });
   const api = (i: number) =>
     request(app.getHttpServer())

@@ -1,11 +1,24 @@
 import type { PrismaTransactionalClient } from "../../database/prisma/prisma.transaction";
 import type { ConversationCheckIn } from "../../generated/prisma/client";
-import { acceptsIntent, isEligible, socialUser, type SocialUser } from "./social-access";
+import { acceptsIntent, CHECK_IN_FLAG, hasRosterBlock, isEligible, socialEnabledFor, socialUser, type SocialUser } from "./social-access";
 
 export const checkInParticipants = {
   userLow: { select: socialUser },
   userHigh: { select: socialUser },
 };
+
+export async function activeCheckInMatch(db: PrismaTransactionalClient, userId: string, id: string) {
+  const conversation = await db.conversation.findFirst({
+    where: { id, status: "ACTIVE", match: { status: "ACTIVE", OR: [{ userLowId: userId }, { userHighId: userId }] } },
+    include: { match: { include: checkInParticipants } },
+  });
+  const match = conversation?.match;
+  if (!match || !isEligible(match.userLow) || !isEligible(match.userHigh)) return null;
+  const ids = [match.userLowId, match.userHighId];
+  if (!await socialEnabledFor(db, CHECK_IN_FLAG, ids) || await hasRosterBlock(db, ids) ||
+      await db.blindRelationship.findFirst({ where: { matchId: match.id, revealedAt: null }, select: { matchId: true } })) return null;
+  return match;
+}
 
 export async function clearInvalidAgreement(
   tx: PrismaTransactionalClient, row: ConversationCheckIn | null, pair: { userLow: SocialUser; userHigh: SocialUser },

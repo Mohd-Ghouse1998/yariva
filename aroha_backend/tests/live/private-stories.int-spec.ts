@@ -899,16 +899,25 @@ live("Private Stories authorization on PostgreSQL", () => {
     const requester = users[2]!.id;
     const other = users[3]!.id;
     await db.privateFollow.deleteMany({ where: { ownerId: owner } });
+    await db.userProfile.update({ where: { userId: requester }, data: { city: "Hyderabad", fieldAudiences: { location: "MATCHES" } } });
+    await db.userProfile.update({ where: { userId: owner }, data: { city: "Hyderabad", fieldAudiences: { location: "ONLY_ME" } } });
+    const directory = (i: number, kind: "requests" | "followers" | "following") =>
+      api(i).get(`/api/v1/private-stories/follows/${kind}`).set(auth(i)).expect(200);
     const summary = (i: number) => api(i).get("/api/v1/private-stories/follows/summary").set(auth(i)).expect(200);
     expect((await summary(0)).body).toEqual({ followers: 0, following: 0, requests: 0 });
     await api(2).post(`/api/v1/private-stories/follows/${owner}`).set(auth(2)).expect(201);
     await api(3).post(`/api/v1/private-stories/follows/${owner}`).set(auth(3)).expect(201);
     expect((await summary(0)).body).toEqual({ followers: 0, following: 0, requests: 2 });
+    expect((await directory(0, "requests")).body.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ requesterId: requester, city: null }),
+    ]));
     expect((await api(2).get(`/api/v1/private-stories/follows/summary?userId=${owner}`).set(auth(2)).expect(200)).body).toEqual({ followers: 0, following: 0, requests: 0 });
     expect((await api(2).get("/api/v1/private-stories/follows/followers").set(auth(2)).expect(200)).body.items).toEqual([]);
     await api(0).post(`/api/v1/private-stories/follows/${requester}/approve`).set(auth(0)).expect(201);
     expect((await summary(0)).body).toEqual({ followers: 1, following: 0, requests: 1 });
     expect((await summary(2)).body.following).toBe(1);
+    expect((await directory(0, "followers")).body.items).toEqual([expect.objectContaining({ userId: requester, city: null })]);
+    expect((await directory(2, "following")).body.items).toEqual([expect.objectContaining({ userId: owner, city: null })]);
     await api(0).get("/api/v1/private-stories/follows/followers?cursor=bad").set(auth(0)).expect(400);
 
     await db.block.create({ data: { blockerId: owner, blockedId: requester } });
@@ -920,6 +929,8 @@ live("Private Stories authorization on PostgreSQL", () => {
     const low = [owner, requester].sort()[0]!;
     const high = [owner, requester].sort()[1]!;
     await db.match.upsert({ where: { userLowId_userHighId: { userLowId: low, userHighId: high } }, create: { userLowId: low, userHighId: high }, update: { status: "ACTIVE", endedAt: null } });
+    expect((await directory(0, "followers")).body.items).toEqual([expect.objectContaining({ userId: requester, city: "Hyderabad" })]);
+    expect((await directory(2, "following")).body.items).toEqual([expect.objectContaining({ userId: owner, city: null })]);
     const created = await api(0).post("/api/v1/private-stories").set(auth(0)).send({ text: "Follow and match", audienceRule: "SELECTED", recipientIds: [requester] }).expect(201);
     const storyId = created.body.story.id;
     await api(2).delete(`/api/v1/private-stories/follows/requested/${owner}`).set(auth(2)).expect(200);

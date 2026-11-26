@@ -8,6 +8,7 @@ import { AppLogger } from "../../../common/logger/app-logger.service";
 import { PrismaService } from "../../../database/prisma/prisma.service";
 import { BullmqProducer } from "../../../integrations/bullmq/bullmq.producer";
 import { ObjectStorageService } from "../../../integrations/object-storage/object-storage.service";
+import { canViewProfileField } from "../../profiles/domain/profile-field-audience";
 import { UserReaderService } from "../../users/application/users.services";
 import { UserRepository } from "../../users/infrastructure/users.infrastructure";
 import { InvalidateDiscoverySnapshotService } from "../../discovery/application/discovery.services";
@@ -37,6 +38,7 @@ import {
 
 const PASS_TTL_DAYS = 14;
 const SERIALIZABLE_RETRY_ATTEMPTS = 3;
+type CachedLikeReceipt = { like: LikeDto; match: { id: string } | null };
 
 export interface LikeActionMetadata {
   ipAddress: string | null;
@@ -109,14 +111,16 @@ export class GetLikesReceivedService {
       eligibleRows.map(async (row) => {
         const profile = row.actor.profile!;
         const primaryPhoto = row.actor.photos[0] ?? null;
+        const activeMatch = !!(row.actor.matchesLow?.length || row.actor.matchesHigh?.length);
+        const showLocation = canViewProfileField(profile, "location", activeMatch);
         return {
           likeId: row.id,
           actorUserId: row.actorId,
           likedAt: row.createdAt.toISOString(),
           introNote: row.introNote,
           displayName: profile.displayName ?? "Someone",
-          headline: profile.headline ?? null,
-          age: !profile.hideAge && profile.dateOfBirth ? calculateAge(profile.dateOfBirth) : null,
+          headline: canViewProfileField(profile, "intro", activeMatch) ? profile.headline ?? null : null,
+          age: canViewProfileField(profile, "age", activeMatch) && profile.dateOfBirth ? calculateAge(profile.dateOfBirth) : null,
           intents: row.actor.intents.map(
             (i) => i.intent as ReceivedLikePreviewDto["intents"][number],
           ),
@@ -127,8 +131,8 @@ export class GetLikesReceivedService {
                 objectKey: primaryPhoto.objectKey,
               })
             : null,
-          city: profile.city ?? null,
-          region: profile.region ?? null,
+          city: showLocation ? profile.city ?? null : null,
+          region: showLocation ? profile.region ?? null : null,
         };
       }),
     );
@@ -201,16 +205,17 @@ export class CreateLikeService {
     );
 
     const idempotencyKey = input.payload.sceneId ? undefined : input.idempotencyKey;
+    let cached: CachedLikeReceipt | null = null;
     if (input.payload.sceneId) {
       await this.scenes.assertResponseAllowed(input.userId, input.payload.targetUserId, input.payload.sceneId);
     } else if (idempotencyKey) {
-      const cached =
-        await this.likeIdempotencyRepository.get<CreateLikeResponseDto>(
+      cached =
+        await this.likeIdempotencyRepository.get<CachedLikeReceipt>(
           input.userId,
           idempotencyKey,
         );
-      if (cached) {
-        return cached;
+      if (cached && cached.like.targetId !== input.payload.targetUserId) {
+        throw new AppException(409, ERROR_CODES.IDEMPOTENCY_CONFLICT, "Like request already used for another profile");
       }
     }
 
@@ -220,7 +225,7 @@ export class CreateLikeService {
     this.likePolicyService.assertTargetEligible(target);
 
     const hasHistoricalMatch =
-      await this.likeInteractionRepository.hasHistoricalMatchBetween(
+      !cached?.match && await this.likeInteractionRepository.hasHistoricalMatchBetween(
         input.userId,
         input.payload.targetUserId,
       );
@@ -237,6 +242,11 @@ export class CreateLikeService {
       input.payload.targetUserId,
     );
     this.likePolicyService.assertNotBlocked(blocked);
+    if (cached) {
+      return cached.match
+        ? this.buildMatchedResponse(cached.like, input.userId, input.payload.targetUserId, cached.match.id)
+        : { outcome: "LIKE_RECORDED", like: cached.like, match: null, conversation: null };
+    }
 
     const existingLike = await this.likeRepository.findByActorAndTarget(
       input.userId,
@@ -244,7 +254,7 @@ export class CreateLikeService {
     );
     if (existingLike?.status === "MATCHED") {
       const response = await this.buildMatchedResponse(
-        existingLike,
+        this.likeReaderService.mapLike(existingLike),
         input.userId,
         input.payload.targetUserId,
       );
@@ -463,15 +473,16 @@ export class CreateLikeService {
 
     let response: CreateLikeResponseDto;
     if (transactionResult.kind === "match-created") {
+      const like = this.likeReaderService.mapLike(transactionResult.like);
       response = await this.buildMatchedResponse(
-        transactionResult.like,
+        like,
         input.userId,
         input.payload.targetUserId,
         transactionResult.matchId,
         transactionResult.conversationId,
       );
       const targetResponse = await this.buildMatchedResponse(
-        transactionResult.like,
+        like,
         input.payload.targetUserId,
         input.userId,
         transactionResult.matchId,
@@ -496,7 +507,7 @@ export class CreateLikeService {
       );
     } else if (transactionResult.kind === "existing-match") {
       response = await this.buildMatchedResponse(
-        transactionResult.like,
+        this.likeReaderService.mapLike(transactionResult.like),
         input.userId,
         input.payload.targetUserId,
       );
@@ -524,17 +535,7 @@ export class CreateLikeService {
   }
 
   private async buildMatchedResponse(
-    like: {
-      id: string;
-      actorId: string;
-      targetId: string;
-      introNote: string | null;
-      status: "ACTIVE" | "MATCHED" | "RETRACTED";
-      matchedAt: Date | null;
-      retractedAt: Date | null;
-      createdAt: Date;
-      updatedAt: Date;
-    },
+    like: LikeDto,
     viewerUserId: string,
     targetUserId: string,
     providedMatchId?: string,
@@ -546,7 +547,7 @@ export class CreateLikeService {
     if (!match) {
       return {
         outcome: "LIKE_RECORDED",
-        like: this.likeReaderService.mapLike(like),
+        like,
         match: null,
         conversation: null,
       };
@@ -556,6 +557,9 @@ export class CreateLikeService {
       match,
       viewerUserId,
     );
+    if (matchProjection.status !== "ACTIVE") {
+      throw new AppException(409, ERROR_CODES.MATCH_NOT_ACTIVE, "Match is no longer active");
+    }
     const conversationId =
       providedConversationId ?? matchProjection.conversation?.id ?? null;
     const conversation =
@@ -568,7 +572,7 @@ export class CreateLikeService {
 
     return {
       outcome: "MATCH_CREATED",
-      like: this.likeReaderService.mapLike(like),
+      like,
       match: await this.matchReaderService.mapSummary(
         matchProjection,
         viewerUserId,
@@ -613,7 +617,10 @@ export class CreateLikeService {
       return;
     }
 
-    await this.likeIdempotencyRepository.set(userId, idempotencyKey, response);
+    await this.likeIdempotencyRepository.set<CachedLikeReceipt>(userId, idempotencyKey, {
+      like: response.like,
+      match: response.match ? { id: response.match.id } : null,
+    });
   }
 
   private async invalidateDiscoverySafely(userId: string): Promise<void> {

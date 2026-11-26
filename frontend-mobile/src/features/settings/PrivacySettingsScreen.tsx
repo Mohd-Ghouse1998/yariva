@@ -1,19 +1,26 @@
-import React from "react";
+import React, { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { profilesApi } from "../../api/endpoints/profiles";
 import { useProfileFormLayout } from "../../components/profile/useProfileFormLayout";
 import { Header } from "../../components/layout/Header";
+import { CenterDialog } from "../../components/ui/CenterDialog";
 import { Chip } from "../../components/ui/Chip";
-import { NavigationListSection } from "../../components/ui/NavigationList";
+import { NavigationListRow, NavigationListSection } from "../../components/ui/NavigationList";
 import { SectionTitle } from "../../components/ui/SectionTitle";
 import { Text } from "../../components/ui/Text";
 import { ToggleRow } from "../../components/ui/ToggleRow";
 import { useSafeBack } from "../../navigation/useSafeBack";
 import { useTheme } from "../../theme/ThemeContext";
+import { spacing } from "../../theme/spacing";
+import type { ProfileAudience } from "../../types/profile";
 import {
+  AUDIENCE_LABELS,
+  PERSONAL_DETAIL_FIELDS,
+  PROFILE_DETAIL_FIELDS,
   privacySettingsToProfileUpdate,
   profileToPrivacySettings,
+  type PrivacySettingsValue,
   type VisibilityMode,
 } from "./privacySettings";
 import { SettingsLoadState } from "./SettingsLoadState";
@@ -21,8 +28,10 @@ import { useSerializedSettings } from "./useSerializedSettings";
 
 const loadPrivacy = async () => profileToPrivacySettings(await profilesApi.me());
 
-const savePrivacy = async (next: Awaited<ReturnType<typeof loadPrivacy>>) =>
-  profileToPrivacySettings(await profilesApi.updateMe(privacySettingsToProfileUpdate(next)));
+const savePrivacy = async (next: PrivacySettingsValue, previous: PrivacySettingsValue) =>
+  profileToPrivacySettings(await profilesApi.updateMe(privacySettingsToProfileUpdate(next, previous)));
+
+const AUDIENCE_OPTIONS: ProfileAudience[] = ["ALL_ELIGIBLE", "MATCHES", "ONLY_ME"];
 
 const VISIBILITY_OPTIONS: Array<{
   value: VisibilityMode;
@@ -50,6 +59,7 @@ export const PrivacySettingsScreen: React.FC = () => {
   const formLayout = useProfileFormLayout();
   const goBack = useSafeBack("/(app)/settings");
   const { palette } = useTheme();
+  const [editing, setEditing] = useState<(typeof PROFILE_DETAIL_FIELDS)[number] | null>(null);
   const settings = useSerializedSettings({
     load: loadPrivacy,
     save: savePrivacy,
@@ -72,7 +82,7 @@ export const PrivacySettingsScreen: React.FC = () => {
             contentContainerStyle={formLayout.content}
             contentInsetAdjustmentBehavior="automatic"
           >
-            <SectionTitle style={{ marginTop: 8 }}>PROFILE VISIBILITY</SectionTitle>
+            <SectionTitle style={{ marginTop: spacing.sm }}>PROFILE VISIBILITY</SectionTitle>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {VISIBILITY_OPTIONS.map((option) => (
                 <Chip
@@ -101,38 +111,59 @@ export const PrivacySettingsScreen: React.FC = () => {
               />
             </NavigationListSection>
 
-            <NavigationListSection label="PROFILE DETAILS">
-              <ToggleRow
-                grouped
-                first
-                label="Hide age"
-                sub="People can still match by age range."
-                value={value.hideAge}
-                disabled={settings.saving}
-                onValueChange={(hideAge) => void settings.update({ ...value, hideAge })}
-              />
-              <ToggleRow
-                grouped
-                label="Hide distance"
-                sub="Show only city, not kilometres away."
-                value={value.hideDistance}
-                disabled={settings.saving}
-                onValueChange={(hideDistance) => void settings.update({ ...value, hideDistance })}
-              />
-              <ToggleRow
-                grouped
-                label="Share personal values"
-                sub="Family, religion and future plans"
-                value={value.shareSensitiveCompatibility}
-                disabled={settings.saving}
-                onValueChange={(shareSensitiveCompatibility) =>
-                  void settings.update({ ...value, shareSensitiveCompatibility })
-                }
-              />
-            </NavigationListSection>
+            <Text variant="caption" color="textSubdued">
+              Choose who can see each detail when they can already view your profile.
+            </Text>
+            {([
+              ["PROFILE DETAILS", PROFILE_DETAIL_FIELDS],
+              ["PERSONAL DETAILS", PERSONAL_DETAIL_FIELDS],
+            ] as const).map(([label, fields]) => (
+              <NavigationListSection key={label} label={label}>
+                {fields.map((field, index) => {
+                  const audience = AUDIENCE_LABELS[value.fieldAudiences[field.key]];
+                  return (
+                    <NavigationListRow
+                      key={field.key}
+                      first={index === 0}
+                      label={field.label}
+                      meta={field.description}
+                      metaLines={2}
+                      value={audience}
+                      accessibilityLabel={`${field.label}, ${audience}`}
+                      disabled={settings.saving}
+                      onPress={() => setEditing(field)}
+                    />
+                  );
+                })}
+              </NavigationListSection>
+            ))}
           </ScrollView>
         )}
       </SafeAreaView>
+      {value && editing ? (
+        <CenterDialog visible onClose={() => setEditing(null)} accessibilityLabel={`${editing.label} audience`}>
+          <SectionTitle>{editing.label}</SectionTitle>
+          <NavigationListSection>
+            {AUDIENCE_OPTIONS.map((audience, index) => (
+              <NavigationListRow
+                key={audience}
+                first={index === 0}
+                label={AUDIENCE_LABELS[audience]}
+                selected={value.fieldAudiences[editing.key] === audience}
+                onPress={() => {
+                  setEditing(null);
+                  if (value.fieldAudiences[editing.key] !== audience) {
+                    void settings.update({
+                      ...value,
+                      fieldAudiences: { ...value.fieldAudiences, [editing.key]: audience },
+                    });
+                  }
+                }}
+              />
+            ))}
+          </NavigationListSection>
+        </CenterDialog>
+      ) : null}
     </View>
   );
 };
